@@ -1,21 +1,22 @@
 # Visual Studio
 .vs/
 
-# CMake build output
+# CMake / Ninja build files
 out/
 build/
 cmake-build-*/
 
-# Generated files
-*.user
-*.suo
+# vcpkg installed dependencies
+vcpkg_installed/
+
+# Compiled files
 *.obj
 *.exe
 *.dll
 *.pdb
+*.lib
 
-# Local CMake presets
+# User-specific files
+*.user
+*.suo
 CMakeUserPresets.json
-
-# Package Manager Dependencies
-vpkg_installed/
