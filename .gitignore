@@ -16,3 +16,6 @@ cmake-build-*/
 
 # Local CMake presets
 CMakeUserPresets.json
+
+# Package Manager Dependencies
+vpkg_installed/
