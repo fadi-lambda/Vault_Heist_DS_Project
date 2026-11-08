@@ -1,4 +1,3 @@
-
 # PROJECT_STATE.md
 
 # Vault Heist: The Living Vault
@@ -6,29 +5,35 @@
 ## 1. Project Status
 
 Current Phase: Phase 0 - Environment and Project Audit
-Overall Status: IN PROGRESS
+Overall Status: COMPLETED
 
 Project Deadline: 20 November 2026
 
 ## 2. Technology Stack
 
-- Language: C++17 (proposed)
-- GUI: SFML 3.x (exact version pending)
+- Language: C++20
+- GUI: SFML 3
 - Build: CMake
-- IDE: Visual Studio (version to verify)
-- Compiler: MSVC (version to verify)
-- Testing: GoogleTest (pending verification)
+- Build Generator: Ninja
+- IDE: Visual Studio Insiders
+- Compiler: MSVC (exact version not recorded)
+- Package Manager: vcpkg
+- Testing: GoogleTest
 - Version Control: Git and GitHub
 
 ## 3. Repository Status
 
-- GitHub repository: Created (reported)
-- CMake project: Opened successfully in Visual Studio (reported)
-- Initial folder structure: Established (reported)
-- Clean build: Not verified
-- SFML window: Not verified
-- GoogleTest: Not verified
-- Remote push status: Not confirmed
+- GitHub repository: Created
+- Main branch: main
+- Remote tracking: origin/main
+- CMake project: Configured successfully
+- Project structure: Established
+- x64 Debug configuration: Successful
+- SFML linking: Successful
+- SFML test window: Successfully launched
+- GoogleTest integration: Successful
+- Initial GoogleTest setup test: Passed
+- Latest changes: Not yet confirmed committed and pushed
 
 ## 4. Team Responsibilities
 
@@ -52,7 +57,7 @@ Shared:
 
 ## 5. Development Progress
 
-Phase 0: IN PROGRESS
+Phase 0: COMPLETED
 Phase 1: NOT STARTED
 Phase 2: NOT STARTED
 Phase 3: NOT STARTED
@@ -65,47 +70,45 @@ Phase 9: NOT STARTED
 
 ## 6. Technical Decisions
 
-- C++ and SFML are the required technologies.
+- C++20 and SFML 3 are the selected technologies.
 - CMake is the shared build system.
+- Ninja is the selected build generator.
+- vcpkg manages external dependencies.
 - All major data structures must be implemented from scratch.
 - GUI and data-structure logic must remain separate.
 - Operations will produce events for visualisation.
 - Snapshot-based undo is the initial recommendation.
-- GoogleTest will be integrated through CMake.
+- GoogleTest is integrated through CMake.
 
 ## 7. Current Blockers / Unknowns
 
-- Existing folder structure has not been reviewed.
-- Compiler and CMake versions need confirmation.
-- Exact SFML release needs confirmation.
-- GoogleTest integration needs verification.
+- vcpkg path portability between team members needs to be addressed.
+- Friend's environment and successful build need verification.
 - Shared architecture and interfaces are not finalised.
+- Git changes from the initial project restructuring need review and push confirmation.
 
 ## 8. Next Actions
 
-Member 1:
-- Provide current repository structure.
-- Verify local compiler and CMake versions.
-
-Member 2:
-- Verify local compiler and CMake versions.
-- Confirm ability to build the shared project.
-
 Shared:
-- Review existing CMakeLists.txt.
-- Finalise environment configuration.
+- Finalise portable vcpkg configuration.
+- Verify the friend's development environment.
+- Review and commit the initial project restructuring.
 - Agree on project architecture.
-- Build and run a minimal SFML application.
-- Verify GoogleTest.
-- Finalise initial folder structure and interfaces.
+- Begin Phase 1 foundation.
 
 ## 9. Git Status
 
-- Main branch: To be confirmed.
-- Feature branches: Not established.
-- Initial commit: To be confirmed.
-- Latest pushed commit: To be confirmed.
+- Main branch: main
+- Remote branch: origin/main
+- Feature branches: Not established
+- Initial repository: Created
+- Latest changes: Pending review, commit, and push confirmation
 
 ## 10. Testing Status
 
-No project-specific tests have been verified yet.
+- CMake configuration: Passed
+- x64 Debug build: Passed
+- SFML linking: Passed
+- SFML window execution: Passed
+- GoogleTest setup test: Passed
+- Project-specific data-structure tests: Not yet implemented

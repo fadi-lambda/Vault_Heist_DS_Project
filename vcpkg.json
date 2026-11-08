@@ -1,7 +1,8 @@
 {
-	"name": "vault-heist-ds",
-	"version-string": "1.0.0",
-	"dependencies": [
-		"sfml"
-	]
+    "name": "vault-heist-ds",
+    "version-string": "1.0.0",
+    "dependencies": [
+        "sfml",
+        "gtest"
+    ]
 }
