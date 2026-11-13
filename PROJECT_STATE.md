@@ -4,8 +4,8 @@
 
 ## 1. Project Status
 
-Current Phase: Phase 0 - Environment and Project Audit
-Overall Status: COMPLETED
+Current Phase: Phase 1 - Core Data Structures (Member 2: Max Heap & Heap Sort Completed)
+Overall Status: IN PROGRESS
 
 Project Deadline: 20 November 2026
 
@@ -16,7 +16,7 @@ Project Deadline: 20 November 2026
 - Build: CMake
 - Build Generator: Ninja
 - IDE: Visual Studio Insiders
-- Compiler: MSVC (exact version not recorded)
+- Compiler: MSVC (C++20)
 - Package Manager: vcpkg
 - Testing: GoogleTest
 - Version Control: Git and GitHub
@@ -33,32 +33,32 @@ Project Deadline: 20 November 2026
 - SFML test window: Successfully launched
 - GoogleTest integration: Successful
 - Initial GoogleTest setup test: Passed
-- Latest changes: Not yet confirmed committed and pushed
+- Latest changes: Max Heap and Unit Tests added
 
 ## 4. Team Responsibilities
 
 Member 1:
-- General Binary Tree
-- Binary Search Tree
+- General Binary Tree (Act 1)
+- Binary Search Tree (Act 2)
 - Related unit tests
 
 Member 2:
-- AVL Tree
-- Max Heap
-- Heap Sort
-- Related unit tests
+- AVL Tree (Act 3) - Pending / Next
+- Max Heap (Act 4) - COMPLETED (`include/MaxHeap.h`, `src/MaxHeap.cpp`)
+- Heap Sort (Act 4) - COMPLETED (in-place $O(n \log n)$)
+- Max Heap Unit Tests - COMPLETED & PASSED (`tests/TestMaxHeap.cpp`)
 
 Shared:
 - Architecture and integration
-- Event system
+- Event system (for animation and visualizer)
 - SFML GUI
-- Game systems
+- Game systems (LevelManager, Alarm meter, Score)
 - Testing and documentation
 
 ## 5. Development Progress
 
-Phase 0: COMPLETED
-Phase 1: NOT STARTED
+Phase 0: COMPLETED (Environment & setup audit)
+Phase 1: IN PROGRESS (Member 2 completed Max Heap and Heap Sort with unit tests)
 Phase 2: NOT STARTED
 Phase 3: NOT STARTED
 Phase 4: NOT STARTED
@@ -71,38 +71,45 @@ Phase 9: NOT STARTED
 ## 6. Technical Decisions
 
 - C++20 and SFML 3 are the selected technologies.
-- CMake is the shared build system.
-- Ninja is the selected build generator.
+- CMake is the shared build system with Ninja generator.
 - vcpkg manages external dependencies.
-- All major data structures must be implemented from scratch.
-- GUI and data-structure logic must remain separate.
-- Operations will produce events for visualisation.
-- Snapshot-based undo is the initial recommendation.
-- GoogleTest is integrated through CMake.
+- Strict Course Guidelines Applied:
+  * No `std::vector` allowed: Manual dynamic arrays (`int* data = new int[capacity]`) with automatic resizing and clean destructors (`delete[]`).
+  * No `enum` / `enum class` allowed.
+  * No global variables allowed.
+  * Node heights: `height(leaf) = 1` and `height(nullptr) = 0`.
+- All major data structures are implemented strictly from scratch.
+- GUI and data-structure logic remain separate.
+- GoogleTest is integrated through CMake for all unit tests.
 
 ## 7. Current Blockers / Unknowns
 
-- vcpkg path portability between team members needs to be addressed.
-- Friend's environment and successful build need verification.
-- Shared architecture and interfaces are not finalised.
-- Git changes from the initial project restructuring need review and push confirmation.
+- Member 1's progress on BinaryTree / BST.
+- Next step for Member 2: Implement AVL Tree (`include/AVLTree.h`, `src/AVLTree.cpp`).
 
 ## 8. Next Actions
 
+Member 2 (You):
+- Implement AVL Tree (Act 3):
+  * `AVLNode` with `height` and `size`
+  * 4 Rotations: LL, RR, LR, RL
+  * Balanced Insert & Delete
+  * Order-statistics ($k$-th smallest, `rank`, `countInRange`)
+- Implement AVL Tree Google Tests (`tests/TestAVLTree.cpp`)
+
 Shared:
-- Finalise portable vcpkg configuration.
-- Verify the friend's development environment.
-- Review and commit the initial project restructuring.
-- Agree on project architecture.
-- Begin Phase 1 foundation.
+- Commit and push Member 2's completed Max Heap implementation and unit tests to GitHub.
 
 ## 9. Git Status
 
 - Main branch: main
 - Remote branch: origin/main
-- Feature branches: Not established
-- Initial repository: Created
-- Latest changes: Pending review, commit, and push confirmation
+- Uncommitted new files:
+  * `include/MaxHeap.h`
+  * `src/MaxHeap.cpp`
+  * `tests/TestMaxHeap.cpp`
+  * `tests/CMakeLists.txt` (modified)
+  * `project_state.md` (updated)
 
 ## 10. Testing Status
 
@@ -111,4 +118,9 @@ Shared:
 - SFML linking: Passed
 - SFML window execution: Passed
 - GoogleTest setup test: Passed
-- Project-specific data-structure tests: Not yet implemented
+- Member 2 Data-Structure Tests:
+  * `MaxHeapTest.InsertAndExtractMax`: PASSED (0 ms)
+  * `MaxHeapTest.DynamicResizing`: PASSED (0 ms)
+  * `MaxHeapTest.BuildMaxHeapVariousArrays`: PASSED (0 ms)
+  * `MaxHeapTest.HeapSortCorrectness`: PASSED (0 ms)
+- Result: **5/5 Tests Passed (100% Success)**

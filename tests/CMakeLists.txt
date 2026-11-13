@@ -1,5 +1,7 @@
 add_executable(Vault_Heist_Tests
     TestMain.cpp
+    TestMaxHeap.cpp
+    ${PROJECT_SOURCE_DIR}/src/MaxHeap.cpp
 )
 
 target_include_directories(Vault_Heist_Tests
