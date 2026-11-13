@@ -1,5 +1,4 @@
-﻿
-cmake_minimum_required(VERSION 3.22)
+﻿cmake_minimum_required(VERSION 3.22)
 
 if(POLICY CMP0141)
     cmake_policy(SET CMP0141 NEW)
@@ -22,10 +21,17 @@ find_package(GTest CONFIG REQUIRED)
 # Main application
 add_executable(Vault_Heist
     src/main.cpp
+    src/MaxHeap.cpp
+    src/AVLTree.cpp
 )
 
 target_include_directories(Vault_Heist
     PRIVATE include
+)
+
+target_compile_options(Vault_Heist
+    PRIVATE
+        /Z7
 )
 
 target_link_libraries(Vault_Heist
