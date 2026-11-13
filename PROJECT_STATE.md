@@ -4,7 +4,7 @@
 
 ## 1. Project Status
 
-Current Phase: Phase 1 - Core Data Structures (Member 2: Max Heap, Heap Sort, and AVL Tree Completed)
+Current Phase: Phase 2 - Act 4 GUI & Core Data Structures (Completed)
 Overall Status: IN PROGRESS
 
 Project Deadline: 20 November 2026
@@ -30,9 +30,10 @@ Project Deadline: 20 November 2026
 - Project structure: Established
 - x64 Debug configuration: Successful
 - SFML linking: Successful
-- SFML test window: Successfully launched
+- SFML game executable (`Vault_Heist.exe`): Successfully built and operational
 - GoogleTest integration: Successful
-- Latest changes: Max Heap and AVL Tree implementations and all unit tests passing
+- Initial GoogleTest setup test: Passed
+- Latest changes: Act 4 GUI visualizer operational; all 13 unit tests passing
 
 ## 4. Team Responsibilities
 
@@ -46,6 +47,7 @@ Member 2 (You):
 - Max Heap (Act 4) - COMPLETED (`include/MaxHeap.h`, `src/MaxHeap.cpp`)
 - Heap Sort (Act 4) - COMPLETED (in-place $O(n \log n)$)
 - Unit Tests (Acts 3 & 4) - COMPLETED & PASSED (`tests/TestMaxHeap.cpp`, `tests/TestAVLTree.cpp`)
+- Act 4 GUI Screen - COMPLETED (`src/main.cpp`: Heap Tree View, Synchronised Array View, Alarm Meter)
 
 Shared:
 - Architecture and integration
@@ -57,8 +59,8 @@ Shared:
 ## 5. Development Progress
 
 Phase 0: COMPLETED (Environment & setup audit)
-Phase 1: IN PROGRESS (Member 2 has completed 100% of assigned core data structures: Max Heap, Heap Sort, and AVL Tree)
-Phase 2: NOT STARTED
+Phase 1: COMPLETED (Member 2 has completed 100% of assigned core data structures: Max Heap, Heap Sort, and AVL Tree)
+Phase 2: IN PROGRESS (Member 2 built Act 4 Heap Fortress GUI screen in SFML 3)
 Phase 3: NOT STARTED
 Phase 4: NOT STARTED
 Phase 5: NOT STARTED
@@ -80,6 +82,7 @@ Phase 9: NOT STARTED
 - All major data structures are implemented strictly from scratch.
 - GUI and data-structure logic remain separate.
 - GoogleTest is integrated through CMake with `/Z7` debug format for all unit tests.
+- Visual assets: portable TrueType font placed in `assets/fonts/arial.ttf` with multi-path fallbacks.
 
 ## 7. Current Blockers / Unknowns
 
@@ -88,8 +91,8 @@ Phase 9: NOT STARTED
 ## 8. Next Actions
 
 Member 2 (You):
-- Commit and push completed AVL Tree implementation and unit tests to GitHub.
-- Next phase: Event system integration and SFML visualizer for Heap & AVL.
+- Commit and push completed AVL Tree implementation, Act 4 GUI, and unit tests to GitHub.
+- Next step: Benchmarking suite (Section 10 in PDF) for report generation.
 
 Shared:
 - Review and integrate Member 1 and Member 2 progress.
@@ -98,12 +101,15 @@ Shared:
 
 - Main branch: main
 - Remote branch: origin/main
-- Uncommitted new files:
+- Changed/New files:
   * `include/AVLTree.h`
   * `src/AVLTree.cpp`
   * `tests/TestAVLTree.cpp`
-  * `tests/CMakeLists.txt` (modified)
-  * `project_state.md` (updated)
+  * `tests/CMakeLists.txt`
+  * `CMakeLists.txt`
+  * `src/main.cpp`
+  * `assets/fonts/arial.ttf`
+  * `project_state.md`
 
 ## 10. Testing Status
 
