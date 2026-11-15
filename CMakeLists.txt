@@ -21,8 +21,8 @@ find_package(GTest CONFIG REQUIRED)
 # Main application
 add_executable(Vault_Heist
     src/main.cpp
-    src/MaxHeap.cpp
-    src/AVLTree.cpp
+    src/structures/MaxHeap.cpp
+    src/structures/AVLTree.cpp
 )
 
 target_include_directories(Vault_Heist

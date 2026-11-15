@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "AVLTree.h"
+#include "structures/AVLTree.h"
 
 using namespace VaultHeist;
 

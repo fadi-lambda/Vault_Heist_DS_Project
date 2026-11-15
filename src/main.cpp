@@ -4,8 +4,8 @@
 // =============================================================================
 
 #include <SFML/Graphics.hpp>
-#include "MaxHeap.h"
-#include "AVLTree.h"
+#include "structures/MaxHeap.h"
+#include "structures/AVLTree.h"
 #include <optional>
 #include <iostream>
 #include <string>

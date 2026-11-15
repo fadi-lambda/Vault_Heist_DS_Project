@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "MaxHeap.h"
+#include "structures/MaxHeap.h"
 
 using namespace VaultHeist;
 
