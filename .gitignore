@@ -20,3 +20,5 @@ vcpkg_installed/
 *.user
 *.suo
 CMakeUserPresets.json
+Project.pdf
+Project_extracted.txt
