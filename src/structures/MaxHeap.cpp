@@ -1,4 +1,4 @@
-#include "MaxHeap.h"
+#include "structures/MaxHeap.h"
 #include <iostream>
 
 namespace VaultHeist {

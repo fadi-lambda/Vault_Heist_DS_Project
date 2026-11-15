@@ -2,8 +2,8 @@ add_executable(Vault_Heist_Tests
     TestMain.cpp
     TestMaxHeap.cpp
     TestAVLTree.cpp
-    ${PROJECT_SOURCE_DIR}/src/MaxHeap.cpp
-    ${PROJECT_SOURCE_DIR}/src/AVLTree.cpp
+    ${PROJECT_SOURCE_DIR}/src/structures/MaxHeap.cpp
+    ${PROJECT_SOURCE_DIR}/src/structures/AVLTree.cpp
 )
 
 target_include_directories(Vault_Heist_Tests
@@ -22,5 +22,4 @@ target_link_libraries(Vault_Heist_Tests
 )
 
 include(GoogleTest)
-
 gtest_discover_tests(Vault_Heist_Tests)
