@@ -1,0 +1,11 @@
+{
+  "level_id": 45,
+  "act": 4,
+  "title": "4.5 Final Vault Boss",
+  "concept": "Complete in-place Heap Sort workflow: Build Heap + Repeated Extraction",
+  "objective": "Sort an entirely new unsorted treasure array in ascending order to unlock the Final Vault.",
+  "alarm_capacity": 30,
+  "optimal_steps": 16,
+  "initial_array": [25, 80, 15, 95, 60, 40, 70, 30],
+  "expected_sorted_result": [15, 25, 30, 40, 60, 70, 80, 95]
+}

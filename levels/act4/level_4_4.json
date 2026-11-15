@@ -1,0 +1,11 @@
+{
+  "level_id": 44,
+  "act": 4,
+  "title": "4.4 Race Against the Guards",
+  "concept": "Heap Sort operational complexity and step budget under strict alarm limits",
+  "objective": "Complete full extraction cycle under tight alarm capacity constraint.",
+  "alarm_capacity": 20,
+  "optimal_steps": 12,
+  "initial_heap": [90, 70, 80, 40, 50, 60, 30],
+  "expected_sorted_result": [30, 40, 50, 60, 70, 80, 90]
+}

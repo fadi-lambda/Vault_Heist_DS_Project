@@ -1,0 +1,29 @@
+{
+  "level_id": 33,
+  "act": 3,
+  "title": "3.3 Manual Repair - Double Rotations",
+  "concept": "Double LR and RL Rotations",
+  "objective": "Identify and perform two-step LR and RL double rotations.",
+  "alarm_capacity": 22,
+  "optimal_steps": 4,
+  "puzzles": [
+    {
+      "case": "LR",
+      "root_key": 30,
+      "left_child": 10,
+      "inner_child": 20,
+      "step_1": "LEFT_ROTATE_CHILD",
+      "step_2": "RIGHT_ROTATE_ROOT",
+      "final_root": 20
+    },
+    {
+      "case": "RL",
+      "root_key": 10,
+      "right_child": 30,
+      "inner_child": 20,
+      "step_1": "RIGHT_ROTATE_CHILD",
+      "step_2": "LEFT_ROTATE_ROOT",
+      "final_root": 20
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "level_id": 31,
+  "act": 3,
+  "title": "3.1 Read the Badges",
+  "concept": "Balance Factor (|BF| <= 1 for balanced nodes)",
+  "objective": "Identify every unbalanced node by clicking nodes whose |BF| > 1.",
+  "alarm_capacity": 15,
+  "optimal_steps": 2,
+  "tree_type": "AVL_Unbalanced",
+  "nodes": [
+    { "key": 50, "left": 30, "right": 70 },
+    { "key": 30, "left": 20, "right": null },
+    { "key": 20, "left": 10, "right": null },
+    { "key": 10, "left": 5, "right": null },
+    { "key": 5, "left": null, "right": null },
+    { "key": 70, "left": 60, "right": 80 },
+    { "key": 60, "left": null, "right": null },
+    { "key": 80, "left": null, "right": 90 },
+    { "key": 90, "left": null, "right": null }
+  ],
+  "expected_violation_keys": [30, 20]
+}

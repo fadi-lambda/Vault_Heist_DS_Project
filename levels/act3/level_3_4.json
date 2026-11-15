@@ -1,0 +1,17 @@
+{
+  "level_id": 34,
+  "act": 3,
+  "title": "3.4 Auto Mode and Prediction",
+  "concept": "Automatic AVL rebalancing and rotation prediction",
+  "objective": "Predict which rotation (LL, RR, LR, RL, None) will occur before each insertion.",
+  "alarm_capacity": 25,
+  "optimal_steps": 5,
+  "initial_keys": [40, 20],
+  "insertion_sequence": [
+    { "key": 10, "expected_rotation": "LL" },
+    { "key": 25, "expected_rotation": "LR" },
+    { "key": 60, "expected_rotation": "None" },
+    { "key": 50, "expected_rotation": "None" },
+    { "key": 70, "expected_rotation": "RR" }
+  ]
+}

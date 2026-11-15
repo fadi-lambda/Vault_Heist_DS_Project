@@ -1,0 +1,27 @@
+{
+  "level_id": 32,
+  "act": 3,
+  "title": "3.2 Manual Repair - Single Rotations",
+  "concept": "Single LL and RR Rotations",
+  "objective": "Perform LL and RR single rotations to balance the tree.",
+  "alarm_capacity": 20,
+  "optimal_steps": 2,
+  "puzzles": [
+    {
+      "case": "LL",
+      "root_key": 30,
+      "left_child": 20,
+      "left_grandchild": 10,
+      "correct_rotation": "RIGHT",
+      "new_root": 20
+    },
+    {
+      "case": "RR",
+      "root_key": 10,
+      "right_child": 20,
+      "right_grandchild": 30,
+      "correct_rotation": "LEFT",
+      "new_root": 20
+    }
+  ]
+}

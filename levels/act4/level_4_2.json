@@ -1,0 +1,13 @@
+{
+  "level_id": 42,
+  "act": 4,
+  "title": "4.2 Repair the Security Locks",
+  "concept": "Restoring Max Heap property via sift-down and sift-up",
+  "objective": "Detect sabotage and restore heap property for all parent-child relationships.",
+  "alarm_capacity": 20,
+  "optimal_steps": 2,
+  "sabotaged_array": [10, 85, 70, 40, 30, 60, 50, 20, 35],
+  "violation_index": 0,
+  "repair_operation": "SIFT_DOWN",
+  "expected_repaired_heap": [85, 40, 70, 35, 30, 60, 50, 20, 10]
+}

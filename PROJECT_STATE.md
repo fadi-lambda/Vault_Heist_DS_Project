@@ -4,132 +4,148 @@
 
 ## 1. Project Status
 
-Current Phase: Phase 2 - Act 4 GUI & Core Data Structures (Completed)
-Overall Status: IN PROGRESS
+Current Phase: Phase 5 - Deliverables Complete & Verified
+Overall Status: READY FOR DEMONSTRATION & SUBMISSION
 
-Project Deadline: 20 November 2026
+Project Deadline: 20 November 2026, 11:59 PM
+Team Responsibility: Member 2 (Acts 3 & 4: AVL Tree, Max Heap, Heap Sort, Benchmarking)
+
+---
 
 ## 2. Technology Stack
 
 - Language: C++20
 - GUI: SFML 3
-- Build: CMake
+- Build System: CMake 3.22+
 - Build Generator: Ninja
-- IDE: Visual Studio Insiders
 - Compiler: MSVC (C++20)
 - Package Manager: vcpkg
-- Testing: GoogleTest
-- Version Control: Git and GitHub
+- Unit Testing: GoogleTest (v1.18.0)
+- Benchmarking: High-Resolution Chrono C++20 Suite
 
-## 3. Repository Status
+---
 
-- GitHub repository: Created
-- Main branch: main
-- Remote tracking: origin/main
-- CMake project: Configured successfully
-- Project structure: Established
-- x64 Debug configuration: Successful
-- SFML linking: Successful
-- SFML game executable (`Vault_Heist.exe`): Successfully built and operational
-- GoogleTest integration: Successful
-- Initial GoogleTest setup test: Passed
-- Latest changes: Act 4 GUI visualizer operational; all 13 unit tests passing
+## 3. Deliverables Status Checklist
 
-## 4. Team Responsibilities
+| Deliverable | Required Items | Status | Files |
+|---|---|---|---|
+| **Deliverable 1** | Executable source code + README (run instructions, controls) | **COMPLETE** | `src/`, `include/`, `README.md` |
+| **Deliverable 2** | Unit test suite covering all data structures + test report | **COMPLETE (13/13 Pass)** | `tests/`, `docs/reports/TEST_REPORT.md` |
+| **Deliverable 3** | Written project report (8–12 pages) + Benchmarks (Section 10) | **COMPLETE** | `docs/reports/PROJECT_REPORT.md`, `benchmarks/BenchmarkSuite.cpp` |
+| **Deliverable 4** | Level data files (JSON) + Guide to adding levels | **COMPLETE** | `levels/act3/*.json`, `levels/act4/*.json`, `docs/LEVEL_CREATION_GUIDE.md` |
 
-Member 1:
-- General Binary Tree (Act 1)
-- Binary Search Tree (Act 2)
-- Related unit tests
+---
 
-Member 2 (You):
-- AVL Tree (Act 3) - COMPLETED (`include/AVLTree.h`, `src/AVLTree.cpp`)
-- Max Heap (Act 4) - COMPLETED (`include/MaxHeap.h`, `src/MaxHeap.cpp`)
-- Heap Sort (Act 4) - COMPLETED (in-place $O(n \log n)$)
-- Unit Tests (Acts 3 & 4) - COMPLETED & PASSED (`tests/TestMaxHeap.cpp`, `tests/TestAVLTree.cpp`)
-- Act 4 GUI Screen - COMPLETED (`src/main.cpp`: Heap Tree View, Synchronised Array View, Alarm Meter)
+## 4. Course Constraints Audit
 
-Shared:
-- Architecture and integration
-- Event system (for animation and visualizer)
-- SFML GUI
-- Game systems (LevelManager, Alarm meter, Score)
-- Testing and documentation
+- [x] **No `std::vector`**: Dynamic arrays with `new[]`/`delete[]` exclusively in data structures.
+- [x] **No `enum` / `enum class`**: Plain typed constants (`static const int`).
+- [x] **No global variables**: All states reside within models or scoped loops.
+- [x] **Height convention**: $\text{height}(\text{leaf}) = 1$ and $\text{height}(\text{nullptr}) = 0$.
+- [x] **GUI independence**: Data structures (`AVLTree`, `MaxHeap`) have zero GUI/SFML dependencies.
+- [x] **All structures from scratch**: Custom tree nodes, rotations, heapify, sift-up/down, order statistics.
 
-## 5. Development Progress
+---
 
-Phase 0: COMPLETED (Environment & setup audit)
-Phase 1: COMPLETED (Member 2 has completed 100% of assigned core data structures: Max Heap, Heap Sort, and AVL Tree)
-Phase 2: IN PROGRESS (Member 2 built Act 4 Heap Fortress GUI screen in SFML 3)
-Phase 3: NOT STARTED
-Phase 4: NOT STARTED
-Phase 5: NOT STARTED
-Phase 6: NOT STARTED
-Phase 7: NOT STARTED
-Phase 8: NOT STARTED
-Phase 9: NOT STARTED
+## 5. Act 3 & Act 4 Campaign Levels
 
-## 6. Technical Decisions
+| Level | Title | Data Structure Concept | Mechanics & UI |
+|---|---|---|---|
+| **3.1** | Read the Badges | Balance Factor diagnosis | Click nodes with $|\text{BF}| > 1$ (red badges). No auto-balance. |
+| **3.2** | Manual Single Rotations | LL and RR single rotations | Visual LL/RR imbalance repair with right/left rotations. |
+| **3.3** | Manual Double Rotations | LR and RL double rotations | Two-step rotation (inner-child rotation then root rotation). |
+| **3.4** | Auto Mode & Prediction | Rebalancing prediction | Predict rotation ($LL, RR, LR, RL, \text{None}$) before each insert. |
+| **3.5** | Boss: Order Statistics | Augmented `subtreeSize` | $O(\log n)$ search for $k$-th smallest and rank queries. |
+| **4.1** | Activate the Vault | Bottom-up Heap Construction | Sift-down from non-leaf nodes $(n/2 - 1)$ down to 0 in $O(n)$ time. |
+| **4.2** | Repair Security Locks | Heap property restoration | Diagnose and repair sabotaged elements using sift-up / sift-down. |
+| **4.3** | Extract Greatest Treasure | Root extraction & array partitioning | Extract max into distinct green **SORTED REGION**, heapify remainder. |
+| **4.4** | Race Against Guards | Time-limited Heap Sort iterations | Speed extraction cycle under strict alarm capacity. |
+| **4.5** | Final Vault Boss | In-place Heap Sort workflow | Phase 1 build Max Heap, Phase 2 extract all, Phase 3 unlock door. |
 
-- C++20 and SFML 3 are the selected technologies.
-- CMake is the shared build system with Ninja generator.
-- vcpkg manages external dependencies.
-- Strict Course Guidelines Applied:
-  * No `std::vector` allowed: Manual dynamic arrays (`int* data = new int[capacity]`) with automatic resizing and clean destructors (`delete[]`).
-  * No `enum` / `enum class` allowed.
-  * No global variables allowed.
-  * Node heights: `height(leaf) = 1` and `height(nullptr) = 0`.
-- All major data structures are implemented strictly from scratch.
-- GUI and data-structure logic remain separate.
-- GoogleTest is integrated through CMake with `/Z7` debug format for all unit tests.
-- Visual assets: portable TrueType font placed in `assets/fonts/arial.ttf` with multi-path fallbacks.
+---
 
-## 7. Current Blockers / Unknowns
+## 6. Unit Testing Summary (13/13 Passed)
 
-- Member 1's progress on BinaryTree / BST.
+Command: `out/build/x64-debug/tests/Vault_Heist_Tests.exe`
+- `GoogleTestSetup.BasicTest`: **PASSED** (0 ms)
+- `MaxHeapTest.InsertAndExtractMax`: **PASSED** (0 ms)
+- `MaxHeapTest.DynamicResizing`: **PASSED** (0 ms)
+- `MaxHeapTest.BuildMaxHeapVariousArrays`: **PASSED** (0 ms)
+- `MaxHeapTest.HeapSortCorrectness`: **PASSED** (0 ms)
+- `AVLTreeTest.LeftLeftRotation`: **PASSED** (0 ms)
+- `AVLTreeTest.RightRightRotation`: **PASSED** (0 ms)
+- `AVLTreeTest.LeftRightRotation`: **PASSED** (0 ms)
+- `AVLTreeTest.RightLeftRotation`: **PASSED** (0 ms)
+- `AVLTreeTest.DuplicateRejection`: **PASSED** (0 ms)
+- `AVLTreeTest.DeleteWithRebalancing`: **PASSED** (0 ms)
+- `AVLTreeTest.OrderStatistics`: **PASSED** (0 ms)
+- `AVLTreeTest.LargeSequentialInsertionMaintainsLogNHeight`: **PASSED** (0 ms)
 
-## 8. Next Actions
+---
 
-Member 2 (You):
-- Commit and push completed AVL Tree implementation, Act 4 GUI, and unit tests to GitHub.
-- Next step: Benchmarking suite (Section 10 in PDF) for report generation.
+## 7. Benchmarking Summary (Section 10)
 
-Shared:
-- Review and integrate Member 1 and Member 2 progress.
+Command: `out/build/x64-debug/Vault_Heist_Benchmarks.exe`
+* **Height Comparison**: At $N = 10,000$, BST degenerates to height **10,000** on sorted input, whereas AVL maintains guaranteed optimal height of **14**.
+* **Order Statistics**: 1,000 $k$-th queries on $N = 10,000$: AVL `kth` takes **0.91 ms** ($O(\log n)$) vs BST inorder scan **108.34 ms** ($O(n)$) — **~119x speedup**.
+* **Bottom-Up Heap Construction**: Empirical time/element ratio remains flat ($\approx 0.02 \ \mu\text{s}$/element) from $N = 100$ to $N = 10,000$, validating $O(n)$ linear complexity.
+* **Heap Sort**: Consistent $O(n \log n)$ execution (~1.5 ms for 10,000 elements) across random, sorted, reverse-sorted, and duplicate-heavy distributions.
+* **Sorting Comparison ($N = 5,000$)**: Heap Sort (0.84 ms, $O(1)$ space) vs QuickSort (0.65 ms) vs InsertionSort (30.77 ms).
 
-## 9. Git Status
+---
 
-- Main branch: main
-- Remote branch: origin/main
-- Changed/New files:
-  * `include/AVLTree.h`
-  * `src/AVLTree.cpp`
-  * `tests/TestAVLTree.cpp`
-  * `tests/CMakeLists.txt`
-  * `CMakeLists.txt`
-  * `src/main.cpp`
-  * `assets/fonts/arial.ttf`
-  * `project_state.md`
+## 8. Directory & File Inventory
 
-## 10. Testing Status
+```
+D:\dsa\Vault_Heist_DS_Project
+├── CMakeLists.txt                 # Multi-target CMake build config (/Z7 debug format)
+├── README.md                      # Comprehensive user & developer manual (Deliverable #1)
+├── PROJECT_STATE.md               # Continuous project progress tracker
+├── include/
+│   ├── AVLTree.h                  # AVL Tree with height, size, rotations, order statistics
+│   └── MaxHeap.h                  # Array-based Max Heap with dynamic resizing
+├── src/
+│   ├── AVLTree.cpp                # Pure data structure implementation (GUI-independent)
+│   ├── MaxHeap.cpp                # Pure MaxHeap & HeapSort implementation
+│   └── main.cpp                   # SFML 3 GUI with 10-level campaign & Interactive Action Panel
+├── benchmarks/
+│   └── BenchmarkSuite.cpp         # Section 10 empirical benchmarking suite
+├── tests/
+│   ├── CMakeLists.txt             # GoogleTest CMake config
+│   ├── TestMain.cpp               # Test runner
+│   ├── TestAVLTree.cpp            # 8 AVL unit tests
+│   └── TestMaxHeap.cpp            # 4 MaxHeap unit tests
+├── levels/
+│   ├── act3/                      # JSON data files for levels 3.1 to 3.5
+│   └── act4/                      # JSON data files for levels 4.1 to 4.5
+└── docs/
+    ├── LEVEL_CREATION_GUIDE.md    # Guide to adding new levels (Deliverable #4)
+    └── reports/
+        ├── TEST_REPORT.md         # Full unit test report (Deliverable #2)
+        └── PROJECT_REPORT.md      # 8–12 page academic report draft (Deliverable #3)
+```
 
-- CMake configuration: Passed
-- x64 Debug build: Passed
-- SFML linking: Passed
-- SFML window execution: Passed
-- GoogleTest setup test: Passed
-- Max Heap Tests:
-  * `MaxHeapTest.InsertAndExtractMax`: PASSED (0 ms)
-  * `MaxHeapTest.DynamicResizing`: PASSED (0 ms)
-  * `MaxHeapTest.BuildMaxHeapVariousArrays`: PASSED (0 ms)
-  * `MaxHeapTest.HeapSortCorrectness`: PASSED (0 ms)
-- AVL Tree Tests:
-  * `AVLTreeTest.LeftLeftRotation`: PASSED (0 ms)
-  * `AVLTreeTest.RightRightRotation`: PASSED (0 ms)
-  * `AVLTreeTest.LeftRightRotation`: PASSED (0 ms)
-  * `AVLTreeTest.RightLeftRotation`: PASSED (0 ms)
-  * `AVLTreeTest.DuplicateRejection`: PASSED (0 ms)
-  * `AVLTreeTest.DeleteWithRebalancing`: PASSED (0 ms)
-  * `AVLTreeTest.OrderStatistics`: PASSED (0 ms)
-  * `AVLTreeTest.LargeSequentialInsertionMaintainsLogNHeight`: PASSED (0 ms)
-- Result: **13/13 Tests Passed (100% Success)**
+---
+
+## 9. Recent Fixes & Quality Assurance Overhaul
+
+1. **Neutral Button Styling (No Green Spoilers)**:
+   - **Issue**: Correct answer buttons were previously styled with green outlines (`sf::Color(80, 200, 100)`) and fills, spoiling solutions before player interaction.
+   - **Resolution**: Refactored all answer and action buttons across all 10 campaign levels to use a consistent neutral slate-blue palette (`btnBg(35, 50, 75)`, `btnOutline(80, 130, 200)`). Removed spoiler hints from button labels.
+
+2. **Level 3.1 (Read the Badges) Hit-Testing & Validation**:
+   - **Issue**: Mouse click coordinates in `hits[]` were offset from rendered tree coordinates in `drawManualNode`.
+   - **Resolution**: Exact mathematical alignment of click radius (28 px) and coordinates. Node validation checks exact keys (30 and 20). Immediate visual feedback with yellow selection rings.
+
+3. **Level 3.2 & 3.3 (Manual Rotations) Initial Invariants**:
+   - **Issue**: Calling standard `AVLTree::insert()` automatically balanced trees upon creation, presenting already-balanced trees in rotation puzzle levels.
+   - **Resolution**: Implemented `ManualNode` puzzles without automatic rebalancing. Level 3.2 properly displays LL/RR imbalance; Level 3.3 properly presents genuine LR (Root 30, Left 10, Right 20) and RL imbalances with red violation badges.
+
+4. **Level 3.5 (Order-Statistic Boss) UI & Validation**:
+   - **Issue**: Multiple-choice buttons were missing from the screen, leaving players guessing inputs.
+   - **Resolution**: Rendered interactive option cards for both Challenge 1 ($k = 3 \implies 25$) and Challenge 2 ($\text{rank}(40) = 5$) with mouse click and keyboard `[1-4]` handlers.
+
+5. **Build & Linking Verification**:
+   - Resolved Windows file lock contention on `Vault_Heist.exe`.
+   - Clean rebuild of all targets: `Vault_Heist.exe`, `Vault_Heist_Tests.exe` (13/13 passing, 0 ms), and `Vault_Heist_Benchmarks.exe`.
+

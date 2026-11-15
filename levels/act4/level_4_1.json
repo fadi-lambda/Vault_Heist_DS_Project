@@ -1,0 +1,12 @@
+{
+  "level_id": 41,
+  "act": 4,
+  "title": "4.1 Activate the Vault",
+  "concept": "Complete Binary Tree representation and bottom-up Max Heap construction",
+  "objective": "Transform an unsorted array into a valid Max Heap in O(n) time using bottom-up sift-down.",
+  "alarm_capacity": 25,
+  "optimal_steps": 4,
+  "initial_array": [15, 60, 25, 90, 75, 40, 80],
+  "start_index": 2,
+  "expected_final_heap": [90, 75, 80, 15, 60, 40, 25]
+}
