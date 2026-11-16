@@ -9,7 +9,7 @@
 ## 1. Current status
 
 - **Overall status:** IN PROGRESS
-- **Reported completed phases:** Phase 0, Phase 1, Phase 3
+- **Reported completed phases:** Phase 0, Phase 1, Phase 2, Phase 3
 - **Phase 2:** Status not confirmed; clarify before assigning work.
 - **Current development stage:** Project setup/build work has been carried out, and the application was reported to launch successfully.
 - **Next focus:** Confirm the exact scope and evidence for each completed phase, establish the current repository state, then continue with the next uncompleted project milestone.

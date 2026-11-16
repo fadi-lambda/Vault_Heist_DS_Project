@@ -23,6 +23,8 @@ add_executable(Vault_Heist
     src/main.cpp
     src/structures/MaxHeap.cpp
     src/structures/AVLTree.cpp
+    src/structures/BinaryTree.cpp
+    src/structures/BST.cpp
 )
 
 target_include_directories(Vault_Heist
