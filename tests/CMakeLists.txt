@@ -11,10 +11,12 @@ target_include_directories(Vault_Heist_Tests
         ${PROJECT_SOURCE_DIR}/include
 )
 
-target_compile_options(Vault_Heist_Tests
-    PRIVATE
-        /Z7
-)
+if(MSVC)
+    target_compile_options(Vault_Heist_Tests
+        PRIVATE
+            /Z7
+    )
+endif()
 
 target_link_libraries(Vault_Heist_Tests
     PRIVATE

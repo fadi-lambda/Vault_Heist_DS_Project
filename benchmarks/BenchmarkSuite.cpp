@@ -13,8 +13,8 @@
 #include <chrono>
 #include <random>
 #include <iomanip>
-#include "AVLTree.h"
-#include "MaxHeap.h"
+#include "structures/AVLTree.h"
+#include "structures/MaxHeap.h"
 
 using namespace VaultHeist;
 

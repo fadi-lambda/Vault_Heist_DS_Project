@@ -1,151 +1,168 @@
 # PROJECT_STATE.md
 
-# Vault Heist: The Living Vault
+**Project:** Vault Heist: The Living Vault  
+**Last updated:** 16 November 2026  
+**Primary requirements source:** `Project.pdf`
 
-## 1. Project Status
+> This file records the progress confirmed in the project conversations. Do not treat an item as complete unless the team has implemented and verified it. Phase numbers below are retained as the team reported them; the detailed phase definitions were not available in the current context.
 
-Current Phase: Phase 5 - Deliverables Complete & Verified
-Overall Status: READY FOR DEMONSTRATION & SUBMISSION
+## 1. Current status
 
-Project Deadline: 20 November 2026, 11:59 PM
-Team Responsibility: Member 2 (Acts 3 & 4: AVL Tree, Max Heap, Heap Sort, Benchmarking)
+- **Overall status:** IN PROGRESS
+- **Reported completed phases:** Phase 0, Phase 1, Phase 3
+- **Phase 2:** Status not confirmed; clarify before assigning work.
+- **Current development stage:** Project setup/build work has been carried out, and the application was reported to launch successfully.
+- **Next focus:** Confirm the exact scope and evidence for each completed phase, establish the current repository state, then continue with the next uncompleted project milestone.
+
+## 2. Technology decisions
+
+| Area | Decision / known state |
+|---|---|
+| Language | C++ |
+| GUI | SFML |
+| Build system | CMake |
+| Version control | Git and GitHub |
+| Testing | GoogleTest integration has been part of the CMake setup; actual test results need confirmation |
+| Environment | Windows, MSVC x64 |
+| Dependency management | vcpkg |
+| CMake preset | `x64-debug` |
+| IDE | Visual Studio 2026 (Insiders build was shown in the setup logs) |
+
+Qt is out of scope. Core data structures must be implemented from scratch; do not replace them with STL tree or priority-queue implementations.
+
+**Still to verify/document:** exact C++ standard, SFML version, GoogleTest version, compiler toolset version, and the current vcpkg manifest/dependency configuration.
+
+## 3. Team responsibilities
+
+| Owner | Responsibility |
+|---|---|
+| Member 1 | General Binary Tree and BST implementation, plus corresponding unit tests |
+| Member 2 | AVL Tree and Max Heap / Heap Sort implementation, plus corresponding unit tests |
+| Shared | Architecture and interfaces, SFML GUI, event/animation integration, game flow, levels, scoring/alarm, undo/replay, save/load, integration testing, benchmarks, report and final submission |
+
+Do not change ownership without agreement from both members.
+
+## 4. Repository and build information
+
+- **Repository/project:** `Vault_Heist_DS`
+- **Local path shown in recent setup:** `E:\Just MY Work\1. Programming Journey\5. Game Dev\Vault_Heist_DS`
+- **Build preset used:** `x64-debug`
+- **Dependency root observed:** Visual Studio's vcpkg installation under `...\VC\vcpkg`
+- **Build command used:** `cmake --preset x64-debug`
+- **Build command used:** `cmake --build --preset x64-debug`
+- **Application:** Team reported that the project launched successfully.
+- **Git branch / latest commit / remote push:** Not confirmed in the available conversation. Do not assume changes are pushed to GitHub.
+
+The repository contains a `CMakeLists.txt`, `.gitignore`, and `include/structures/BinaryTree.h` according to shared terminal output. Other files may exist; inspect the current repository before changing its structure.
+
+## 5. Phase tracking
+
+| Phase | Status | Evidence / qualification |
+|---|---|---|
+| Phase 0 | COMPLETE (team-reported) | Team states this phase is complete. Detailed phase checklist/evidence is not present in the current context. |
+| Phase 1 | COMPLETE (team-reported) | Setup work included CMake/vcpkg configuration and an `x64-debug` preset. The application was reported to launch. A `BinaryTree.h` file was visible in Git diff output. |
+| Phase 2 | NOT CONFIRMED | No reliable status or phase definition available here. Confirm before planning work. |
+| Phase 3 | COMPLETE (team-reported) | Team states this phase is complete. Detailed phase checklist/evidence is not present in the current context. |
+
+**Important:** “Team-reported complete” records the team's status, not an independent verification of every requirement. Preserve this distinction until the relevant code, tests, or deliverables are reviewed.
+
+## 6. Build and testing status
+
+- **CMake configuration:** `x64-debug` preset was listed and used in setup.
+- **Dependency/toolchain check:** vcpkg toolchain path was checked and found.
+- **Application build/run:** Reported successful by the team.
+- **Unit tests:** GoogleTest/CMake test setup was being configured. A complete passing test run is not confirmed by the available evidence.
+- **CTest:** A test command was attempted, but the final complete output/result is not available here.
+- **Known build issue:** Earlier `main.cpp` compile errors involving an undeclared `avl` identifier were shown during setup. The team later reported that the project ran; confirm the current clean build rather than assuming the issue remains or is fully resolved.
+
+Before marking testing complete, run the current build and test commands and record the actual output.
+
+## 7. Architecture and implementation notes
+
+The Project PDF specifies a layered, GUI-independent design:
+
+1. Core data structures / model
+2. Operation event log
+3. Animation controller
+4. Layout engine and renderer
+5. Level manager and game systems
+6. UI / input management
+
+The model should emit events; SFML rendering and input must not contain the core tree/heap algorithms.
+
+Required major structures and acts:
+
+- **Act 1:** General Binary Tree — traversals, reconstruction, height, diameter, LCA, paths and mirror.
+- **Act 2:** BST — search, insertion, deletion, successor/predecessor, range query and degeneration.
+- **Act 3:** AVL — balance factors, all four rotation cases, insertion/deletion, subtree size, kth-smallest and rank.
+- **Act 4:** Max Heap and Heap Sort — build, sift-up/sift-down, heapify, extract-max, heap sort, and synchronised tree/array views.
+
+The current public interfaces, event payload definitions, ownership model, and final folder architecture have not been confirmed in the available context. Do not invent them; inspect the repository and agree on them before parallel implementation.
+
+## 8. Pending project deliverables
+
+The Project PDF requires:
+
+- [ ] Complete source code and README with run instructions and game controls.
+- [ ] Unit test suite covering all major data structures and algorithms.
+- [ ] Test report with genuine test results.
+- [ ] Written report of 8–12 pages.
+- [ ] Architecture and algorithmic complexity analysis.
+- [ ] Benchmark results as specified in Section 10 of the PDF.
+- [ ] GUI screenshots.
+- [ ] Screenshots of LL, RR, LR and RL AVL rotations.
+- [ ] Heap construction, extraction, heapify and final sorted-result demonstrations.
+- [ ] Level data files.
+- [ ] Short guide explaining how to add levels.
+- [ ] Final executable, functional submission packaged as required by the PDF.
+- [ ] Final ZIP filename follows `25I-XXXX_25I-XXXX_Section.zip`.
+- [ ] Submit through Google Classroom; only one member submits for the group.
+- [ ] Both members attend the demonstration and viva.
+
+**Deadline in the PDF:** 20 November 2026, 11:59 PM.
+
+## 9. Git workflow status
+
+- Use `main` as the stable integration branch.
+- Use separate feature branches for member-owned work.
+- Pull the latest `main` before starting dependent work.
+- Commit small, tested changes with descriptive messages.
+- Review and build before merging.
+- Never commit build output, IDE caches, generated binaries, or credentials.
+
+**Current branch, latest commit, PRs, and push status:** Not confirmed. Check with `git status`, `git branch --show-current`, `git log -1 --oneline`, and `git remote -v`.
+
+## 10. Blockers and decisions to confirm
+
+1. Confirm what Phase 0, Phase 1, Phase 2 and Phase 3 each contain, so the phase tracker maps to the team's actual roadmap.
+2. Confirm Phase 2 status.
+3. Inspect the current repository and identify the latest branch/commit and whether the recent work has been pushed.
+4. Run a fresh configure/build and the full CTest suite; record the exact results.
+5. Confirm the C++ standard, SFML version and GoogleTest status.
+6. Review `BinaryTree.h` and establish which required operations are implemented and tested.
+7. Confirm whether the earlier `avl` compile error is resolved in the current checkout.
+
+## 11. Next actions
+
+### Member 1
+- Inspect `BinaryTree.h` and the current Binary Tree/BST files.
+- List implemented operations against the PDF API.
+- Identify missing operations and corresponding unit tests.
+- Do not mark a module TESTED until its tests have actually passed.
+
+### Member 2
+- Inspect the current AVL and Max Heap files, if present.
+- List implemented operations against the PDF API.
+- Identify missing operations and corresponding unit tests.
+- Do not assume a module exists or is complete without checking the repository.
+
+### Shared
+- Confirm phase definitions and Phase 2 status.
+- Check Git branch, commit and remote/push status.
+- Run a clean CMake configure/build and CTest; share the full result.
+- Reconcile the repository structure and agree on core interfaces before expanding GUI integration.
+- Keep this file updated after verified milestones and commit the update.
 
 ---
 
-## 2. Technology Stack
-
-- Language: C++20
-- GUI: SFML 3
-- Build System: CMake 3.22+
-- Build Generator: Ninja
-- Compiler: MSVC (C++20)
-- Package Manager: vcpkg
-- Unit Testing: GoogleTest (v1.18.0)
-- Benchmarking: High-Resolution Chrono C++20 Suite
-
----
-
-## 3. Deliverables Status Checklist
-
-| Deliverable | Required Items | Status | Files |
-|---|---|---|---|
-| **Deliverable 1** | Executable source code + README (run instructions, controls) | **COMPLETE** | `src/`, `include/`, `README.md` |
-| **Deliverable 2** | Unit test suite covering all data structures + test report | **COMPLETE (13/13 Pass)** | `tests/`, `docs/reports/TEST_REPORT.md` |
-| **Deliverable 3** | Written project report (8–12 pages) + Benchmarks (Section 10) | **COMPLETE** | `docs/reports/PROJECT_REPORT.md`, `benchmarks/BenchmarkSuite.cpp` |
-| **Deliverable 4** | Level data files (JSON) + Guide to adding levels | **COMPLETE** | `levels/act3/*.json`, `levels/act4/*.json`, `docs/LEVEL_CREATION_GUIDE.md` |
-
----
-
-## 4. Course Constraints Audit
-
-- [x] **No `std::vector`**: Dynamic arrays with `new[]`/`delete[]` exclusively in data structures.
-- [x] **No `enum` / `enum class`**: Plain typed constants (`static const int`).
-- [x] **No global variables**: All states reside within models or scoped loops.
-- [x] **Height convention**: $\text{height}(\text{leaf}) = 1$ and $\text{height}(\text{nullptr}) = 0$.
-- [x] **GUI independence**: Data structures (`AVLTree`, `MaxHeap`) have zero GUI/SFML dependencies.
-- [x] **All structures from scratch**: Custom tree nodes, rotations, heapify, sift-up/down, order statistics.
-
----
-
-## 5. Act 3 & Act 4 Campaign Levels
-
-| Level | Title | Data Structure Concept | Mechanics & UI |
-|---|---|---|---|
-| **3.1** | Read the Badges | Balance Factor diagnosis | Click nodes with $|\text{BF}| > 1$ (red badges). No auto-balance. |
-| **3.2** | Manual Single Rotations | LL and RR single rotations | Visual LL/RR imbalance repair with right/left rotations. |
-| **3.3** | Manual Double Rotations | LR and RL double rotations | Two-step rotation (inner-child rotation then root rotation). |
-| **3.4** | Auto Mode & Prediction | Rebalancing prediction | Predict rotation ($LL, RR, LR, RL, \text{None}$) before each insert. |
-| **3.5** | Boss: Order Statistics | Augmented `subtreeSize` | $O(\log n)$ search for $k$-th smallest and rank queries. |
-| **4.1** | Activate the Vault | Bottom-up Heap Construction | Sift-down from non-leaf nodes $(n/2 - 1)$ down to 0 in $O(n)$ time. |
-| **4.2** | Repair Security Locks | Heap property restoration | Diagnose and repair sabotaged elements using sift-up / sift-down. |
-| **4.3** | Extract Greatest Treasure | Root extraction & array partitioning | Extract max into distinct green **SORTED REGION**, heapify remainder. |
-| **4.4** | Race Against Guards | Time-limited Heap Sort iterations | Speed extraction cycle under strict alarm capacity. |
-| **4.5** | Final Vault Boss | In-place Heap Sort workflow | Phase 1 build Max Heap, Phase 2 extract all, Phase 3 unlock door. |
-
----
-
-## 6. Unit Testing Summary (13/13 Passed)
-
-Command: `out/build/x64-debug/tests/Vault_Heist_Tests.exe`
-- `GoogleTestSetup.BasicTest`: **PASSED** (0 ms)
-- `MaxHeapTest.InsertAndExtractMax`: **PASSED** (0 ms)
-- `MaxHeapTest.DynamicResizing`: **PASSED** (0 ms)
-- `MaxHeapTest.BuildMaxHeapVariousArrays`: **PASSED** (0 ms)
-- `MaxHeapTest.HeapSortCorrectness`: **PASSED** (0 ms)
-- `AVLTreeTest.LeftLeftRotation`: **PASSED** (0 ms)
-- `AVLTreeTest.RightRightRotation`: **PASSED** (0 ms)
-- `AVLTreeTest.LeftRightRotation`: **PASSED** (0 ms)
-- `AVLTreeTest.RightLeftRotation`: **PASSED** (0 ms)
-- `AVLTreeTest.DuplicateRejection`: **PASSED** (0 ms)
-- `AVLTreeTest.DeleteWithRebalancing`: **PASSED** (0 ms)
-- `AVLTreeTest.OrderStatistics`: **PASSED** (0 ms)
-- `AVLTreeTest.LargeSequentialInsertionMaintainsLogNHeight`: **PASSED** (0 ms)
-
----
-
-## 7. Benchmarking Summary (Section 10)
-
-Command: `out/build/x64-debug/Vault_Heist_Benchmarks.exe`
-* **Height Comparison**: At $N = 10,000$, BST degenerates to height **10,000** on sorted input, whereas AVL maintains guaranteed optimal height of **14**.
-* **Order Statistics**: 1,000 $k$-th queries on $N = 10,000$: AVL `kth` takes **0.91 ms** ($O(\log n)$) vs BST inorder scan **108.34 ms** ($O(n)$) — **~119x speedup**.
-* **Bottom-Up Heap Construction**: Empirical time/element ratio remains flat ($\approx 0.02 \ \mu\text{s}$/element) from $N = 100$ to $N = 10,000$, validating $O(n)$ linear complexity.
-* **Heap Sort**: Consistent $O(n \log n)$ execution (~1.5 ms for 10,000 elements) across random, sorted, reverse-sorted, and duplicate-heavy distributions.
-* **Sorting Comparison ($N = 5,000$)**: Heap Sort (0.84 ms, $O(1)$ space) vs QuickSort (0.65 ms) vs InsertionSort (30.77 ms).
-
----
-
-## 8. Directory & File Inventory
-
-```
-D:\dsa\Vault_Heist_DS_Project
-├── CMakeLists.txt                 # Multi-target CMake build config (/Z7 debug format)
-├── README.md                      # Comprehensive user & developer manual (Deliverable #1)
-├── PROJECT_STATE.md               # Continuous project progress tracker
-├── include/
-│   ├── AVLTree.h                  # AVL Tree with height, size, rotations, order statistics
-│   └── MaxHeap.h                  # Array-based Max Heap with dynamic resizing
-├── src/
-│   ├── AVLTree.cpp                # Pure data structure implementation (GUI-independent)
-│   ├── MaxHeap.cpp                # Pure MaxHeap & HeapSort implementation
-│   └── main.cpp                   # SFML 3 GUI with 10-level campaign & Interactive Action Panel
-├── benchmarks/
-│   └── BenchmarkSuite.cpp         # Section 10 empirical benchmarking suite
-├── tests/
-│   ├── CMakeLists.txt             # GoogleTest CMake config
-│   ├── TestMain.cpp               # Test runner
-│   ├── TestAVLTree.cpp            # 8 AVL unit tests
-│   └── TestMaxHeap.cpp            # 4 MaxHeap unit tests
-├── levels/
-│   ├── act3/                      # JSON data files for levels 3.1 to 3.5
-│   └── act4/                      # JSON data files for levels 4.1 to 4.5
-└── docs/
-    ├── LEVEL_CREATION_GUIDE.md    # Guide to adding new levels (Deliverable #4)
-    └── reports/
-        ├── TEST_REPORT.md         # Full unit test report (Deliverable #2)
-        └── PROJECT_REPORT.md      # 8–12 page academic report draft (Deliverable #3)
-```
-
----
-
-## 9. Recent Fixes & Quality Assurance Overhaul
-
-1. **Neutral Button Styling (No Green Spoilers)**:
-   - **Issue**: Correct answer buttons were previously styled with green outlines (`sf::Color(80, 200, 100)`) and fills, spoiling solutions before player interaction.
-   - **Resolution**: Refactored all answer and action buttons across all 10 campaign levels to use a consistent neutral slate-blue palette (`btnBg(35, 50, 75)`, `btnOutline(80, 130, 200)`). Removed spoiler hints from button labels.
-
-2. **Level 3.1 (Read the Badges) Hit-Testing & Validation**:
-   - **Issue**: Mouse click coordinates in `hits[]` were offset from rendered tree coordinates in `drawManualNode`.
-   - **Resolution**: Exact mathematical alignment of click radius (28 px) and coordinates. Node validation checks exact keys (30 and 20). Immediate visual feedback with yellow selection rings.
-
-3. **Level 3.2 & 3.3 (Manual Rotations) Initial Invariants**:
-   - **Issue**: Calling standard `AVLTree::insert()` automatically balanced trees upon creation, presenting already-balanced trees in rotation puzzle levels.
-   - **Resolution**: Implemented `ManualNode` puzzles without automatic rebalancing. Level 3.2 properly displays LL/RR imbalance; Level 3.3 properly presents genuine LR (Root 30, Left 10, Right 20) and RL imbalances with red violation badges.
-
-4. **Level 3.5 (Order-Statistic Boss) UI & Validation**:
-   - **Issue**: Multiple-choice buttons were missing from the screen, leaving players guessing inputs.
-   - **Resolution**: Rendered interactive option cards for both Challenge 1 ($k = 3 \implies 25$) and Challenge 2 ($\text{rank}(40) = 5$) with mouse click and keyboard `[1-4]` handlers.
-
-5. **Build & Linking Verification**:
-   - Resolved Windows file lock contention on `Vault_Heist.exe`.
-   - Clean rebuild of all targets: `Vault_Heist.exe`, `Vault_Heist_Tests.exe` (13/13 passing, 0 ms), and `Vault_Heist_Benchmarks.exe`.
-
+**Status rule:** Use `NOT STARTED`, `IN PROGRESS`, `BLOCKED`, `IMPLEMENTED – NOT TESTED`, `TESTED`, `INTEGRATED`, and `COMPLETE`. Reserve `COMPLETE` for work that satisfies the relevant PDF requirement, is integrated, and has been tested.

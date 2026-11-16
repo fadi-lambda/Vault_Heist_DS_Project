@@ -29,35 +29,27 @@ target_include_directories(Vault_Heist
     PRIVATE include
 )
 
-target_compile_options(Vault_Heist
-    PRIVATE /Z7
-)
+if(MSVC)
+    target_compile_options(Vault_Heist PRIVATE /Z7 /EHsc)
+endif()
 
 target_link_libraries(Vault_Heist
     PRIVATE SFML::Graphics
 )
 
-if(MSVC)
-    target_compile_options(Vault_Heist PRIVATE /EHsc)
-endif()
-
 # Benchmarks (Section 10)
 add_executable(Vault_Heist_Benchmarks
     benchmarks/BenchmarkSuite.cpp
-    src/MaxHeap.cpp
-    src/AVLTree.cpp
+    src/structures/MaxHeap.cpp
+    src/structures/AVLTree.cpp
 )
 
 target_include_directories(Vault_Heist_Benchmarks
     PRIVATE include
 )
 
-target_compile_options(Vault_Heist_Benchmarks
-    PRIVATE /Z7
-)
-
 if(MSVC)
-    target_compile_options(Vault_Heist_Benchmarks PRIVATE /EHsc)
+    target_compile_options(Vault_Heist_Benchmarks PRIVATE /Z7 /EHsc)
 endif()
 
 # Tests
