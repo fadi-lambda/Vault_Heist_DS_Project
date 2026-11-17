@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TreeNode.h"
+#include "events/Event.h"
 #include <iostream>
 
 namespace VaultHeist {
@@ -23,9 +24,9 @@ private:
     int nodeCount;
 
     // --- Recursive traversal helpers (fill into caller's array) ---
-    void preorderHelper(TreeNode* node, int* out, int& idx) const;
-    void inorderHelper(TreeNode* node, int* out, int& idx) const;
-    void postorderHelper(TreeNode* node, int* out, int& idx) const;
+    void preorderHelper(TreeNode* node, int* out, int& idx, EventBatch& events) const;
+    void inorderHelper(TreeNode* node, int* out, int& idx, EventBatch& events) const;
+    void postorderHelper(TreeNode* node, int* out, int& idx, EventBatch& events) const;
 
     // --- Reconstruction helpers ---
     // Returns index of `value` in arr[lo..hi], or -1
@@ -33,11 +34,11 @@ private:
 
     TreeNode* buildFromPreIn(const int* pre, int preStart, int preEnd,
                              const int* in, int inStart, int inEnd,
-                             TreeNode* parent);
+                             TreeNode* parent, EventBatch& events);
 
     TreeNode* buildFromPostIn(const int* post, int postStart, int postEnd,
                               const int* in, int inStart, int inEnd,
-                              TreeNode* parent);
+                              TreeNode* parent, EventBatch& events);
 
     // --- Structural helpers ---
     int heightHelper(TreeNode* node) const;
@@ -47,7 +48,7 @@ private:
     bool findNode(TreeNode* node, int val) const;
     bool pathToHelper(TreeNode* node, int target, int* path, int& len) const;
 
-    void mirrorHelper(TreeNode* node);
+    void mirrorHelper(TreeNode* node, EventBatch& events);
 
     bool isSameTreeHelper(TreeNode* a, TreeNode* b) const;
     bool isSymmetricHelper(TreeNode* left, TreeNode* right) const;
@@ -71,20 +72,31 @@ public:
     // --- Traversals (recursive) ---
     // Each returns a newly-allocated int* of node values; caller must delete[].
     // `count` is set to the number of elements written.
+    // Event overloads append one EVENT_VISIT per node, in actual visit order.
     int* preorderRecursive(int& count) const;
     int* inorderRecursive(int& count) const;
     int* postorderRecursive(int& count) const;
+    int* preorderRecursive(int& count, EventBatch& events) const;
+    int* inorderRecursive(int& count, EventBatch& events) const;
+    int* postorderRecursive(int& count, EventBatch& events) const;
 
     // --- Traversals (iterative, explicit stack / queue) ---
     int* preorderIterative(int& count) const;
     int* inorderIterative(int& count) const;
     int* postorderIterative(int& count) const;
     int* levelOrder(int& count) const;   // iterative BFS with manual array-queue
+    int* preorderIterative(int& count, EventBatch& events) const;
+    int* inorderIterative(int& count, EventBatch& events) const;
+    int* postorderIterative(int& count, EventBatch& events) const;
+    int* levelOrder(int& count, EventBatch& events) const;
 
     // --- Reconstruction ---
     // Replaces the current tree with a tree reconstructed from traversal pairs.
+    // Event overloads append one EVENT_INSERT per created node (creation order).
     void buildFromPreorderInorder(const int* preorder, const int* inorder, int n);
     void buildFromPostorderInorder(const int* postorder, const int* inorder, int n);
+    void buildFromPreorderInorder(const int* preorder, const int* inorder, int n, EventBatch& events);
+    void buildFromPostorderInorder(const int* postorder, const int* inorder, int n, EventBatch& events);
 
     // --- Structural queries ---
     int height() const;
@@ -99,7 +111,9 @@ public:
     int* pathTo(int target, int& pathLen) const;
 
     // --- Transforms ---
+    // Event overload appends one EVENT_VISIT per node whose children are flipped.
     void mirror();
+    void mirror(EventBatch& events);
 
     // --- Comparison ---
     bool isSameTree(const BinaryTree& other) const;

@@ -150,3 +150,90 @@ TEST(AVLTreeTest, LargeSequentialInsertionMaintainsLogNHeight) {
     EXPECT_EQ(tree.getSize(), 63);
     EXPECT_LE(tree.getHeight(), 7); // Max height for 63 nodes in AVL is 6 or 7
 }
+
+// ---------------- Phase 6: event emission (additions only) ----------------
+
+static int countRotations(const EventBatch& events, int rotationCase) {
+    int n = 0;
+    for (int i = 0; i < events.getCount(); ++i) {
+        Event e = events.getEventAt(i);
+        if (e.type == EVENT_ROTATE && e.rotationCase == rotationCase) n++;
+    }
+    return n;
+}
+
+// 9. LL insert emits exactly one ROTATE tagged ROTATION_LL
+TEST(AVLTreeTest, EventsLLRotation) {
+    AVLTree tree;
+    tree.insert(30);
+    tree.insert(20);
+    EventBatch events;
+    EXPECT_TRUE(tree.insert(10, events));
+
+    EXPECT_EQ(events.countOfType(EVENT_ROTATE), 1);
+    EXPECT_EQ(countRotations(events, ROTATION_LL), 1);
+    EXPECT_EQ(events.countOfType(EVENT_BALANCE_ALERT), 1);
+    EXPECT_EQ(events.countOfType(EVENT_INSERT), 1);
+    EXPECT_GE(events.countOfType(EVENT_UPDATE_HEIGHT), 1);
+    EXPECT_EQ(events.getEventAt(0).type, EVENT_OPERATION_STARTED);
+    EXPECT_EQ(events.getEventAt(events.getCount() - 1).type, EVENT_OPERATION_COMPLETED);
+    // INSERT happens before the ROTATE
+    int insertIdx = -1, rotateIdx = -1;
+    for (int i = 0; i < events.getCount(); ++i) {
+        if (events.getEventAt(i).type == EVENT_INSERT) insertIdx = i;
+        if (events.getEventAt(i).type == EVENT_ROTATE) rotateIdx = i;
+    }
+    EXPECT_LT(insertIdx, rotateIdx);
+    EXPECT_EQ(events.getEventAt(rotateIdx).nodeId, 30);      // pivot
+    EXPECT_EQ(events.getEventAt(rotateIdx).otherNodeId, 20); // new subtree root
+    EXPECT_TRUE(tree.isValidAVL());
+}
+
+// 10. RR / LR / RL cases are tagged correctly (double rotations emit two ROTATEs)
+TEST(AVLTreeTest, EventsRotationCases) {
+    {
+        AVLTree t; t.insert(10); t.insert(20);
+        EventBatch e; t.insert(30, e);
+        EXPECT_EQ(countRotations(e, ROTATION_RR), 1);
+        EXPECT_EQ(e.countOfType(EVENT_ROTATE), 1);
+        EXPECT_TRUE(t.isValidAVL());
+    }
+    {
+        AVLTree t; t.insert(30); t.insert(10);
+        EventBatch e; t.insert(20, e);
+        EXPECT_EQ(countRotations(e, ROTATION_LR), 2);
+        EXPECT_EQ(e.countOfType(EVENT_ROTATE), 2);
+        EXPECT_TRUE(t.isValidAVL());
+    }
+    {
+        AVLTree t; t.insert(10); t.insert(30);
+        EventBatch e; t.insert(20, e);
+        EXPECT_EQ(countRotations(e, ROTATION_RL), 2);
+        EXPECT_EQ(e.countOfType(EVENT_ROTATE), 2);
+        EXPECT_TRUE(t.isValidAVL());
+    }
+}
+
+// 11. Duplicate insert / search / delete events
+TEST(AVLTreeTest, EventsSearchDeleteDuplicate) {
+    AVLTree tree;
+    int keys[] = { 40, 20, 60, 10, 30, 50, 70 };
+    for (int k : keys) tree.insert(k);
+
+    EventBatch dup;
+    EXPECT_FALSE(tree.insert(30, dup));
+    EXPECT_EQ(dup.countOfType(EVENT_INSERT), 0);
+    EXPECT_EQ(dup.getEventAt(dup.getCount() - 1).type, EVENT_OPERATION_FAILED);
+
+    EventBatch s;
+    EXPECT_TRUE(tree.search(30, s));
+    EXPECT_EQ(s.countOfType(EVENT_COMPARE), 3); // 40, 20, 30
+
+    EventBatch del;
+    EXPECT_TRUE(tree.deleteKey(40, del));       // two children -> successor 50
+    EXPECT_EQ(del.countOfType(EVENT_SWAP_VALUE), 1);
+    EXPECT_EQ(del.countOfType(EVENT_UNLINK), 1);
+    EXPECT_GE(del.countOfType(EVENT_UPDATE_SIZE), 1);
+    EXPECT_TRUE(tree.isValidAVL());
+    EXPECT_EQ(tree.getSize(), 6);
+}

@@ -388,3 +388,77 @@ TEST(BinaryTreeTest, MirrorAndSymmetry) {
     t.mirror();
     EXPECT_TRUE(t.isSameTree(originalCopy));
 }
+
+// ---------------- Phase 6: event emission ----------------
+
+//        1
+//       / \
+//      2   3
+//     / \
+//    4   5
+static void buildEventTree(BinaryTree& tree) {
+    TreeNode* r = tree.addNode(1, nullptr, true);
+    TreeNode* n2 = tree.addNode(2, r, true);
+    tree.addNode(3, r, false);
+    tree.addNode(4, n2, true);
+    tree.addNode(5, n2, false);
+}
+
+// Collects the node values of EVENT_VISIT events, in order.
+static int collectVisits(const EventBatch& events, int* out) {
+    int n = 0;
+    for (int i = 0; i < events.getCount(); ++i) {
+        Event e = events.getEventAt(i);
+        if (e.type == EVENT_VISIT) out[n++] = e.newValue;
+    }
+    return n;
+}
+
+TEST(BinaryTreeEventTest, TraversalVisitOrderMatchesOutput) {
+    BinaryTree tree;
+    buildEventTree(tree);
+
+    EventBatch pre, in, post, lvl;
+    int count = 0;
+    int* a = tree.preorderRecursive(count, pre);
+    int* b = tree.inorderIterative(count, in);
+    int* c = tree.postorderIterative(count, post);
+    int* d = tree.levelOrder(count, lvl);
+
+    int visits[5];
+    int expectedPre[]  = { 1, 2, 4, 5, 3 };
+    int expectedIn[]   = { 4, 2, 5, 1, 3 };
+    int expectedPost[] = { 4, 5, 2, 3, 1 };
+    int expectedLvl[]  = { 1, 2, 3, 4, 5 };
+
+    ASSERT_EQ(collectVisits(pre, visits), 5);
+    for (int i = 0; i < 5; ++i) { EXPECT_EQ(visits[i], expectedPre[i]); EXPECT_EQ(visits[i], a[i]); }
+    ASSERT_EQ(collectVisits(in, visits), 5);
+    for (int i = 0; i < 5; ++i) { EXPECT_EQ(visits[i], expectedIn[i]); EXPECT_EQ(visits[i], b[i]); }
+    ASSERT_EQ(collectVisits(post, visits), 5);
+    for (int i = 0; i < 5; ++i) { EXPECT_EQ(visits[i], expectedPost[i]); EXPECT_EQ(visits[i], c[i]); }
+    ASSERT_EQ(collectVisits(lvl, visits), 5);
+    for (int i = 0; i < 5; ++i) { EXPECT_EQ(visits[i], expectedLvl[i]); EXPECT_EQ(visits[i], d[i]); }
+
+    // Bracketed by STARTED / COMPLETED
+    EXPECT_EQ(pre.getEventAt(0).type, EVENT_OPERATION_STARTED);
+    EXPECT_EQ(pre.getEventAt(pre.getCount() - 1).type, EVENT_OPERATION_COMPLETED);
+    EXPECT_EQ(pre.getCount(), 7);
+
+    delete[] a; delete[] b; delete[] c; delete[] d;
+}
+
+TEST(BinaryTreeEventTest, BuildEmitsOneInsertPerNode) {
+    BinaryTree tree;
+    int pre[] = { 1, 2, 4, 5, 3 };
+    int in[]  = { 4, 2, 5, 1, 3 };
+    EventBatch events;
+    tree.buildFromPreorderInorder(pre, in, 5, events);
+    EXPECT_EQ(tree.getSize(), 5);
+    EXPECT_EQ(events.countOfType(EVENT_INSERT), 5);
+    // First inserted node is the root (no parent)
+    Event first = events.getEventAt(1);
+    EXPECT_EQ(first.type, EVENT_INSERT);
+    EXPECT_EQ(first.newValue, 1);
+    EXPECT_EQ(first.otherNodeId, -1);
+}

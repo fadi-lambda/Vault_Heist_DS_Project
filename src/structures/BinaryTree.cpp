@@ -1,5 +1,5 @@
 // =============================================================================
-// BinaryTree.cpp — General Binary Tree (Act 1)
+// BinaryTree.cpp â€” General Binary Tree (Act 1)
 // No ordering invariant. Traversals, reconstruction, structural queries.
 // Height convention: leaf = 1, nullptr = 0.
 // =============================================================================
@@ -43,62 +43,135 @@ TreeNode* BinaryTree::addNode(int value, TreeNode* parent, bool asLeft) {
     return n;
 }
 
+// ========================== Event helpers (file-local functions) =============
+
+static inline void emitNode(EventBatch& events, int type, const TreeNode* node,
+                            const char* label) {
+    Event e(type, label);
+    if (node) {
+        e.nodeId = node->id;
+        e.newValue = node->value;
+    }
+    events.append(e);
+}
+
+static inline void emitOp(EventBatch& events, int type, const char* label) {
+    events.append(Event(type, label));
+}
+
 // ========================== Recursive Traversals =============================
 
-void BinaryTree::preorderHelper(TreeNode* node, int* out, int& idx) const {
+void BinaryTree::preorderHelper(TreeNode* node, int* out, int& idx, EventBatch& events) const {
     if (!node) return;
+    emitNode(events, EVENT_VISIT, node, "visit");
     out[idx++] = node->value;
-    preorderHelper(node->left, out, idx);
-    preorderHelper(node->right, out, idx);
+    preorderHelper(node->left, out, idx, events);
+    preorderHelper(node->right, out, idx, events);
 }
 
-void BinaryTree::inorderHelper(TreeNode* node, int* out, int& idx) const {
+void BinaryTree::inorderHelper(TreeNode* node, int* out, int& idx, EventBatch& events) const {
     if (!node) return;
-    inorderHelper(node->left, out, idx);
+    inorderHelper(node->left, out, idx, events);
+    emitNode(events, EVENT_VISIT, node, "visit");
     out[idx++] = node->value;
-    inorderHelper(node->right, out, idx);
+    inorderHelper(node->right, out, idx, events);
 }
 
-void BinaryTree::postorderHelper(TreeNode* node, int* out, int& idx) const {
+void BinaryTree::postorderHelper(TreeNode* node, int* out, int& idx, EventBatch& events) const {
     if (!node) return;
-    postorderHelper(node->left, out, idx);
-    postorderHelper(node->right, out, idx);
+    postorderHelper(node->left, out, idx, events);
+    postorderHelper(node->right, out, idx, events);
+    emitNode(events, EVENT_VISIT, node, "visit");
     out[idx++] = node->value;
 }
 
 int* BinaryTree::preorderRecursive(int& count) const {
-    count = nodeCount;
-    if (count == 0) return nullptr;
-    int* result = new int[count];
-    int idx = 0;
-    preorderHelper(root, result, idx);
-    return result;
+    EventBatch tmp;
+    return preorderRecursive(count, tmp);
 }
 
 int* BinaryTree::inorderRecursive(int& count) const {
-    count = nodeCount;
-    if (count == 0) return nullptr;
-    int* result = new int[count];
-    int idx = 0;
-    inorderHelper(root, result, idx);
-    return result;
+    EventBatch tmp;
+    return inorderRecursive(count, tmp);
 }
 
 int* BinaryTree::postorderRecursive(int& count) const {
+    EventBatch tmp;
+    return postorderRecursive(count, tmp);
+}
+
+int* BinaryTree::preorderRecursive(int& count, EventBatch& events) const {
+    emitOp(events, EVENT_OPERATION_STARTED, "preorderRecursive");
     count = nodeCount;
-    if (count == 0) return nullptr;
+    if (count == 0) {
+        emitOp(events, EVENT_OPERATION_COMPLETED, "preorderRecursive");
+        return nullptr;
+    }
     int* result = new int[count];
     int idx = 0;
-    postorderHelper(root, result, idx);
+    preorderHelper(root, result, idx, events);
+    emitOp(events, EVENT_OPERATION_COMPLETED, "preorderRecursive");
+    return result;
+}
+
+int* BinaryTree::inorderRecursive(int& count, EventBatch& events) const {
+    emitOp(events, EVENT_OPERATION_STARTED, "inorderRecursive");
+    count = nodeCount;
+    if (count == 0) {
+        emitOp(events, EVENT_OPERATION_COMPLETED, "inorderRecursive");
+        return nullptr;
+    }
+    int* result = new int[count];
+    int idx = 0;
+    inorderHelper(root, result, idx, events);
+    emitOp(events, EVENT_OPERATION_COMPLETED, "inorderRecursive");
+    return result;
+}
+
+int* BinaryTree::postorderRecursive(int& count, EventBatch& events) const {
+    emitOp(events, EVENT_OPERATION_STARTED, "postorderRecursive");
+    count = nodeCount;
+    if (count == 0) {
+        emitOp(events, EVENT_OPERATION_COMPLETED, "postorderRecursive");
+        return nullptr;
+    }
+    int* result = new int[count];
+    int idx = 0;
+    postorderHelper(root, result, idx, events);
+    emitOp(events, EVENT_OPERATION_COMPLETED, "postorderRecursive");
     return result;
 }
 
 // ========================== Iterative Traversals =============================
-// Using explicit stack (raw array) — no std::stack / std::vector.
+// Using explicit stack (raw array) â€” no std::stack / std::vector.
 
 int* BinaryTree::preorderIterative(int& count) const {
+    EventBatch tmp;
+    return preorderIterative(count, tmp);
+}
+
+int* BinaryTree::inorderIterative(int& count) const {
+    EventBatch tmp;
+    return inorderIterative(count, tmp);
+}
+
+int* BinaryTree::postorderIterative(int& count) const {
+    EventBatch tmp;
+    return postorderIterative(count, tmp);
+}
+
+int* BinaryTree::levelOrder(int& count) const {
+    EventBatch tmp;
+    return levelOrder(count, tmp);
+}
+
+int* BinaryTree::preorderIterative(int& count, EventBatch& events) const {
+    emitOp(events, EVENT_OPERATION_STARTED, "preorderIterative");
     count = nodeCount;
-    if (count == 0) return nullptr;
+    if (count == 0) {
+        emitOp(events, EVENT_OPERATION_COMPLETED, "preorderIterative");
+        return nullptr;
+    }
 
     int* result = new int[count];
     int idx = 0;
@@ -110,6 +183,7 @@ int* BinaryTree::preorderIterative(int& count) const {
     stack[++top] = root;
     while (top >= 0) {
         TreeNode* curr = stack[top--];
+        emitNode(events, EVENT_VISIT, curr, "visit");
         result[idx++] = curr->value;
         // Push right first so left is processed first
         if (curr->right) stack[++top] = curr->right;
@@ -117,12 +191,17 @@ int* BinaryTree::preorderIterative(int& count) const {
     }
 
     delete[] stack;
+    emitOp(events, EVENT_OPERATION_COMPLETED, "preorderIterative");
     return result;
 }
 
-int* BinaryTree::inorderIterative(int& count) const {
+int* BinaryTree::inorderIterative(int& count, EventBatch& events) const {
+    emitOp(events, EVENT_OPERATION_STARTED, "inorderIterative");
     count = nodeCount;
-    if (count == 0) return nullptr;
+    if (count == 0) {
+        emitOp(events, EVENT_OPERATION_COMPLETED, "inorderIterative");
+        return nullptr;
+    }
 
     int* result = new int[count];
     int idx = 0;
@@ -137,17 +216,23 @@ int* BinaryTree::inorderIterative(int& count) const {
             curr = curr->left;
         }
         curr = stack[top--];
+        emitNode(events, EVENT_VISIT, curr, "visit");
         result[idx++] = curr->value;
         curr = curr->right;
     }
 
     delete[] stack;
+    emitOp(events, EVENT_OPERATION_COMPLETED, "inorderIterative");
     return result;
 }
 
-int* BinaryTree::postorderIterative(int& count) const {
+int* BinaryTree::postorderIterative(int& count, EventBatch& events) const {
+    emitOp(events, EVENT_OPERATION_STARTED, "postorderIterative");
     count = nodeCount;
-    if (count == 0) return nullptr;
+    if (count == 0) {
+        emitOp(events, EVENT_OPERATION_COMPLETED, "postorderIterative");
+        return nullptr;
+    }
 
     int* result = new int[count];
 
@@ -164,20 +249,29 @@ int* BinaryTree::postorderIterative(int& count) const {
         if (curr->right) stack1[++top1] = curr->right;
     }
 
+    // Nodes are "visited" (output) when popped from stack2 â€” that is the
+    // actual postorder emission order.
     int idx = 0;
     while (top2 >= 0) {
-        result[idx++] = stack2[top2--]->value;
+        TreeNode* visited = stack2[top2--];
+        emitNode(events, EVENT_VISIT, visited, "visit");
+        result[idx++] = visited->value;
     }
 
     delete[] stack1;
     delete[] stack2;
+    emitOp(events, EVENT_OPERATION_COMPLETED, "postorderIterative");
     return result;
 }
 
-// Level-order (BFS) with manual array-based queue — no std::queue.
-int* BinaryTree::levelOrder(int& count) const {
+// Level-order (BFS) with manual array-based queue â€” no std::queue.
+int* BinaryTree::levelOrder(int& count, EventBatch& events) const {
+    emitOp(events, EVENT_OPERATION_STARTED, "levelOrder");
     count = nodeCount;
-    if (count == 0) return nullptr;
+    if (count == 0) {
+        emitOp(events, EVENT_OPERATION_COMPLETED, "levelOrder");
+        return nullptr;
+    }
 
     int* result = new int[count];
     int idx = 0;
@@ -189,12 +283,14 @@ int* BinaryTree::levelOrder(int& count) const {
     queue[back++] = root;
     while (front < back) {
         TreeNode* curr = queue[front++];
+        emitNode(events, EVENT_VISIT, curr, "visit");
         result[idx++] = curr->value;
         if (curr->left)  queue[back++] = curr->left;
         if (curr->right) queue[back++] = curr->right;
     }
 
     delete[] queue;
+    emitOp(events, EVENT_OPERATION_COMPLETED, "levelOrder");
     return result;
 }
 
@@ -209,58 +305,94 @@ int BinaryTree::findIndex(const int* arr, int lo, int hi, int value) {
 
 TreeNode* BinaryTree::buildFromPreIn(const int* pre, int preStart, int preEnd,
                                       const int* in, int inStart, int inEnd,
-                                      TreeNode* parent) {
+                                      TreeNode* parent, EventBatch& events) {
     if (preStart > preEnd || inStart > inEnd) return nullptr;
 
     int rootVal = pre[preStart];
     TreeNode* node = new TreeNode(nextId++, rootVal);
     node->parent = parent;
     nodeCount++;
+    {
+        Event e(EVENT_INSERT, "insert");
+        e.nodeId = node->id;
+        e.otherNodeId = parent ? parent->id : -1;
+        e.newValue = rootVal;
+        events.append(e);
+    }
 
     int inIdx = findIndex(in, inStart, inEnd, rootVal);
     int leftSize = inIdx - inStart;
 
     node->left  = buildFromPreIn(pre, preStart + 1, preStart + leftSize,
-                                 in, inStart, inIdx - 1, node);
+                                 in, inStart, inIdx - 1, node, events);
     node->right = buildFromPreIn(pre, preStart + leftSize + 1, preEnd,
-                                 in, inIdx + 1, inEnd, node);
+                                 in, inIdx + 1, inEnd, node, events);
     return node;
 }
 
 TreeNode* BinaryTree::buildFromPostIn(const int* post, int postStart, int postEnd,
                                        const int* in, int inStart, int inEnd,
-                                       TreeNode* parent) {
+                                       TreeNode* parent, EventBatch& events) {
     if (postStart > postEnd || inStart > inEnd) return nullptr;
 
     int rootVal = post[postEnd];
     TreeNode* node = new TreeNode(nextId++, rootVal);
     node->parent = parent;
     nodeCount++;
+    {
+        Event e(EVENT_INSERT, "insert");
+        e.nodeId = node->id;
+        e.otherNodeId = parent ? parent->id : -1;
+        e.newValue = rootVal;
+        events.append(e);
+    }
 
     int inIdx = findIndex(in, inStart, inEnd, rootVal);
     int leftSize = inIdx - inStart;
 
     node->left  = buildFromPostIn(post, postStart, postStart + leftSize - 1,
-                                  in, inStart, inIdx - 1, node);
+                                  in, inStart, inIdx - 1, node, events);
     node->right = buildFromPostIn(post, postStart + leftSize, postEnd - 1,
-                                  in, inIdx + 1, inEnd, node);
+                                  in, inIdx + 1, inEnd, node, events);
     return node;
 }
 
 void BinaryTree::buildFromPreorderInorder(const int* preorder, const int* inorder, int n) {
-    destroyRecursive(root);
-    root = nullptr;
-    nodeCount = 0;
-    if (n <= 0) return;
-    root = buildFromPreIn(preorder, 0, n - 1, inorder, 0, n - 1, nullptr);
+    EventBatch tmp;
+    buildFromPreorderInorder(preorder, inorder, n, tmp);
 }
 
 void BinaryTree::buildFromPostorderInorder(const int* postorder, const int* inorder, int n) {
+    EventBatch tmp;
+    buildFromPostorderInorder(postorder, inorder, n, tmp);
+}
+
+void BinaryTree::buildFromPreorderInorder(const int* preorder, const int* inorder, int n,
+                                          EventBatch& events) {
+    emitOp(events, EVENT_OPERATION_STARTED, "buildFromPreorderInorder");
     destroyRecursive(root);
     root = nullptr;
     nodeCount = 0;
-    if (n <= 0) return;
-    root = buildFromPostIn(postorder, 0, n - 1, inorder, 0, n - 1, nullptr);
+    if (n <= 0) {
+        emitOp(events, EVENT_OPERATION_COMPLETED, "buildFromPreorderInorder");
+        return;
+    }
+    root = buildFromPreIn(preorder, 0, n - 1, inorder, 0, n - 1, nullptr, events);
+    emitOp(events, EVENT_OPERATION_COMPLETED, "buildFromPreorderInorder");
+}
+
+void BinaryTree::buildFromPostorderInorder(const int* postorder, const int* inorder, int n,
+                                           EventBatch& events) {
+    emitOp(events, EVENT_OPERATION_STARTED, "buildFromPostorderInorder");
+    destroyRecursive(root);
+    root = nullptr;
+    nodeCount = 0;
+    if (n <= 0) {
+        emitOp(events, EVENT_OPERATION_COMPLETED, "buildFromPostorderInorder");
+        return;
+    }
+    root = buildFromPostIn(postorder, 0, n - 1, inorder, 0, n - 1, nullptr, events);
+    emitOp(events, EVENT_OPERATION_COMPLETED, "buildFromPostorderInorder");
 }
 
 // ========================== Structural Queries ===============================
@@ -298,7 +430,7 @@ bool BinaryTree::findNode(TreeNode* node, int val) const {
     return findNode(node->left, val) || findNode(node->right, val);
 }
 
-// General-tree LCA — no ordering to exploit, must search both subtrees.
+// General-tree LCA â€” no ordering to exploit, must search both subtrees.
 TreeNode* BinaryTree::lcaHelper(TreeNode* node, int a, int b) const {
     if (!node) return nullptr;
     if (node->value == a || node->value == b) return node;
@@ -341,18 +473,26 @@ int* BinaryTree::pathTo(int target, int& pathLen) const {
 
 // ========================== Transforms =======================================
 
-void BinaryTree::mirrorHelper(TreeNode* node) {
+void BinaryTree::mirrorHelper(TreeNode* node, EventBatch& events) {
     if (!node) return;
+    emitNode(events, EVENT_VISIT, node, "mirror");
     // Swap children
     TreeNode* tmp = node->left;
     node->left = node->right;
     node->right = tmp;
-    mirrorHelper(node->left);
-    mirrorHelper(node->right);
+    mirrorHelper(node->left, events);
+    mirrorHelper(node->right, events);
 }
 
 void BinaryTree::mirror() {
-    mirrorHelper(root);
+    EventBatch tmp;
+    mirror(tmp);
+}
+
+void BinaryTree::mirror(EventBatch& events) {
+    emitOp(events, EVENT_OPERATION_STARTED, "mirror");
+    mirrorHelper(root, events);
+    emitOp(events, EVENT_OPERATION_COMPLETED, "mirror");
 }
 
 // ========================== Comparison =======================================

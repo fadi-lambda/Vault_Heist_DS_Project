@@ -115,3 +115,79 @@ TEST(MaxHeapTest, HeapSortCorrectness) {
         EXPECT_EQ(arr[i], expected[i]);
     }
 }
+
+// ---------------- Phase 6: event emission (additions only) ----------------
+
+// 5. buildMaxHeap emits HEAP_BUILD + one HEAP_SWAP per real swap
+TEST(MaxHeapTest, EventsBuildMaxHeap) {
+    MaxHeap heap(10);
+    int arr[] = { 1, 2, 3 };
+    EventBatch events;
+    heap.buildMaxHeap(arr, 3, events);
+
+    EXPECT_TRUE(heap.isMaxHeap());
+    EXPECT_EQ(events.countOfType(EVENT_HEAP_BUILD), 1);
+    EXPECT_EQ(events.countOfType(EVENT_HEAP_SWAP), 1);      // 1 <-> 3
+    EXPECT_EQ(events.countOfType(EVENT_HEAPIFY_START), 1);  // only index 0 is non-leaf
+    EXPECT_EQ(events.countOfType(EVENT_HEAPIFY_DONE), 1);
+    for (int i = 0; i < events.getCount(); ++i) {
+        Event e = events.getEventAt(i);
+        if (e.type == EVENT_HEAP_SWAP) {
+            EXPECT_EQ(e.indexA, 0);
+            EXPECT_EQ(e.indexB, 2);
+            EXPECT_EQ(e.oldValue, 1);
+            EXPECT_EQ(e.newValue, 3);
+        }
+    }
+}
+
+// 6. extractMax emits root/last swap, EXTRACT_MAX, HEAP_SIZE_CHANGE
+TEST(MaxHeapTest, EventsExtractMax) {
+    MaxHeap heap(10);
+    heap.insert(10);
+    heap.insert(40);
+    heap.insert(20);
+
+    EventBatch events;
+    EXPECT_EQ(heap.extractMax(events), 40);
+    EXPECT_TRUE(heap.isMaxHeap());
+    EXPECT_EQ(events.countOfType(EVENT_EXTRACT_MAX), 1);
+    EXPECT_GE(events.countOfType(EVENT_HEAP_SWAP), 1);
+    bool sawSize = false;
+    for (int i = 0; i < events.getCount(); ++i) {
+        Event e = events.getEventAt(i);
+        if (e.type == EVENT_HEAP_SIZE_CHANGE) {
+            EXPECT_EQ(e.oldValue, 3);
+            EXPECT_EQ(e.newValue, 2);
+            sawSize = true;
+        }
+        if (e.type == EVENT_EXTRACT_MAX) EXPECT_EQ(e.oldValue, 40);
+    }
+    EXPECT_TRUE(sawSize);
+
+    MaxHeap empty(5);
+    EventBatch fail;
+    EXPECT_EQ(empty.extractMax(fail), -1);
+    EXPECT_EQ(fail.getEventAt(fail.getCount() - 1).type, EVENT_OPERATION_FAILED);
+}
+
+// 7. heapSort marks every index sorted exactly once and ends with SORT_COMPLETE
+TEST(MaxHeapTest, EventsHeapSort) {
+    MaxHeap heap(10);
+    int arr[] = { 5, 1, 4, 2, 3 };
+    EventBatch events;
+    heap.heapSort(arr, 5, events);
+
+    for (int i = 0; i < 5; ++i) EXPECT_EQ(arr[i], i + 1);
+    EXPECT_EQ(events.countOfType(EVENT_MARK_SORTED), 5);
+    EXPECT_EQ(events.countOfType(EVENT_EXTRACT_MAX), 4);
+    EXPECT_EQ(events.countOfType(EVENT_HEAP_SORT_COMPLETE), 1);
+    int marked[5] = { 0, 0, 0, 0, 0 };
+    for (int i = 0; i < events.getCount(); ++i) {
+        Event e = events.getEventAt(i);
+        if (e.type == EVENT_MARK_SORTED) marked[e.indexA]++;
+    }
+    for (int i = 0; i < 5; ++i) EXPECT_EQ(marked[i], 1);
+    EXPECT_EQ(events.getEventAt(events.getCount() - 2).type, EVENT_HEAP_SORT_COMPLETE);
+    EXPECT_EQ(events.getEventAt(events.getCount() - 1).type, EVENT_OPERATION_COMPLETED);
+}

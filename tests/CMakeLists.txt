@@ -4,6 +4,8 @@ add_executable(Vault_Heist_Tests
     TestAVLTree.cpp
     BinaryTreeTests.cpp
     BSTTests.cpp
+    EventLogTests.cpp
+    ${PROJECT_SOURCE_DIR}/src/events/EventLog.cpp
     ${PROJECT_SOURCE_DIR}/src/structures/MaxHeap.cpp
     ${PROJECT_SOURCE_DIR}/src/structures/AVLTree.cpp
     ${PROJECT_SOURCE_DIR}/src/structures/BinaryTree.cpp

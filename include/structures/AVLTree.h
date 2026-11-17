@@ -2,6 +2,7 @@
 
 #include <string>
 #include <iostream>
+#include "events/Event.h"
 
 namespace VaultHeist {
 
@@ -32,19 +33,23 @@ private:
     int getNodeSize(AVLNode* node) const { return node ? node->size : 0; }
     int getBalanceFactor(AVLNode* node) const;
 
-    void updateHeightAndSize(AVLNode* node);
+    // Updates height/size; appends EVENT_UPDATE_HEIGHT / EVENT_UPDATE_SIZE
+    // (old/new values) only when the stored value actually changes.
+    void updateHeightAndSize(AVLNode* node, EventBatch& events);
 
-    // Rotations (LL, RR, LR, RL)
-    AVLNode* rotateRight(AVLNode* y); // LL Case (Single Right Rotation)
-    AVLNode* rotateLeft(AVLNode* x);  // RR Case (Single Left Rotation)
-    AVLNode* rebalance(AVLNode* node);
+    // Rotations (LL, RR, LR, RL). Each emits one EVENT_ROTATE tagged with the
+    // overall case (a double rotation LR/RL emits two ROTATE events, both tagged).
+    AVLNode* rotateRight(AVLNode* y, EventBatch& events, int rotationCase); // LL Case (Single Right Rotation)
+    AVLNode* rotateLeft(AVLNode* x, EventBatch& events, int rotationCase);  // RR Case (Single Left Rotation)
+    AVLNode* rebalance(AVLNode* node, EventBatch& events);
 
     // Recursive helpers
-    AVLNode* insertHelper(AVLNode* node, AVLNode* parent, int key, bool& inserted);
-    AVLNode* deleteHelper(AVLNode* node, int key, bool& deleted);
+    AVLNode* insertHelper(AVLNode* node, AVLNode* parent, int key, bool& inserted, EventBatch& events);
+    AVLNode* deleteHelper(AVLNode* node, int key, bool& deleted, EventBatch& events);
     AVLNode* findMinNode(AVLNode* node) const;
     AVLNode* findMaxNode(AVLNode* node) const;
     AVLNode* searchHelper(AVLNode* node, int key) const;
+    AVLNode* searchHelper(AVLNode* node, int key, EventBatch& events) const;
 
     // Order statistics helpers (Boss Level 3.5)
     int kthHelper(AVLNode* node, int k) const;
@@ -63,6 +68,14 @@ public:
     bool insert(int key);
     bool deleteKey(int key);
     bool search(int key) const;
+
+    // Event-emitting overloads (PLAN.md §6.4/§6.5). Same behaviour as above,
+    // additionally append to `events`. nodeId/otherNodeId carry node KEYS
+    // (AVLNode has no id field; keys are unique). Batches are bracketed by
+    // OPERATION_STARTED and OPERATION_COMPLETED / OPERATION_FAILED.
+    bool insert(int key, EventBatch& events);
+    bool deleteKey(int key, EventBatch& events);
+    bool search(int key, EventBatch& events) const;
 
     // Min and Max
     int findMin() const;

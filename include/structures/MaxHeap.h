@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "events/Event.h"
 
 namespace VaultHeist {
 
@@ -18,8 +19,8 @@ private:
     // Resize array if it runs out of capacity
     void resize(int newCapacity);
 
-    // Swap two elements in the array
-    void swap(int i, int j);
+    // Swap two elements in the array (emits EVENT_HEAP_SWAP)
+    void swap(int i, int j, EventBatch& events);
 
 public:
     // Constructor: creates an empty heap with initial capacity
@@ -38,6 +39,22 @@ public:
     // Bulk Operations (Section 5.5)
     void buildMaxHeap(const int* arr, int n);
     void heapSort(int* arr, int n);
+
+    // Event-emitting overloads (PLAN.md §6.4/§6.5) — identical behaviour,
+    // additionally append to `events`. Heap events use indexA/indexB for
+    // array positions and oldValue/newValue for the values involved.
+    //   siftUp/siftDown -> EVENT_HEAP_SWAP per actual swap
+    //   siftDown        -> bracketed by EVENT_HEAPIFY_START / EVENT_HEAPIFY_DONE
+    //   extractMax      -> HEAP_SWAP(root,last), EXTRACT_MAX, HEAP_SIZE_CHANGE
+    //   buildMaxHeap    -> EVENT_HEAP_BUILD + heapify/swap events
+    //   heapSort        -> swap/extract events, MARK_SORTED per index,
+    //                      HEAP_SORT_COMPLETE at the end
+    void siftUp(int index, EventBatch& events);
+    void siftDown(int index, int heapSize, EventBatch& events);
+    void insert(int value, EventBatch& events);
+    int extractMax(EventBatch& events);
+    void buildMaxHeap(const int* arr, int n, EventBatch& events);
+    void heapSort(int* arr, int n, EventBatch& events);
 
     // Invariant Check (Section 5.6)
     bool isMaxHeap() const;

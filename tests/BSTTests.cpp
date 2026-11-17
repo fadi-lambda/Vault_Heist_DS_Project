@@ -231,3 +231,87 @@ TEST(BSTTest, DegenerateChainHeightEqualsN) {
         EXPECT_EQ(bst.kthSmallest(i), i);
     }
 }
+
+// ---------------- Phase 6: event emission ----------------
+
+TEST(BSTEventTest, InsertEmitsComparesThenInsert) {
+    BST bst;
+    bst.insert(50);
+    bst.insert(30);
+    bst.insert(70);
+    int id30 = bst.getRoot()->left->id;
+
+    EventBatch events;
+    EXPECT_TRUE(bst.insert(20, events));
+    // STARTED, VISIT(50), COMPARE(50), VISIT(30), COMPARE(30), INSERT, COMPLETED
+    ASSERT_EQ(events.getCount(), 7);
+    EXPECT_EQ(events.getEventAt(0).type, EVENT_OPERATION_STARTED);
+    EXPECT_EQ(events.getEventAt(2).type, EVENT_COMPARE);
+    EXPECT_EQ(events.getEventAt(2).oldValue, 50);
+    EXPECT_EQ(events.getEventAt(2).newValue, 20);
+    EXPECT_EQ(events.getEventAt(4).oldValue, 30);
+    EXPECT_EQ(events.getEventAt(5).type, EVENT_INSERT);
+    EXPECT_EQ(events.getEventAt(5).otherNodeId, id30);
+    EXPECT_EQ(events.getEventAt(5).newValue, 20);
+    EXPECT_EQ(events.getEventAt(6).type, EVENT_OPERATION_COMPLETED);
+
+    // Duplicate: comparisons, no INSERT, ends with FAILED
+    EventBatch dup;
+    EXPECT_FALSE(bst.insert(30, dup));
+    EXPECT_EQ(dup.countOfType(EVENT_INSERT), 0);
+    EXPECT_EQ(dup.countOfType(EVENT_COMPARE), 2);
+    EXPECT_EQ(dup.getEventAt(dup.getCount() - 1).type, EVENT_OPERATION_FAILED);
+}
+
+TEST(BSTEventTest, SearchAndDeleteEvents) {
+    BST bst;
+    int keys[] = { 50, 30, 70, 20, 40, 60, 80 };
+    for (int k : keys) bst.insert(k);
+
+    EventBatch s;
+    EXPECT_TRUE(bst.search(40, s));
+    EXPECT_EQ(s.countOfType(EVENT_VISIT), 3);   // 50, 30, 40
+    EXPECT_EQ(s.countOfType(EVENT_COMPARE), 3);
+
+    EventBatch miss;
+    EXPECT_FALSE(bst.search(45, miss));
+    EXPECT_EQ(miss.getEventAt(miss.getCount() - 1).type, EVENT_OPERATION_FAILED);
+
+    // Leaf delete -> single UNLINK, no SWAP_VALUE
+    EventBatch leaf;
+    EXPECT_TRUE(bst.deleteKey(20, leaf));
+    EXPECT_EQ(leaf.countOfType(EVENT_UNLINK), 1);
+    EXPECT_EQ(leaf.countOfType(EVENT_SWAP_VALUE), 0);
+
+    // Two-child delete (root 50) -> SWAP_VALUE (50 <- 60) then UNLINK of successor
+    EventBatch two;
+    EXPECT_TRUE(bst.deleteKey(50, two));
+    EXPECT_EQ(two.countOfType(EVENT_SWAP_VALUE), 1);
+    EXPECT_EQ(two.countOfType(EVENT_UNLINK), 1);
+    int swapIdx = -1, unlinkIdx = -1;
+    for (int i = 0; i < two.getCount(); ++i) {
+        if (two.getEventAt(i).type == EVENT_SWAP_VALUE) swapIdx = i;
+        if (two.getEventAt(i).type == EVENT_UNLINK) unlinkIdx = i;
+    }
+    EXPECT_LT(swapIdx, unlinkIdx);
+    EXPECT_EQ(two.getEventAt(swapIdx).oldValue, 50);
+    EXPECT_EQ(two.getEventAt(swapIdx).newValue, 60);
+    EXPECT_EQ(two.getEventAt(unlinkIdx).oldValue, 60);
+    EXPECT_TRUE(bst.isValidBST());
+}
+
+TEST(BSTEventTest, RangeQueryHighlightsPrunedSubtrees) {
+    BST bst;
+    int keys[] = { 50, 30, 70, 20, 40, 60, 80 };
+    for (int k : keys) bst.insert(k);
+
+    // [55, 65]: left subtree of 50 (rooted at 30) is pruned, and so is
+    // 70's right subtree (80).
+    EventBatch events;
+    int count = 0;
+    int* r = bst.rangeQuery(55, 65, count, events);
+    ASSERT_EQ(count, 1);
+    EXPECT_EQ(r[0], 60);
+    EXPECT_EQ(events.countOfType(EVENT_HIGHLIGHT_SUBTREE), 2);
+    delete[] r;
+}
