@@ -3,9 +3,9 @@
   "act": 3,
   "title": "3.4 Auto Mode and Prediction",
   "concept": "Automatic AVL rebalancing and rotation prediction",
-  "objective": "Predict the rotation pivot (or attachment parent if balanced) by clicking that node before each insert!",
-  "controls": "Click predicted pivot/parent node to trigger next AVL insert",
-  "start_status": "Click the rotation pivot node on the AVL tree to insert!",
+  "objective": "Before each incoming key is inserted, predict which rotation type ([LL], [RR], [LR], [RL], or [None]) the AVL tree will perform!",
+  "controls": "Click [LL (1)], [RR (2)], [LR (3)], [RL (4)], or [None (5/N)] to predict & insert",
+  "start_status": "Predict the rotation type ([LL], [RR], [LR], [RL], or [None]) before inserting the incoming key!",
   "initial_keys": [40, 20],
   "insertion_sequence": [
     { "key": 10, "pivot_key": 40, "expected_rotation": "LL" },
@@ -14,6 +14,6 @@
     { "key": 50, "pivot_key": 20, "expected_rotation": "RL" }
   ],
   "hints": [
-    "Walk the incoming key down from the root. The pivot is the lowest node that becomes unbalanced - or the parent it attaches to if nothing breaks."
+    "Mentally place the incoming key as a BST leaf and trace upward: if no ancestor reaches |BF| = 2 choose None; if one does, compare the two steps from that ancestor toward the new key (LL, RR, LR, or RL)."
   ]
 }

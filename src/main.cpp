@@ -166,161 +166,133 @@ struct CanvasCamera {
     }
 };
 
-// Structs for Custom / Manual Tree Puzzles (Levels 3.1 - 3.3)
-struct ManualNode {
-    int key;
-    int height;
-    int size;
-    ManualNode* left;
-    ManualNode* right;
-
-    ManualNode(int k, int h = 1, int s = 1)
-        : key(k), height(h), size(s), left(nullptr), right(nullptr) {}
-};
-
-static void deleteManualTree(ManualNode* node) {
+// Real AVLTree helpers for Act 3 (Levels 3.1 - 3.5)
+static void updateAvlSubtreeMetadata(AVLTree& tree, AVLNode* node) {
     if (!node) return;
-    deleteManualTree(node->left);
-    deleteManualTree(node->right);
-    delete node;
+    updateAvlSubtreeMetadata(tree, node->left);
+    updateAvlSubtreeMetadata(tree, node->right);
+    if (node->left) node->left->parent = node;
+    if (node->right) node->right->parent = node;
+    EventBatch tmp;
+    tree.updateHeightAndSize(node, tmp);
 }
 
-static void updateManualMetadata(ManualNode* node) {
-    if (!node) return;
-    updateManualMetadata(node->left);
-    updateManualMetadata(node->right);
-    int lh = node->left ? node->left->height : 0;
-    int rh = node->right ? node->right->height : 0;
-    node->height = 1 + maxInt(lh, rh);
-    int ls = node->left ? node->left->size : 0;
-    int rs = node->right ? node->right->size : 0;
-    node->size = 1 + ls + rs;
-}
-
-static ManualNode* manualRotateRight(ManualNode* y) {
-    if (!y || !y->left) return y;
-    ManualNode* x = y->left;
-    ManualNode* T2 = x->right;
-    x->right = y;
-    y->left = T2;
-    updateManualMetadata(y);
-    updateManualMetadata(x);
-    return x;
-}
-
-static ManualNode* manualRotateLeft(ManualNode* x) {
-    if (!x || !x->right) return x;
-    ManualNode* y = x->right;
-    ManualNode* T2 = y->left;
-    y->left = x;
-    x->right = T2;
-    updateManualMetadata(x);
-    updateManualMetadata(y);
-    return y;
-}
-
-static int countManualTree(const ManualNode* node, int depth, int& maxDepth) {
-    if (!node) return 0;
-    if (depth > maxDepth) maxDepth = depth;
-    return 1 + countManualTree(node->left, depth + 1, maxDepth)
-             + countManualTree(node->right, depth + 1, maxDepth);
-}
-
-static void assignManualLayout(const ManualNode* node, int parentId, int depth,
-                               int& inorderIdx, int totalNodes, int maxDepth,
-                               float areaX, float areaY, float areaW, float areaH,
-                               LayoutResult& out) {
-    if (!node) return;
-    assignManualLayout(node->left, node->key, depth + 1, inorderIdx, totalNodes, maxDepth,
-                       areaX, areaY, areaW, areaH, out);
-    int slot = inorderIdx++;
-    assignManualLayout(node->right, node->key, depth + 1, inorderIdx, totalNodes, maxDepth,
-                       areaX, areaY, areaW, areaH, out);
-
-    if (out.nodeCount >= MAX_LAYOUT_NODES) return;
-
-    float radius = (totalNodes > 18) ? 18.f : 23.f;
-    float marginX = 52.f;
-    float usableW = areaW - 2.f * marginX;
-    if (usableW < 80.f) usableW = 80.f;
-
-    float x = areaX + areaW * 0.5f;
-    if (totalNodes > 1) {
-        float stepX = usableW / static_cast<float>(totalNodes - 1);
-        float maxStepX = 110.f;
-        if (stepX > maxStepX) stepX = maxStepX;
-        float spanW = stepX * static_cast<float>(totalNodes - 1);
-        float startX = areaX + (areaW - spanW) * 0.5f;
-        x = startX + static_cast<float>(slot) * stepX;
-    }
-
-    float marginTop = 38.f;
-    float marginBot = 42.f;
-    float usableH = areaH - marginTop - marginBot;
-    if (usableH < 60.f) usableH = 60.f;
-    float stepY = 76.f;
-    if (maxDepth > 0) {
-        stepY = minFloat(76.f, usableH / static_cast<float>(maxDepth));
-        if (stepY < 38.f) stepY = 38.f;
-    }
-    float y = areaY + marginTop + static_cast<float>(depth) * stepY;
-
-    float pad = radius + 12.f;
-    x = clampFloat(x, areaX + pad, areaX + areaW - pad);
-    y = clampFloat(y, areaY + pad, areaY + areaH - pad);
-
-    int lh = node->left ? node->left->height : 0;
-    int rh = node->right ? node->right->height : 0;
-    int bf = lh - rh;
-
-    NodeLayout nl;
-    nl.id = node->key;
-    nl.key = node->key;
-    nl.x = x;
-    nl.y = y;
-    nl.radius = radius;
-    nl.height = node->height;
-    nl.bf = bf;
-    nl.size = node->size;
-    nl.depth = depth;
-    nl.parentId = parentId;
-    nl.isViolation = (bf < -1 || bf > 1);
-    nl.isRoot = (parentId == -1);
-    out.nodes[out.nodeCount++] = nl;
-}
-
-static void layoutManualTree(const ManualNode* root, float areaX, float areaY, float areaW, float areaH,
-                             LayoutResult& out) {
-    out.clear();
-    out.structureType = STRUCT_AVL;
-    if (!root) return;
-    int maxDepth = 0;
-    int total = countManualTree(root, 0, maxDepth);
-    if (total > MAX_LAYOUT_NODES) total = MAX_LAYOUT_NODES;
-    int inorderIdx = 0;
-    assignManualLayout(root, -1, 0, inorderIdx, total, maxDepth, areaX, areaY, areaW, areaH, out);
-    for (int i = 0; i < out.nodeCount; ++i) {
-        int pid = out.nodes[i].parentId;
-        if (pid >= 0) {
-            int pIdx = out.findNodeIndexById(pid);
-            if (pIdx >= 0 && out.edgeCount < MAX_LAYOUT_NODES) {
-                EdgeLayout el;
-                el.parentId = pid;
-                el.childId = out.nodes[i].id;
-                el.x1 = out.nodes[pIdx].x;
-                el.y1 = out.nodes[pIdx].y;
-                el.x2 = out.nodes[i].x;
-                el.y2 = out.nodes[i].y;
-                el.isViolation = out.nodes[i].isViolation;
-                out.edges[out.edgeCount++] = el;
-            }
-        }
-    }
+static AVLNode* findAvlNodeMutable(AVLNode* node, int key) {
+    if (!node) return nullptr;
+    if (node->key == key) return node;
+    AVLNode* l = findAvlNodeMutable(node->left, key);
+    return l ? l : findAvlNodeMutable(node->right, key);
 }
 
 static int findLevelNodeIndex(const LevelData& d, int key) {
     for (int i = 0; i < d.nodeCount; ++i) {
         if (d.nodes[i].key == key) return i;
+    }
+    return -1;
+}
+
+static AVLNode* buildUnbalancedAvlNodeRec(const LevelData& d, int key, AVLNode* parent) {
+    int idx = findLevelNodeIndex(d, key);
+    if (idx < 0) return nullptr;
+    AVLNode* node = new AVLNode(d.nodes[idx].key);
+    node->parent = parent;
+    if (d.nodes[idx].left != -1) node->left = buildUnbalancedAvlNodeRec(d, d.nodes[idx].left, node);
+    if (d.nodes[idx].right != -1) node->right = buildUnbalancedAvlNodeRec(d, d.nodes[idx].right, node);
+    return node;
+}
+
+static void buildUnbalancedAvlFromData(AVLTree& tree, const LevelData& d) {
+    tree.clear();
+    if (d.nodeCount <= 0) return;
+    AVLNode* r = buildUnbalancedAvlNodeRec(d, d.nodes[0].key, nullptr);
+    tree.setRoot(r);
+    updateAvlSubtreeMetadata(tree, tree.getRoot());
+}
+
+static void buildPuzzleAvl(AVLTree& tree, const LevelPuzzleSpec& p) {
+    tree.clear();
+    AVLNode* root = new AVLNode(p.rootKey);
+    AVLNode* child = new AVLNode(p.childKey);
+    AVLNode* inner = new AVLNode(p.innerKey);
+    if (p.caseName == "LL") {
+        root->left = child; child->parent = root;
+        child->left = inner; inner->parent = child;
+    } else if (p.caseName == "RR") {
+        root->right = child; child->parent = root;
+        child->right = inner; inner->parent = child;
+    } else if (p.caseName == "LR") {
+        root->left = child; child->parent = root;
+        child->right = inner; inner->parent = child;
+    } else if (p.caseName == "RL") {
+        root->right = child; child->parent = root;
+        child->left = inner; inner->parent = child;
+    }
+    tree.setRoot(root);
+    updateAvlSubtreeMetadata(tree, tree.getRoot());
+}
+
+static int countAndValidateAvlSizesRec(const AVLNode* node, bool& ok, int& outBadKey) {
+    if (!node) return 0;
+    int ls = countAndValidateAvlSizesRec(node->left, ok, outBadKey);
+    int rs = countAndValidateAvlSizesRec(node->right, ok, outBadKey);
+    int realSz = 1 + ls + rs;
+    if (ok && node->size != realSz) {
+        ok = false;
+        outBadKey = node->key;
+    }
+    return realSz;
+}
+
+static bool validateAvlSubtreeSizes(const AVLNode* root, int& outBadKey) {
+    bool ok = true;
+    outBadKey = -1;
+    countAndValidateAvlSizesRec(root, ok, outBadKey);
+    return ok;
+}
+
+static int kthLargestAvl(const AVLTree& tree, int k, int& outComparisons, EventBatch* events = nullptr) {
+    outComparisons = 0;
+    if (events) {
+        Event s(EVENT_OPERATION_STARTED, "kth largest");
+        s.newValue = k;
+        events->append(s);
+    }
+    const AVLNode* cur = tree.getRoot();
+    if (!cur || k < 1 || k > cur->size) {
+        if (events) events->append(Event(EVENT_OPERATION_FAILED, "kth largest: out of range"));
+        return -1;
+    }
+    int rem = k;
+    while (cur) {
+        int rightSize = cur->right ? cur->right->size : 0;
+        outComparisons++;
+        if (events) {
+            Event v(EVENT_VISIT, "visit");
+            v.nodeId = cur->key;
+            v.newValue = cur->key;
+            events->append(v);
+
+            Event c(EVENT_COMPARE, "compare right size");
+            c.nodeId = cur->key;
+            c.oldValue = rightSize + 1;
+            c.newValue = rem;
+            events->append(c);
+        }
+        if (rem == rightSize + 1) {
+            if (events) {
+                Event done(EVENT_OPERATION_COMPLETED, "kth largest");
+                done.nodeId = cur->key;
+                done.newValue = cur->key;
+                events->append(done);
+            }
+            return cur->key;
+        }
+        if (rem <= rightSize) {
+            cur = cur->right;
+        } else {
+            rem -= (rightSize + 1);
+            cur = cur->left;
+        }
     }
     return -1;
 }
@@ -467,43 +439,6 @@ static bool allInternalNodesSwapped(const TreeNode* root, const int* swappedKeys
 static void buildBstFromData(BST& bst, const LevelData& d) {
     bst = BST();
     for (int i = 0; i < d.initialKeyCount; ++i) bst.insert(d.initialKeys[i]);
-}
-
-static ManualNode* buildManualNodeRec(const LevelData& d, int key) {
-    int idx = findLevelNodeIndex(d, key);
-    if (idx < 0) return nullptr;
-    ManualNode* node = new ManualNode(d.nodes[idx].key);
-    if (d.nodes[idx].left != -1) node->left = buildManualNodeRec(d, d.nodes[idx].left);
-    if (d.nodes[idx].right != -1) node->right = buildManualNodeRec(d, d.nodes[idx].right);
-    return node;
-}
-
-static ManualNode* buildManualTreeFromData(const LevelData& d) {
-    if (d.nodeCount <= 0) return nullptr;
-    ManualNode* root = buildManualNodeRec(d, d.nodes[0].key);
-    updateManualMetadata(root);
-    return root;
-}
-
-static ManualNode* buildManualPuzzleTree(const LevelPuzzleSpec& p) {
-    ManualNode* root = new ManualNode(p.rootKey);
-    ManualNode* child = new ManualNode(p.childKey);
-    ManualNode* inner = new ManualNode(p.innerKey);
-    if (p.caseName == "LL") {
-        root->left = child;
-        child->left = inner;
-    } else if (p.caseName == "RR") {
-        root->right = child;
-        child->right = inner;
-    } else if (p.caseName == "LR") {
-        root->left = child;
-        child->right = inner;
-    } else if (p.caseName == "RL") {
-        root->right = child;
-        child->left = inner;
-    }
-    updateManualMetadata(root);
-    return root;
 }
 
 static int treeHeightNodes(const TreeNode* node) {
@@ -705,6 +640,7 @@ int main(int argc, char** argv) {
     bool profileFps = false;
     bool verifyAct1 = false;
     bool verifyAct2 = false;
+    bool verifyAct3 = false;
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--verify-screenshots") == 0 && i + 1 < argc) {
             verifyDir = argv[++i];
@@ -714,6 +650,8 @@ int main(int argc, char** argv) {
             verifyAct1 = true;
         } else if (std::strcmp(argv[i], "--verify-act2") == 0) {
             verifyAct2 = true;
+        } else if (std::strcmp(argv[i], "--verify-act3") == 0) {
+            verifyAct3 = true;
         }
     }
 
@@ -822,11 +760,16 @@ int main(int argc, char** argv) {
     float dialAngle = 0.0f;
     sf::Clock deltaClock;
 
-    // Act 3 State
-    ManualNode* manualTree = nullptr;
+    // Act 3 State (real AVLTree + live rotation/size validation)
     int manualSubPuzzle = 1;
     int manualDoubleStep = 0;
     int clicked31Mask = 0;
+    bool act3PivotPicked = false;
+    int act3PivotKey = -1;
+    bool act3NextPuzzlePending = false;
+    int act3LastComps = 0;
+    int act3LastHeight = 0;
+    bool act3SizeOk = true;
 
     AVLTree avl;
     int avlQueuePos = 0;
@@ -862,7 +805,7 @@ int main(int argc, char** argv) {
     BST act2Bst;
     int act2Hl1 = -9999, act2Hl2 = -9999;
     std::string act2ExtraInfo = "";
-    LayoutResult bstLayout, btLayout, avlLayout, manualLayout, heapLayout;
+    LayoutResult bstLayout, btLayout, avlLayout, heapLayout;
     Renderer guiRenderer;
     AnimationController animCtrl;
     UndoStack undoStack;
@@ -890,6 +833,7 @@ int main(int argc, char** argv) {
     int cachedPromptLid = -1, cachedPromptSeq = -1, cachedPromptAvl = -1;
     int cachedPromptMode = -1, cachedPromptPost = -1, cachedPromptLca = -1;
     int cachedPromptAct2A = -9999, cachedPromptAct2B = -9999;
+    int cachedPromptAct3A = -9999, cachedPromptAct3B = -9999;
     std::string cachedPromptHead;
     int cachedBriefLid = -1, cachedBriefCap = -1;
     std::string cachedBriefAct, cachedBriefObj, cachedBriefInt;
@@ -1021,7 +965,8 @@ int main(int argc, char** argv) {
         if (lid == LEVEL_2_1 || lid == LEVEL_2_2 || lid == LEVEL_2_3 || lid == LEVEL_2_4) return 0;
         if (lid == LEVEL_2_5) return act2BossStage;
         if (lid == LEVEL_3_2) return manualSubPuzzle - 1;
-        if (lid == LEVEL_3_3) return (manualSubPuzzle - 1) * 2 + manualDoubleStep;
+        if (lid == LEVEL_3_3) return (manualDoubleStep == 0) ? 0 : 1;
+        if (lid == LEVEL_3_4) return avlQueuePos;
         if (lid == LEVEL_3_5) return bossQueryIdx;
         if (lid == LEVEL_4_1) {
             int firstIdx = (d.initialArrayCount / 2) - 1;
@@ -1058,8 +1003,6 @@ int main(int argc, char** argv) {
         sortedCount = 0;
         hlIndex1 = -1;
         hlIndex2 = -1;
-        deleteManualTree(manualTree);
-        manualTree = nullptr;
 
         int lid = d.id;
         act1Reconstructed = false;
@@ -1089,6 +1032,12 @@ int main(int argc, char** argv) {
         manualSubPuzzle = 1;
         manualDoubleStep = 0;
         clicked31Mask = 0;
+        act3PivotPicked = false;
+        act3PivotKey = -1;
+        act3NextPuzzlePending = false;
+        act3LastComps = 0;
+        act3LastHeight = 0;
+        act3SizeOk = true;
         avlQueuePos = 0;
         bossQueryIdx = 0;
         selectedNodeId = -1;
@@ -1174,13 +1123,14 @@ int main(int argc, char** argv) {
             act2ExtraInfo = "";
             status = d.startStatus;
         } else if (lid == LEVEL_3_1) {
-            manualTree = buildManualTreeFromData(d);
+            buildUnbalancedAvlFromData(avl, d);
             status = d.startStatus;
         } else if (lid == LEVEL_3_2 || lid == LEVEL_3_3) {
-            if (d.puzzleCount > 0) manualTree = buildManualPuzzleTree(d.puzzles[0]);
+            avl.clear();
+            if (d.puzzleCount > 0) buildPuzzleAvl(avl, d.puzzles[0]);
             status = d.startStatus;
         } else if (lid == LEVEL_3_4) {
-            avl = AVLTree();
+            avl.clear();
             for (int i = 0; i < d.initialKeyCount; ++i) avl.insert(d.initialKeys[i]);
             avlQueuePos = 0;
             if (d.insertCount > 0) {
@@ -1189,8 +1139,11 @@ int main(int argc, char** argv) {
                 status = d.startStatus;
             }
         } else if (lid == LEVEL_3_5) {
-            avl = AVLTree();
+            avl.clear();
             for (int i = 0; i < d.initialKeyCount; ++i) avl.insert(d.initialKeys[i]);
+            int badKey = -1;
+            act3SizeOk = validateAvlSubtreeSizes(avl.getRoot(), badKey);
+            act3LastHeight = avl.getHeight();
             bossQueryIdx = 0;
             status = d.startStatus;
         } else if (lid == LEVEL_4_1 || lid == LEVEL_4_2) {
@@ -1232,7 +1185,9 @@ int main(int argc, char** argv) {
         snap.act2BossStage = act2BossStage;
         snap.act2Clicked24Mask = act2RqIdx;
         snap.avlQueuePos = avlQueuePos;
-        snap.bossQueryIdx = bossQueryIdx;
+        snap.bossQueryIdx = (currentLevelIdx >= 0 && (levelData[currentLevelIdx].id == LEVEL_3_2 || levelData[currentLevelIdx].id == LEVEL_3_3))
+                                ? (manualSubPuzzle * 10 + manualDoubleStep)
+                                : bossQueryIdx;
         snap.buildStepIdx = buildStepIdx;
         snap.act4Built = act4Built;
         snap.act1Hl1 = act1Hl1;
@@ -1265,6 +1220,9 @@ int main(int argc, char** argv) {
         act2RqIdx = snap.act2Clicked24Mask;
         act2TwoChildPhase2Pending = false;
         act2Phase2Batch.clear();
+        act3PivotPicked = false;
+        act3PivotKey = -1;
+        act3NextPuzzlePending = false;
         avlQueuePos = snap.avlQueuePos;
         bossQueryIdx = snap.bossQueryIdx;
         buildStepIdx = snap.buildStepIdx;
@@ -1300,6 +1258,21 @@ int main(int argc, char** argv) {
             } else if (curD.id == LEVEL_2_5) {
                 scoring.setCapacity(act2BossCapacityFor(scoring.optimal(), act2Bst.getHeight()));
                 levels[currentLevelIdx].alarmCapacity = scoring.capacity();
+            } else if (curD.id == LEVEL_3_1) {
+                buildUnbalancedAvlFromData(avl, curD);
+            } else if (curD.id == LEVEL_3_2 || curD.id == LEVEL_3_3) {
+                manualSubPuzzle = maxInt(1, snap.bossQueryIdx / 10);
+                manualDoubleStep = snap.bossQueryIdx % 10;
+                if (manualSubPuzzle - 1 < curD.puzzleCount) {
+                    buildPuzzleAvl(avl, curD.puzzles[manualSubPuzzle - 1]);
+                    if (curD.id == LEVEL_3_3 && manualDoubleStep == 2 && avl.getRoot()) {
+                        AVLNode* r = avl.getRoot();
+                        EventBatch dummy;
+                        if (avl.balanceFactor(r) > 1 && r->left) r->left = avl.rotateLeft(r->left, dummy, ROTATION_LR);
+                        else if (avl.balanceFactor(r) < -1 && r->right) r->right = avl.rotateRight(r->right, dummy, ROTATION_RL);
+                        avl.updateHeightAndSize(r, dummy);
+                    }
+                }
             }
         }
         animCtrl.clearCurrent();
@@ -1321,6 +1294,32 @@ int main(int argc, char** argv) {
             status = "Deleted 2-child node! Target " + std::to_string(act2DelStage + 1) + "/" +
                      std::to_string(levelData[currentLevelIdx].deleteSequenceCount) +
                      ": classify room " + std::to_string(nextKey) + "!";
+        }
+    };
+
+    auto loadNextAct3Puzzle = [&]() {
+        if (!act3NextPuzzlePending || currentLevelIdx < 0) return;
+        act3NextPuzzlePending = false;
+        const LevelData& curD = levelData[currentLevelIdx];
+        if (manualSubPuzzle < curD.puzzleCount) {
+            buildPuzzleAvl(avl, curD.puzzles[manualSubPuzzle]);
+            manualSubPuzzle++;
+            manualDoubleStep = 0;
+            act3PivotPicked = false;
+            act3PivotKey = -1;
+            selectedNodeId = -1;
+            animCtrl.clearCurrent();
+            layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+            layoutDirty = false;
+            if (curD.id == LEVEL_3_2) {
+                status = "Puzzle " + std::to_string(manualSubPuzzle) + "/" + std::to_string(curD.puzzleCount) +
+                         ": Click the unbalanced pivot node (|BF| > 1), then pick [LL] or [RR]!";
+            } else {
+                status = "Puzzle " + std::to_string(manualSubPuzzle) + "/" + std::to_string(curD.puzzleCount) +
+                         ": Identify the zig-zag case ([Case: LR] or [Case: RL])!";
+            }
+            toastQueue.push("Loaded Puzzle " + std::to_string(manualSubPuzzle) + "/" + std::to_string(curD.puzzleCount),
+                            TOAST_KIND_SUCCESS);
         }
     };
 
@@ -1348,7 +1347,16 @@ int main(int argc, char** argv) {
                            " degenerate chain, turning searches into O(n) walks under a shrinking alarm. "
                            "Wing 3 (AVL Trees) is now unlocked to enforce balance and O(log n) speed!");
         }
-        else if (lid == LEVEL_3_4) finishLevelWin(stars, "AVL Tree auto-balanced every incoming key!");
+        else if (lid == LEVEL_3_2) finishLevelWin(stars, "Single rotations (LL & RR) repaired using real AVLTree rotations!");
+        else if (lid == LEVEL_3_3) finishLevelWin(stars, "Double rotations (LR & RL) repaired using real AVLTree rotations!");
+        else if (lid == LEVEL_3_4) finishLevelWin(stars, "All AVL rotation types predicted & auto-balanced cleanly!");
+        else if (lid == LEVEL_3_5) {
+            finishLevelWin(stars,
+                           "Act 3 Boss defeated! Stole k-th most valuable treasures in " +
+                           std::to_string(act3LastComps) + " comparisons <= Height " +
+                           std::to_string(act3LastHeight) + " (O(log n), Size Check: " +
+                           std::string(act3SizeOk ? "PASS" : "FAIL") + ")! Wing 4 unlocked!");
+        }
         else if (lid == LEVEL_4_1) finishLevelWin(stars, "Bottom-up Max Heap activated in O(n)!");
         else if (lid == LEVEL_4_2) finishLevelWin(stars, "Sabotaged root sifted down; Max Heap restored!");
         else if (lid == LEVEL_4_3) finishLevelWin(stars, "All treasures extracted to sorted region!");
@@ -1363,11 +1371,161 @@ int main(int argc, char** argv) {
             status = "Step: " + AnimationController::formatEvent(cur);
         } else if (act2TwoChildPhase2Pending && currentScreen == SCREEN_LEVEL_PLAY && currentLevelIdx >= 0) {
             startAct2TwoChildPhase2();
+        } else if (act3NextPuzzlePending && currentScreen == SCREEN_LEVEL_PLAY && currentLevelIdx >= 0) {
+            loadNextAct3Puzzle();
         } else if (pendingWin && currentScreen == SCREEN_LEVEL_PLAY && currentLevelIdx >= 0) {
             completePendingWin();
         } else {
             status = "Event batch complete!";
         }
+    };
+
+    auto handleAct3SingleRotation = [&](int choice) {
+        if (currentScreen != SCREEN_LEVEL_PLAY || currentLevelIdx < 0 || pendingWin || showingBriefing) return;
+        const LevelData& d = levelData[currentLevelIdx];
+        if (d.id != LEVEL_3_2) return;
+        if (!act3PivotPicked || act3PivotKey < 0) {
+            toastQueue.push("Click the unbalanced pivot node (|BF| > 1) first!", TOAST_KIND_WARNING);
+            status = "Step 1/2: Click the unbalanced pivot node (RED |BF| > 1) on the tree first!";
+            return;
+        }
+        AVLNode* pivot = findAvlNodeMutable(avl.getRoot(), act3PivotKey);
+        if (!pivot) return;
+        int bf = avl.balanceFactor(pivot);
+        int expectedChoice = (bf > 1 && pivot->left && avl.balanceFactor(pivot->left) >= 0) ? 1
+                           : ((bf < -1 && pivot->right && avl.balanceFactor(pivot->right) <= 0) ? 2 : 0);
+        if (choice != expectedChoice) {
+            raisePenalty(PENALTY_WRONG_ROTATION,
+                         "Wrong rotation choice! Pivot " + std::to_string(act3PivotKey) +
+                         " has BF=" + std::to_string(bf) + " (pick " +
+                         std::string(expectedChoice == 1 ? "[LL: Rotate Right]" : "[RR: Rotate Left]") + ").");
+            return;
+        }
+
+        pushUndoSnapshot(false);
+        LayoutResult before;
+        LayoutEngine::layoutAVL(avl, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
+        EventBatch batch;
+        batch.append(Event(EVENT_OPERATION_STARTED, choice == 1 ? "single LL rotate right" : "single RR rotate left"));
+        {
+            Event alert(EVENT_BALANCE_ALERT, "balance alert");
+            alert.nodeId = pivot->key;
+            alert.newValue = bf;
+            batch.append(alert);
+        }
+        AVLNode* oldParent = pivot->parent;
+        bool wasLeft = (oldParent && oldParent->left == pivot);
+        AVLNode* newSub = (choice == 1) ? avl.rotateRight(pivot, batch, ROTATION_LL)
+                                        : avl.rotateLeft(pivot, batch, ROTATION_RR);
+        if (!oldParent) {
+            avl.setRoot(newSub);
+        } else {
+            if (wasLeft) oldParent->left = newSub;
+            else oldParent->right = newSub;
+            newSub->parent = oldParent;
+            for (AVLNode* anc = oldParent; anc; anc = anc->parent) {
+                avl.updateHeightAndSize(anc, batch);
+            }
+        }
+        batch.append(Event(EVENT_OPERATION_COMPLETED, choice == 1 ? "LL rotation complete" : "RR rotation complete"));
+
+        int badKey = -1;
+        if (!validateAvlSubtreeSizes(avl.getRoot(), badKey)) {
+            raisePenalty(PENALTY_WRONG_ROTATION, "Subtree size invariant broken at node " + std::to_string(badKey) + "!");
+            return;
+        }
+
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        animCtrl.loadOperation(batch, before, avlLayout, true, autoPlayEvents);
+        scoring.addStep(1);
+        syncScoringHud();
+        act3PivotPicked = false;
+        act3PivotKey = -1;
+        selectedNodeId = -1;
+
+        toastQueue.push(std::string(choice == 1 ? "LL (Rotate Right)" : "RR (Rotate Left)") +
+                        " repaired puzzle " + std::to_string(manualSubPuzzle) + "!", TOAST_KIND_SUCCESS);
+        if (scoring.isAlarmFull()) {
+            triggerAlarmFullFail();
+        } else if (manualSubPuzzle < d.puzzleCount) {
+            act3NextPuzzlePending = true;
+            status = "Rotation animated! Advancing to Puzzle " + std::to_string(manualSubPuzzle + 1) + "/" +
+                     std::to_string(d.puzzleCount) + "...";
+        } else {
+            pendingWin = true;
+            status = "Final single rotation complete! Verifying AVL balance...";
+        }
+    };
+
+    auto handleAct3DoubleCase = [&](int choice) {
+        if (currentScreen != SCREEN_LEVEL_PLAY || currentLevelIdx < 0 || pendingWin || showingBriefing) return;
+        const LevelData& d = levelData[currentLevelIdx];
+        if (d.id != LEVEL_3_3) return;
+        if (manualDoubleStep != 0) {
+            toastQueue.push("Case already identified! Click the pivot node on the tree.", TOAST_KIND_WARNING);
+            return;
+        }
+        AVLNode* r = avl.getRoot();
+        int rbf = avl.balanceFactor(r);
+        int expectedCase = (rbf > 1 && r && r->left && avl.balanceFactor(r->left) < 0) ? 1
+                         : ((rbf < -1 && r && r->right && avl.balanceFactor(r->right) > 0) ? 2 : 0);
+        if (choice != expectedCase) {
+            raisePenalty(PENALTY_WRONG_ROTATION,
+                         "Wrong zig-zag case! Inspect BF signs on root and heavy child (+2/-1 = LR, -2/+1 = RL).");
+            return;
+        }
+        manualDoubleStep = 1;
+        int childKey = (expectedCase == 1 && r->left) ? r->left->key
+                     : ((expectedCase == 2 && r->right) ? r->right->key : -1);
+        toastQueue.push(std::string("Identified ") + (expectedCase == 1 ? "LR" : "RL") +
+                        " case! Now click child pivot " + std::to_string(childKey), TOAST_KIND_SUCCESS);
+        status = std::string(expectedCase == 1 ? "LR" : "RL") +
+                 " case confirmed! Step 2/3: Click child pivot node " + std::to_string(childKey) + " first!";
+    };
+
+    auto handleAct3Prediction = [&](const char* pred) {
+        if (currentScreen != SCREEN_LEVEL_PLAY || currentLevelIdx < 0 || pendingWin || showingBriefing) return;
+        const LevelData& d = levelData[currentLevelIdx];
+        if (d.id != LEVEL_3_4 || avlQueuePos >= d.insertCount) return;
+
+        int incoming = d.inserts[avlQueuePos].key;
+        const std::string& expectedRot = d.inserts[avlQueuePos].expectedRotation;
+        if (expectedRot != pred) {
+            raisePenalty(PENALTY_WRONG_ROTATION,
+                         "Wrong prediction '" + std::string(pred) + "' for incoming key " +
+                         std::to_string(incoming) + "! Check which ancestor hits |BF| = 2.");
+            return;
+        }
+
+        pushUndoSnapshot(false);
+        LayoutResult before;
+        LayoutEngine::layoutAVL(avl, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
+        EventBatch batch;
+        avl.insert(incoming, batch);
+
+        int badKey = -1;
+        if (!validateAvlSubtreeSizes(avl.getRoot(), badKey)) {
+            raisePenalty(PENALTY_WRONG_ROTATION, "Subtree size mismatch at node " + std::to_string(badKey) + "!");
+            return;
+        }
+
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        animCtrl.loadOperation(batch, before, avlLayout, true, autoPlayEvents);
+        scoring.addStep(1);
+        scoring.addBonus(50);
+        syncScoringHud();
+        toastQueue.push("Correct (" + expectedRot + ")! Inserted & balanced key " + std::to_string(incoming),
+                        TOAST_KIND_SUCCESS);
+
+        avlQueuePos++;
+        if (avlQueuePos >= d.insertCount) {
+            pendingWin = true;
+            status = "All incoming keys balanced! Playing final AVL events...";
+        } else {
+            status = "Inserted " + std::to_string(incoming) + "! Predict rotation for next key [" +
+                     std::to_string(d.inserts[avlQueuePos].key) + "]: LL, RR, LR, RL, or None!";
+        }
+        if (scoring.isAlarmFull()) triggerAlarmFullFail();
     };
 
     auto handleAct2CompareChoice = [&](int choice) {
@@ -2171,77 +2329,130 @@ int main(int argc, char** argv) {
         else if (lid == LEVEL_3_2) {
             int pIdx = manualSubPuzzle - 1;
             if (pIdx >= 0 && pIdx < d.puzzleCount) {
-                const LevelPuzzleSpec& p = d.puzzles[pIdx];
-                if (clickedKey == p.rootKey) {
-                    manualTree = (p.caseName == "LL") ? manualRotateRight(manualTree) : manualRotateLeft(manualTree);
-                    scoring.addStep(1);
-                    syncScoringHud();
-                    if (scoring.isAlarmFull()) {
-                        triggerAlarmFullFail();
-                    } else if (manualSubPuzzle < d.puzzleCount) {
-                        deleteManualTree(manualTree);
-                        manualTree = buildManualPuzzleTree(d.puzzles[manualSubPuzzle]);
-                        manualSubPuzzle++;
-                        selectedNodeId = -1;
-                        const LevelPuzzleSpec& nextP = d.puzzles[manualSubPuzzle - 1];
-                        toastQueue.push(p.caseName + " rotation on " + std::to_string(p.rootKey) + " succeeded!", TOAST_KIND_SUCCESS);
-                        status = "Puzzle " + std::to_string(manualSubPuzzle) + "/" + std::to_string(d.puzzleCount) +
-                                 " (" + nextP.caseName + "): Click unbalanced pivot node " + std::to_string(nextP.rootKey) + "!";
+                AVLNode* clickedNode = findAvlNodeMutable(avl.getRoot(), clickedKey);
+                if (clickedNode) {
+                    int bf = avl.balanceFactor(clickedNode);
+                    if (bf > 1 || bf < -1) {
+                        act3PivotPicked = true;
+                        act3PivotKey = clickedKey;
+                        selectedNodeId = clickedId;
+                        toastQueue.push("Selected unbalanced pivot " + std::to_string(clickedKey) +
+                                        " (BF=" + std::to_string(bf) + ")! Pick [LL] or [RR].",
+                                        TOAST_KIND_SUCCESS);
+                        status = "Pivot " + std::to_string(clickedKey) + " (BF=" + std::to_string(bf) +
+                                 ") selected! Click [LL: Rotate Right (1)] or [RR: Rotate Left (2)].";
                     } else {
-                        finishLevelWin(scoring.stars(), "Single rotations (LL & RR) mastered by clicking pivots!");
+                        raisePenalty(PENALTY_WRONG_ROTATION,
+                                     "Node " + std::to_string(clickedKey) + " is balanced (BF=" +
+                                     std::to_string(bf) + ")! Click an unbalanced pivot (|BF| > 1).");
                     }
-                } else {
-                    raisePenalty(PENALTY_WRONG_ROTATION,
-                                 "Click the unbalanced pivot node " + std::to_string(p.rootKey) +
-                                 " for " + p.caseName + " rotation!");
                 }
             }
         }
         else if (lid == LEVEL_3_3) {
             int pIdx = manualSubPuzzle - 1;
             if (pIdx >= 0 && pIdx < d.puzzleCount) {
-                const LevelPuzzleSpec& p = d.puzzles[pIdx];
                 if (manualDoubleStep == 0) {
-                    if (clickedKey == p.childKey) {
-                        if (p.caseName == "LR") manualTree->left = manualRotateLeft(manualTree->left);
-                        else manualTree->right = manualRotateRight(manualTree->right);
-                        updateManualMetadata(manualTree);
-                        manualDoubleStep = 1;
+                    toastQueue.push("First identify the zig-zag case: click [Case: LR] or [Case: RL]!",
+                                    TOAST_KIND_WARNING);
+                    status = "Puzzle " + std::to_string(manualSubPuzzle) + "/" + std::to_string(d.puzzleCount) +
+                             ": Pick [Case: LR (1)] or [Case: RL (2)] before rotating pivots!";
+                } else if (manualDoubleStep == 1) {
+                    AVLNode* rootNode = avl.getRoot();
+                    int rbf = avl.balanceFactor(rootNode);
+                    bool isLR = (rbf > 1 && rootNode && rootNode->left && avl.balanceFactor(rootNode->left) < 0);
+                    bool isRL = (rbf < -1 && rootNode && rootNode->right && avl.balanceFactor(rootNode->right) > 0);
+                    AVLNode* childPivot = isLR ? rootNode->left : (isRL ? rootNode->right : nullptr);
+                    if (childPivot && clickedKey == childPivot->key) {
+                        pushUndoSnapshot(false);
+                        LayoutResult before;
+                        LayoutEngine::layoutAVL(avl, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
+                        EventBatch batch;
+                        batch.append(Event(EVENT_OPERATION_STARTED,
+                                           isLR ? "LR step 1: rotate left child" : "RL step 1: rotate right child"));
+                        {
+                            Event alert(EVENT_BALANCE_ALERT, "balance alert");
+                            alert.nodeId = childPivot->key;
+                            alert.newValue = avl.balanceFactor(childPivot);
+                            batch.append(alert);
+                        }
+                        AVLNode* newChild = isLR ? avl.rotateLeft(childPivot, batch, ROTATION_LR)
+                                                 : avl.rotateRight(childPivot, batch, ROTATION_RL);
+                        if (isLR) rootNode->left = newChild;
+                        else      rootNode->right = newChild;
+                        if (newChild) newChild->parent = rootNode;
+                        avl.updateHeightAndSize(rootNode, batch);
+                        batch.append(Event(EVENT_OPERATION_COMPLETED, "child pivot rotated"));
+
+                        int badKey = -1;
+                        if (!validateAvlSubtreeSizes(avl.getRoot(), badKey)) {
+                            raisePenalty(PENALTY_WRONG_ROTATION,
+                                         "Subtree size invariant broken at node " + std::to_string(badKey) + "!");
+                            return;
+                        }
+
+                        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+                        animCtrl.loadOperation(batch, before, avlLayout, true, autoPlayEvents);
+                        manualDoubleStep = 2;
+                        selectedNodeId = -1;
                         scoring.addStep(1);
                         syncScoringHud();
-                        toastQueue.push("Step 1/2: Rotated child " + std::to_string(p.childKey) +
-                                        "! Now click root " + std::to_string(p.rootKey), TOAST_KIND_SUCCESS);
-                        status = p.caseName + " Step 2/2: Now click root pivot " + std::to_string(p.rootKey) + "!";
+                        toastQueue.push("Step 1/2 rotated child " + std::to_string(clickedKey) +
+                                        "! Now click root " + std::to_string(rootNode->key),
+                                        TOAST_KIND_SUCCESS);
+                        status = std::string(isLR ? "LR" : "RL") + " Step 3/3: Now click root pivot " +
+                                 std::to_string(rootNode->key) + "!";
                         if (scoring.isAlarmFull()) triggerAlarmFullFail();
                     } else {
                         raisePenalty(PENALTY_WRONG_ROTATION,
-                                     p.caseName + " Step 1/2: Click child pivot " + std::to_string(p.childKey) + " first!");
+                                     "Click heavy child pivot " +
+                                     std::to_string(childPivot ? childPivot->key : d.puzzles[pIdx].childKey) +
+                                     " first to straighten the zig-zag!");
                     }
                 } else {
-                    if (clickedKey == p.rootKey) {
-                        manualTree = (p.caseName == "LR") ? manualRotateRight(manualTree) : manualRotateLeft(manualTree);
+                    AVLNode* rootNode = avl.getRoot();
+                    if (rootNode && clickedKey == rootNode->key) {
+                        int rbf = avl.balanceFactor(rootNode);
+                        bool isLR = (rbf > 1);
+                        pushUndoSnapshot(false);
+                        LayoutResult before;
+                        LayoutEngine::layoutAVL(avl, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
+                        EventBatch batch;
+                        batch.append(Event(EVENT_OPERATION_STARTED,
+                                           isLR ? "LR step 2: rotate right root" : "RL step 2: rotate left root"));
+                        AVLNode* newRoot = isLR ? avl.rotateRight(rootNode, batch, ROTATION_LR)
+                                                : avl.rotateLeft(rootNode, batch, ROTATION_RL);
+                        avl.setRoot(newRoot);
+                        batch.append(Event(EVENT_OPERATION_COMPLETED, "double rotation complete"));
+
+                        int badKey = -1;
+                        if (!validateAvlSubtreeSizes(avl.getRoot(), badKey)) {
+                            raisePenalty(PENALTY_WRONG_ROTATION,
+                                         "Subtree size invariant broken at node " + std::to_string(badKey) + "!");
+                            return;
+                        }
+
+                        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+                        animCtrl.loadOperation(batch, before, avlLayout, true, autoPlayEvents);
                         scoring.addStep(1);
                         syncScoringHud();
+                        selectedNodeId = -1;
                         if (scoring.isAlarmFull()) {
                             triggerAlarmFullFail();
                         } else if (manualSubPuzzle < d.puzzleCount) {
-                            deleteManualTree(manualTree);
-                            manualTree = buildManualPuzzleTree(d.puzzles[manualSubPuzzle]);
-                            manualSubPuzzle++;
-                            manualDoubleStep = 0;
-                            selectedNodeId = -1;
-                            const LevelPuzzleSpec& nextP = d.puzzles[manualSubPuzzle - 1];
-                            toastQueue.push(p.caseName + " Double Rotation complete! Next: " + nextP.caseName + " puzzle",
-                                            TOAST_KIND_SUCCESS);
-                            status = "Puzzle " + std::to_string(manualSubPuzzle) + "/" + std::to_string(d.puzzleCount) +
-                                     " (" + nextP.caseName + "): Step 1/2 - Click child pivot " + std::to_string(nextP.childKey) + " first!";
+                            act3NextPuzzlePending = true;
+                            toastQueue.push("Double Rotation complete! Advancing to Puzzle " +
+                                            std::to_string(manualSubPuzzle + 1), TOAST_KIND_SUCCESS);
+                            status = "Double rotation animated! Loading next zig-zag puzzle...";
                         } else {
-                            finishLevelWin(scoring.stars(), "Double rotations (LR & RL) mastered!");
+                            pendingWin = true;
+                            status = "Final double rotation complete! Verifying balanced AVL tree...";
                         }
                     } else {
                         raisePenalty(PENALTY_WRONG_ROTATION,
-                                     p.caseName + " Step 2/2: Click root pivot " + std::to_string(p.rootKey) +
-                                     " to complete " + p.caseName + " rotation!");
+                                     "Step 3/3: Click root pivot " +
+                                     std::to_string(rootNode ? rootNode->key : d.puzzles[pIdx].rootKey) +
+                                     " to complete double rotation!");
                     }
                 }
             }
@@ -2249,43 +2460,29 @@ int main(int argc, char** argv) {
         else if (lid == LEVEL_3_4) {
             if (avlQueuePos < d.insertCount) {
                 int incoming = d.inserts[avlQueuePos].key;
-                int expectedPivot = d.inserts[avlQueuePos].pivotKey;
-                const std::string& rotLabel = d.inserts[avlQueuePos].expectedRotation;
-                if (clickedKey == expectedPivot) {
-                    pushUndoSnapshot(false);
-                    LayoutResult before;
-                    LayoutEngine::layoutAVL(avl, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
-                    EventBatch batch;
-                    avl.insert(incoming, batch);
-                    layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
-                    animCtrl.loadOperation(batch, before, avlLayout, true, autoPlayEvents);
-                    scoring.addStep(1);
-                    scoring.addBonus(50);
-                    syncScoringHud();
-                    toastQueue.push("Correct (" + rotLabel + " at " + std::to_string(expectedPivot) +
-                                    ")! Inserted " + std::to_string(incoming), TOAST_KIND_SUCCESS);
-                    avlQueuePos++;
-                    if (avlQueuePos >= d.insertCount) {
-                        pendingWin = true;
-                        status = "All incoming keys balanced! Playing final AVL events...";
-                    } else {
-                        status = "Inserted " + std::to_string(incoming) + ". Next incoming: " +
-                                 std::to_string(d.inserts[avlQueuePos].key) + "! Click its rotation pivot (or attachment parent).";
-                    }
-                    if (scoring.isAlarmFull()) triggerAlarmFullFail();
-                } else {
-                    raisePenalty(PENALTY_WRONG_ROTATION,
-                                 "Wrong node " + std::to_string(clickedKey) + " for incoming " +
-                                 std::to_string(incoming) + " (expected " + rotLabel + " at " +
-                                 std::to_string(expectedPivot) + ")!");
-                }
+                toastQueue.push("Predict the rotation for key " + std::to_string(incoming) +
+                                " using [LL], [RR], [LR], [RL], or [None]!", TOAST_KIND_WARNING);
+                status = "Use the bottom prediction buttons [LL] [RR] [LR] [RL] [None] for incoming key " +
+                         std::to_string(incoming) + "!";
             }
         }
         else if (lid == LEVEL_3_5) {
             if (bossQueryIdx < d.kQueryCount) {
+                int badKey = -1;
+                if (!validateAvlSubtreeSizes(avl.getRoot(), badKey)) {
+                    act3SizeOk = false;
+                    raisePenalty(PENALTY_WRONG_ROTATION,
+                                 "Subtree size invariant broken at node " + std::to_string(badKey) + "!");
+                    return;
+                }
                 int k = d.kQueries[bossQueryIdx];
-                int expectedKey = avl.kth(k);
+                int comps = 0;
+                int expectedKey = kthLargestAvl(avl, k, comps);
                 if (clickedKey == expectedKey) {
+                    pushUndoSnapshot(false);
+                    int hBefore = avl.getHeight();
+                    act3LastComps = comps;
+                    act3LastHeight = hBefore;
                     scoring.addStep(1);
                     scoring.addBonus(50);
                     syncScoringHud();
@@ -2293,16 +2490,52 @@ int main(int argc, char** argv) {
                     if (scoring.isAlarmFull()) {
                         triggerAlarmFullFail();
                     } else if (bossQueryIdx >= d.kQueryCount) {
-                        finishLevelWin(scoring.stars(), "Act 3 Boss defeated! Wing 4 (Max Heap Fortress) unlocked!");
+                        LayoutResult sameLayout;
+                        LayoutEngine::layoutAVL(avl, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, sameLayout);
+                        EventBatch qBatch;
+                        int dummyC = 0;
+                        kthLargestAvl(avl, k, dummyC, &qBatch);
+                        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+                        animCtrl.loadOperation(qBatch, sameLayout, avlLayout, true, autoPlayEvents);
+                        toastQueue.push("Stole #" + std::to_string(k) + " largest=" + std::to_string(expectedKey) +
+                                        " in " + std::to_string(comps) + " comps <= H=" +
+                                        std::to_string(hBefore) + " (sz OK)!", TOAST_KIND_SUCCESS);
+                        pendingWin = true;
+                        status = "Final #" + std::to_string(k) + " largest=" + std::to_string(expectedKey) +
+                                 " verified in " + std::to_string(comps) + " comps <= H=" +
+                                 std::to_string(hBefore) + "! Completing Boss...";
                     } else {
-                        toastQueue.push("Correct! k=" + std::to_string(k) + " treasure is " + std::to_string(expectedKey),
+                        LayoutResult before;
+                        LayoutEngine::layoutAVL(avl, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
+                        EventBatch rotBatch;
+                        if (!avl.search(22)) {
+                            avl.insert(22, rotBatch);
+                        } else {
+                            int dummyC = 0;
+                            kthLargestAvl(avl, k, dummyC, &rotBatch);
+                        }
+                        int postBad = -1;
+                        act3SizeOk = validateAvlSubtreeSizes(avl.getRoot(), postBad);
+                        if (!act3SizeOk) {
+                            raisePenalty(PENALTY_WRONG_ROTATION,
+                                         "Subtree size mismatch after security rotation at " +
+                                         std::to_string(postBad) + "!");
+                            return;
+                        }
+                        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+                        animCtrl.loadOperation(rotBatch, before, avlLayout, true, autoPlayEvents);
+                        toastQueue.push("Stole #" + std::to_string(k) + " largest=" + std::to_string(expectedKey) +
+                                        " (" + std::to_string(comps) + " comps <= H=" +
+                                        std::to_string(hBefore) + ")! Security inserted 22 + rotated (sz OK)!",
                                         TOAST_KIND_SUCCESS);
-                        status = "Challenge " + std::to_string(bossQueryIdx + 1) + "/" + std::to_string(d.kQueryCount) +
-                                 ": Click the k=" + std::to_string(d.kQueries[bossQueryIdx]) + " smallest treasure using subtree sizes (sz)!";
+                        status = "Last query: " + std::to_string(comps) + " comps <= H=" +
+                                 std::to_string(hBefore) + " (sz OK). Security added 22 & rotated -> Now click #" +
+                                 std::to_string(d.kQueries[bossQueryIdx]) + " MOST VALUABLE!";
                     }
                 } else {
                     raisePenalty(PENALTY_WRONG_TRAVERSAL,
-                                 "Node " + std::to_string(clickedKey) + " is not the k=" + std::to_string(k) + " smallest key!");
+                                 "Node " + std::to_string(clickedKey) + " is not the #" + std::to_string(k) +
+                                 " MOST VALUABLE (largest) key! Compare right subtree sz.");
                 }
             }
         }
@@ -2658,6 +2891,10 @@ int main(int argc, char** argv) {
             animCtrl.finishInstant();
             if (act2TwoChildPhase2Pending) {
                 startAct2TwoChildPhase2();
+                animCtrl.finishInstant();
+            }
+            if (act3NextPuzzlePending) {
+                loadNextAct3Puzzle();
                 animCtrl.finishInstant();
             }
             if (pendingWin) completePendingWin();
@@ -3028,19 +3265,7 @@ int main(int argc, char** argv) {
                 }
                 showId = true;
             }
-            else if (lid >= LEVEL_3_1 && lid <= LEVEL_3_3) {
-                if (needLayout) {
-                    layoutManualTree(manualTree, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, manualLayout);
-                    layoutDirty = false;
-                }
-                activeDrawLayout = &manualLayout;
-                if (inCanvasHover) {
-                    int hovIdx = manualLayout.hitTestNode(canvasHoverWorld.x, canvasHoverWorld.y);
-                    if (hovIdx >= 0) hl.hoveredNodeId = manualLayout.nodes[hovIdx].id;
-                }
-                showBf = true;
-            }
-            else if (lid == LEVEL_3_4 || lid == LEVEL_3_5) {
+            else if (lid >= LEVEL_3_1 && lid <= LEVEL_3_5) {
                 if (!animCtrl.hasEvents() && needLayout) {
                     layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
                     layoutDirty = false;
@@ -3053,6 +3278,7 @@ int main(int argc, char** argv) {
                 }
                 if (animCtrl.hasEvents()) animCtrl.fillHighlightState(hl);
                 showBf = true;
+                if (lid == LEVEL_3_5) hl.showBadges = true;
             }
             else if (lid >= LEVEL_4_1 && lid <= LEVEL_4_5) {
                 bool useRealHeap = (lid == LEVEL_4_3 || lid == LEVEL_4_4 || (lid == LEVEL_4_5 && act4Built));
@@ -3148,6 +3374,7 @@ int main(int argc, char** argv) {
             Ui::panel(window, 30.f, 660.f, 1540.f, 210.f, sf::Color(60, 85, 125), 235, &uiCache);
 
             int act2PromptA = -9999, act2PromptB = -9999;
+            int act3PromptA = -9999, act3PromptB = -9999;
             if (lid == LEVEL_2_1 || lid == LEVEL_2_2 || lid == LEVEL_2_5) {
                 act2PromptA = act2CurKey;
                 act2PromptB = act2TargetIdx * 10 + act2BossStage;
@@ -3157,11 +3384,23 @@ int main(int argc, char** argv) {
             } else if (lid == LEVEL_2_4) {
                 act2PromptA = act2RqIdx;
                 act2PromptB = act2PrunedCount;
+            } else if (lid == LEVEL_3_1) {
+                act3PromptA = clicked31Mask;
+            } else if (lid == LEVEL_3_2) {
+                act3PromptA = manualSubPuzzle;
+                act3PromptB = act3PivotPicked ? act3PivotKey : -1;
+            } else if (lid == LEVEL_3_3) {
+                act3PromptA = manualSubPuzzle;
+                act3PromptB = manualDoubleStep;
+            } else if (lid == LEVEL_3_5) {
+                act3PromptA = bossQueryIdx;
+                act3PromptB = avl.getSize();
             }
 
             if (cachedPromptLid != lid || cachedPromptSeq != act1SeqIdx || cachedPromptAvl != avlQueuePos ||
                 cachedPromptMode != act1TravMode || cachedPromptPost != act1PostIdx || cachedPromptLca != act1LcaStage ||
-                cachedPromptAct2A != act2PromptA || cachedPromptAct2B != act2PromptB) {
+                cachedPromptAct2A != act2PromptA || cachedPromptAct2B != act2PromptB ||
+                cachedPromptAct3A != act3PromptA || cachedPromptAct3B != act3PromptB) {
                 cachedPromptLid = lid;
                 cachedPromptSeq = act1SeqIdx;
                 cachedPromptAvl = avlQueuePos;
@@ -3170,11 +3409,42 @@ int main(int argc, char** argv) {
                 cachedPromptLca = act1LcaStage;
                 cachedPromptAct2A = act2PromptA;
                 cachedPromptAct2B = act2PromptB;
+                cachedPromptAct3A = act3PromptA;
+                cachedPromptAct3B = act3PromptB;
                 cachedPromptHead = "NODE INTERACTION GUIDE";
                 const LevelData& curD = levelData[currentLevelIdx];
                 if (lid == LEVEL_3_4 && avlQueuePos < curD.insertCount) {
                     cachedPromptHead = "INCOMING KEY [" + std::to_string(curD.inserts[avlQueuePos].key) +
-                                       "] - Click the predicted pivot/attachment node on the AVL tree:";
+                                       "] - Predict rotation (LL / RR / LR / RL / None):";
+                } else if (lid == LEVEL_3_1) {
+                    cachedPromptHead = "READ THE BADGES - Click every room with |BF| > 1 (height(L) - height(R)):";
+                } else if (lid == LEVEL_3_2) {
+                    if (!act3PivotPicked) {
+                        cachedPromptHead = "SINGLE ROTATION [" + std::to_string(manualSubPuzzle) + "/" +
+                                           std::to_string(curD.puzzleCount) + "] - Step 1/2: Click unbalanced pivot (|BF| > 1):";
+                    } else {
+                        cachedPromptHead = "PIVOT [" + std::to_string(act3PivotKey) +
+                                           "] SELECTED - Step 2/2: Pick [LL: Rotate Right] or [RR: Rotate Left]:";
+                    }
+                } else if (lid == LEVEL_3_3) {
+                    if (manualDoubleStep == 0) {
+                        cachedPromptHead = "DOUBLE ROTATION [" + std::to_string(manualSubPuzzle) + "/" +
+                                           std::to_string(curD.puzzleCount) + "] - Step 1/3: Pick [Case: LR] or [Case: RL]:";
+                    } else if (manualDoubleStep == 1) {
+                        cachedPromptHead = "DOUBLE ROTATION - Step 2/3: Click heavy CHILD pivot node first:";
+                    } else {
+                        cachedPromptHead = "DOUBLE ROTATION - Step 3/3: Click ROOT pivot node second:";
+                    }
+                } else if (lid == LEVEL_3_5 && bossQueryIdx < curD.kQueryCount) {
+                    cachedPromptHead = "ORDER-STATISTIC BOSS [" + std::to_string(bossQueryIdx + 1) + "/" +
+                                       std::to_string(curD.kQueryCount) + "] - Click #" +
+                                       std::to_string(curD.kQueries[bossQueryIdx]) + " MOST VALUABLE (LARGEST) via sz";
+                    if (act3LastComps > 0) {
+                        cachedPromptHead += " | Last: " + std::to_string(act3LastComps) + " comps <= H=" +
+                                            std::to_string(act3LastHeight) + " (sz " +
+                                            std::string(act3SizeOk ? "OK" : "ERR") + ")";
+                    }
+                    cachedPromptHead += ":";
                 } else if (lid == LEVEL_1_1) {
                     cachedPromptHead = std::string(traversalModeName(act1TravMode)) + " [" +
                                        std::to_string(act1SeqIdx) + "/" + std::to_string(act1Tree.getSize()) +
@@ -3233,11 +3503,13 @@ int main(int argc, char** argv) {
                     }
                 }
             }
-            Ui::textFit(window, font, cachedPromptHead, TXT_H2, Ui::gold(), 54.f, 678.f, 1080.f, true, &uiCache);
-            Ui::textWrap(window, font, status, TXT_BODY, Ui::textBody(), 54.f, 718.f, 1050.f, false, &uiCache);
+            float headMaxW = (lid == LEVEL_3_4) ? 960.f : 1080.f;
+            float bodyMaxW = (lid == LEVEL_3_4) ? 960.f : 1050.f;
+            Ui::textFit(window, font, cachedPromptHead, TXT_H2, Ui::gold(), 54.f, 678.f, headMaxW, true, &uiCache);
+            Ui::textWrap(window, font, status, TXT_BODY, Ui::textBody(), 54.f, 718.f, bodyMaxW, false, &uiCache);
             if (hintSys.wasUsed()) {
                 Ui::textWrap(window, font, "HINT (-1 star cap): " + hintSys.shownText(),
-                             TXT_HINT, Ui::cyan(), 54.f, 774.f, 1050.f, false, &uiCache);
+                             TXT_HINT, Ui::cyan(), 54.f, 774.f, bodyMaxW, false, &uiCache);
             }
 
             if (lid == LEVEL_1_1 && act1SeqIdx == 0 && !pendingWin) {
@@ -3268,6 +3540,20 @@ int main(int argc, char** argv) {
                 Ui::button(window, font, "Report Room", 1122.f, 705.f, 136.f, 52.f, BTN_PRIMARY,   in, 14, &uiCache);
                 Ui::button(window, font, "Prune Left",  1268.f, 705.f, 136.f, 52.f, BTN_SECONDARY, in, 14, &uiCache);
                 Ui::button(window, font, "Prune Right", 1414.f, 705.f, 136.f, 52.f, BTN_SECONDARY, in, 14, &uiCache);
+            } else if (lid == LEVEL_3_2 && !pendingWin) {
+                Ui::button(window, font, "LL: Rotate Right (1)", 1122.f, 705.f, 206.f, 52.f,
+                           act3PivotPicked ? BTN_PRIMARY : BTN_SECONDARY, in, 14, &uiCache);
+                Ui::button(window, font, "RR: Rotate Left (2)",  1344.f, 705.f, 206.f, 52.f,
+                           act3PivotPicked ? BTN_PRIMARY : BTN_SECONDARY, in, 14, &uiCache);
+            } else if (lid == LEVEL_3_3 && manualDoubleStep == 0 && !pendingWin) {
+                Ui::button(window, font, "Case: LR (1)", 1122.f, 705.f, 206.f, 52.f, BTN_PRIMARY,   in, 15, &uiCache);
+                Ui::button(window, font, "Case: RL (2)", 1344.f, 705.f, 206.f, 52.f, BTN_SECONDARY, in, 15, &uiCache);
+            } else if (lid == LEVEL_3_4 && !pendingWin) {
+                Ui::button(window, font, "LL (1)",   1038.f, 705.f, 96.f, 52.f, BTN_SECONDARY, in, 14, &uiCache);
+                Ui::button(window, font, "RR (2)",   1142.f, 705.f, 96.f, 52.f, BTN_SECONDARY, in, 14, &uiCache);
+                Ui::button(window, font, "LR (3)",   1246.f, 705.f, 96.f, 52.f, BTN_SECONDARY, in, 14, &uiCache);
+                Ui::button(window, font, "RL (4)",   1350.f, 705.f, 96.f, 52.f, BTN_SECONDARY, in, 14, &uiCache);
+                Ui::button(window, font, "None (N)", 1454.f, 705.f, 96.f, 52.f, BTN_PRIMARY,   in, 14, &uiCache);
             } else if (lid == LEVEL_4_5 && !act4Built) {
                 Ui::button(window, font, "Build Max Heap [B]",
                            1220.f, 705.f, 310.f, 52.f, BTN_PRIMARY, in, 15, &uiCache);
@@ -3794,7 +4080,41 @@ int main(int argc, char** argv) {
         animCtrl.finishInstant();
         saveShot("19_act2_5_lazy_architect_boss", idle);
 
-        deleteManualTree(manualTree);
+        // Act 3 Levels (3.1 through 3.5) visual verification
+        toastQueue.clear();
+        startLevel(10); showingBriefing = false; layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
+        if (avlLayout.findNodeIndexByKey(30) >= 0) handleLevelNodeClick(avlLayout.nodes[avlLayout.findNodeIndexByKey(30)].id, 30);
+        saveShot("20_act3_1_read_badges", idle);
+
+        startLevel(11); showingBriefing = false; layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
+        if (levelData[11].puzzleCount > 0) {
+            int pk = levelData[11].puzzles[0].rootKey;
+            int pi = avlLayout.findNodeIndexByKey(pk);
+            if (pi >= 0) handleLevelNodeClick(avlLayout.nodes[pi].id, pk);
+        }
+        saveShot("21_act3_2_single_rotations", idle);
+
+        startLevel(12); showingBriefing = false; layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
+        handleAct3DoubleCase(1); // Identify LR case -> highlights heavy child pivot step
+        saveShot("22_act3_3_double_rotations", idle);
+
+        startLevel(13); showingBriefing = false; layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
+        if (levelData[13].insertCount >= 2) {
+            handleAct3Prediction(levelData[13].inserts[0].expectedRotation.c_str()); animCtrl.finishInstant();
+            handleAct3Prediction(levelData[13].inserts[1].expectedRotation.c_str()); animCtrl.finishInstant();
+        }
+        saveShot("23_act3_4_predict_insert", idle);
+
+        startLevel(14); showingBriefing = false; layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
+        if (levelData[14].kQueryCount > 0) {
+            int dummyC = 0;
+            int ans1 = kthLargestAvl(avl, levelData[14].kQueries[0], dummyC);
+            int idx1 = avlLayout.findNodeIndexByKey(ans1);
+            if (idx1 >= 0) handleLevelNodeClick(avlLayout.nodes[idx1].id, ans1);
+            animCtrl.finishInstant();
+        }
+        saveShot("24_act3_5_order_stat_boss", idle);
+
         return 0;
     }
 
@@ -3803,7 +4123,6 @@ int main(int argc, char** argv) {
         scoreLog.load(""); // do not modify workspace scores.txt
         auto failCheck = [&](const char* msg) -> int {
             std::cerr << "FAIL: " << msg << "\n";
-            deleteManualTree(manualTree);
             return 1;
         };
 
@@ -3943,7 +4262,6 @@ int main(int argc, char** argv) {
         }
         std::cout << "PASS 1.5: Bottom-up click-swap and Auto Mirror both verified (3 stars)\n";
 
-        deleteManualTree(manualTree);
         return 0;
     }
 
@@ -3952,7 +4270,6 @@ int main(int argc, char** argv) {
         scoreLog.load(""); // do not modify workspace scores.txt
         auto failCheck = [&](const char* msg) -> int {
             std::cerr << "FAIL: " << msg << "\n";
-            deleteManualTree(manualTree);
             return 1;
         };
 
@@ -4074,7 +4391,189 @@ int main(int argc, char** argv) {
         }
         std::cout << "PASS 2.5: Lazy Architect Boss (Height=5, Cap shrank 21->17, 3 stars) verified\n";
 
-        deleteManualTree(manualTree);
+        return 0;
+    }
+
+    // End-to-end automated sanity check for all 5 Act 3 levels (--verify-act3)
+    if (verifyAct3) {
+        scoreLog.load(""); // do not modify workspace scores.txt
+        auto failCheck = [&](const char* msg) -> int {
+            std::cerr << "FAIL: " << msg << "\n";
+            return 1;
+        };
+
+        // 3.1: Read the Badges (+1 traversal penalty on balanced node, no -50 rot penalty; 3 stars clean)
+        startLevel(10);
+        showingBriefing = false;
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        {
+            int idx50 = avlLayout.findNodeIndexByKey(50);
+            if (idx50 < 0) return failCheck("3.1 missing balanced node 50");
+            handleLevelNodeClick(avlLayout.nodes[idx50].id, 50);
+            if (scoring.alarm() != 1 || scoring.score() != (SCORE_BASE - SCORE_PER_ALARM_STEP) ||
+                scoring.penaltyEvents() != 1) {
+                return failCheck("3.1 wrong badge click must use +1 alarm (no -50 rot penalty)");
+            }
+        }
+        startLevel(10);
+        showingBriefing = false;
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        {
+            int idx30 = avlLayout.findNodeIndexByKey(30);
+            int idx20 = avlLayout.findNodeIndexByKey(20);
+            if (idx30 < 0 || idx20 < 0) return failCheck("3.1 missing violation nodes 30/20");
+            handleLevelNodeClick(avlLayout.nodes[idx30].id, 30);
+            handleLevelNodeClick(avlLayout.nodes[idx20].id, 20);
+            if (currentScreen != SCREEN_RESULT || scoring.stars() != 3 || scoring.alarm() != 2) {
+                return failCheck("3.1 Read the Badges clean run failed");
+            }
+        }
+        std::cout << "PASS 3.1: Read the Badges (real AVL BF & +1 traversal penalty) verified (3 stars)\n";
+
+        // 3.2: Manual Repair LL/RR (pivot click + LL/RR choice + real AVLTree rotations + +2/-50 penalty)
+        startLevel(11);
+        showingBriefing = false;
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        {
+            const LevelPuzzleSpec& p0 = levelData[11].puzzles[0];
+            int idxChild = avlLayout.findNodeIndexByKey(p0.childKey);
+            if (idxChild < 0) return failCheck("3.2 missing puzzle 0 child");
+            handleLevelNodeClick(avlLayout.nodes[idxChild].id, p0.childKey); // balanced -> PENALTY_WRONG_ROTATION
+            if (scoring.alarm() != 2 ||
+                scoring.score() != (SCORE_BASE - 2 * SCORE_PER_ALARM_STEP - SCORE_ROTATION_PENALTY)) {
+                return failCheck("3.2 balanced pivot click must apply wrong rotation penalty (+2/-50)");
+            }
+            int idxRoot = avlLayout.findNodeIndexByKey(p0.rootKey);
+            handleLevelNodeClick(avlLayout.nodes[idxRoot].id, p0.rootKey);
+            handleAct3SingleRotation(p0.caseName == "LL" ? 2 : 1); // wrong LL/RR button
+            if (scoring.alarm() != 4 ||
+                scoring.score() != (SCORE_BASE - 4 * SCORE_PER_ALARM_STEP - 2 * SCORE_ROTATION_PENALTY)) {
+                return failCheck("3.2 wrong LL/RR choice must apply +2/-50 penalty");
+            }
+        }
+        startLevel(11);
+        showingBriefing = false;
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        for (int pIdx = 0; pIdx < levelData[11].puzzleCount; ++pIdx) {
+            const LevelPuzzleSpec& p = levelData[11].puzzles[pIdx];
+            int rIdx = avlLayout.findNodeIndexByKey(p.rootKey);
+            if (rIdx < 0) return failCheck("3.2 missing puzzle root");
+            handleLevelNodeClick(avlLayout.nodes[rIdx].id, p.rootKey);
+            if (!act3PivotPicked || act3PivotKey != p.rootKey) return failCheck("3.2 failed to select pivot");
+            handleAct3SingleRotation(p.caseName == "LL" ? 1 : 2);
+            int badKey = -1;
+            if (!avl.isValidAVL() || !validateAvlSubtreeSizes(avl.getRoot(), badKey)) {
+                return failCheck("3.2 real AVL single rotation left invalid tree or subtree size");
+            }
+            animCtrl.finishInstant();
+            if (act3NextPuzzlePending) loadNextAct3Puzzle();
+        }
+        completePendingWin();
+        if (currentScreen != SCREEN_RESULT || scoring.stars() != 3) {
+            return failCheck("3.2 clean LL/RR solve failed");
+        }
+        std::cout << "PASS 3.2: Manual Repair LL & RR via real AVLTree rotations verified (3 stars)\n";
+
+        // 3.3: Double Rotations LR/RL (identify case -> child pivot -> root pivot; two real single rotations)
+        startLevel(12);
+        showingBriefing = false;
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        handleAct3DoubleCase(2); // LR puzzle picked as RL -> PENALTY_WRONG_ROTATION
+        if (scoring.alarm() != 2 ||
+            scoring.score() != (SCORE_BASE - 2 * SCORE_PER_ALARM_STEP - SCORE_ROTATION_PENALTY)) {
+            return failCheck("3.3 wrong zig-zag case identification must apply +2/-50 penalty");
+        }
+        startLevel(12);
+        showingBriefing = false;
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        for (int pIdx = 0; pIdx < levelData[12].puzzleCount; ++pIdx) {
+            const LevelPuzzleSpec& p = levelData[12].puzzles[pIdx];
+            handleAct3DoubleCase(p.caseName == "LR" ? 1 : 2);
+            int cIdx = avlLayout.findNodeIndexByKey(p.childKey);
+            if (cIdx < 0) return failCheck("3.3 missing child pivot");
+            handleLevelNodeClick(avlLayout.nodes[cIdx].id, p.childKey);
+            animCtrl.finishInstant();
+            int rIdx = avlLayout.findNodeIndexByKey(p.rootKey);
+            if (rIdx < 0) return failCheck("3.3 missing root pivot");
+            handleLevelNodeClick(avlLayout.nodes[rIdx].id, p.rootKey);
+            int badKey = -1;
+            if (!avl.isValidAVL() || !avl.getRoot() || avl.getRoot()->key != p.innerKey ||
+                !validateAvlSubtreeSizes(avl.getRoot(), badKey)) {
+                return failCheck("3.3 real AVL double rotation produced invalid tree or wrong root");
+            }
+            animCtrl.finishInstant();
+            if (act3NextPuzzlePending) loadNextAct3Puzzle();
+        }
+        completePendingWin();
+        if (currentScreen != SCREEN_RESULT || scoring.stars() != 3) {
+            return failCheck("3.3 clean LR/RL solve failed");
+        }
+        std::cout << "PASS 3.3: Double Rotations LR & RL via case ID + two real rotations verified (3 stars)\n";
+
+        // 3.4: Auto Mode & Prediction (predict LL/RR/LR/RL/None before real avl.insert)
+        startLevel(13);
+        showingBriefing = false;
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        {
+            const std::string& exp0 = levelData[13].inserts[0].expectedRotation;
+            handleAct3Prediction(exp0 == "LL" ? "RR" : "LL");
+            if (scoring.alarm() != 2 ||
+                scoring.score() != (SCORE_BASE - 2 * SCORE_PER_ALARM_STEP - SCORE_ROTATION_PENALTY)) {
+                return failCheck("3.4 wrong prediction must apply +2/-50 penalty");
+            }
+        }
+        startLevel(13);
+        showingBriefing = false;
+        for (int i = 0; i < levelData[13].insertCount; ++i) {
+            handleAct3Prediction(levelData[13].inserts[i].expectedRotation.c_str());
+            int badKey = -1;
+            if (!avl.isValidAVL() || !validateAvlSubtreeSizes(avl.getRoot(), badKey)) {
+                return failCheck("3.4 real AVL insert produced invalid tree or broken subtree size");
+            }
+            animCtrl.finishInstant();
+        }
+        completePendingWin();
+        if (currentScreen != SCREEN_RESULT || scoring.stars() != 3) {
+            return failCheck("3.4 clean rotation prediction solve failed");
+        }
+        std::cout << "PASS 3.4: Rotation Prediction (LL/RR/LR/RL/None) + real AVL insert verified (3 stars)\n";
+
+        // 3.5: Order-Statistic Boss (k-th MOST VALUABLE / LARGEST + live rotation subtree size validation + O(log n))
+        startLevel(14);
+        showingBriefing = false;
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        {
+            int idx30 = avlLayout.findNodeIndexByKey(30);
+            if (idx30 < 0) return failCheck("3.5 missing node 30");
+            handleLevelNodeClick(avlLayout.nodes[idx30].id, 30);
+            if (scoring.alarm() != 1) return failCheck("3.5 wrong click must add +1 alarm");
+        }
+        startLevel(14);
+        showingBriefing = false;
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        {
+            int c1 = 0;
+            int k1 = kthLargestAvl(avl, levelData[14].kQueries[0], c1);
+            if (k1 != 50 || c1 > avl.getHeight()) return failCheck("3.5 challenge 1 k-th largest mismatch (expected 50)");
+            handleLevelNodeClick(avlLayout.nodes[avlLayout.findNodeIndexByKey(k1)].id, k1);
+            animCtrl.finishInstant();
+            int badKey = -1;
+            if (!avl.isValidAVL() || avl.getSize() != 9 || !validateAvlSubtreeSizes(avl.getRoot(), badKey)) {
+                return failCheck("3.5 live key-22 rotation failed subtree size validation");
+            }
+            int c2 = 0;
+            int k2 = kthLargestAvl(avl, levelData[14].kQueries[1], c2);
+            if (k2 != 25 || c2 > avl.getHeight()) return failCheck("3.5 challenge 2 k-th largest mismatch (expected 25)");
+            handleLevelNodeClick(avlLayout.nodes[avlLayout.findNodeIndexByKey(k2)].id, k2);
+            animCtrl.finishInstant();
+            completePendingWin();
+            if (currentScreen != SCREEN_RESULT || scoring.stars() != 3 || !act3SizeOk ||
+                act3LastComps <= 0 || act3LastComps > act3LastHeight) {
+                return failCheck("3.5 Order-Statistic Boss verification failed");
+            }
+        }
+        std::cout << "PASS 3.5: Order-Statistic Boss (k-th largest {50,25}, O(log n) comps, live rotation sz check) verified (3 stars)\n";
+
         return 0;
     }
 
@@ -4160,7 +4659,6 @@ int main(int argc, char** argv) {
         sumFps += benchScene("Campaign Map (20 buttons + 4 panels)", in);
 
         std::cout << "Average FPS: " << (sumFps / 4.0) << "\n";
-        deleteManualTree(manualTree);
         return 0;
     }
 
@@ -4184,7 +4682,11 @@ int main(int argc, char** argv) {
         if (act2TwoChildPhase2Pending && animCtrl.isAtEnd() && !animCtrl.isPlaying()) {
             startAct2TwoChildPhase2();
         }
-        if (pendingWin && !act2TwoChildPhase2Pending && animCtrl.isAtEnd() && !animCtrl.isPlaying()) {
+        if (act3NextPuzzlePending && animCtrl.isAtEnd() && !animCtrl.isPlaying()) {
+            loadNextAct3Puzzle();
+        }
+        if (pendingWin && !act2TwoChildPhase2Pending && !act3NextPuzzlePending &&
+            animCtrl.isAtEnd() && !animCtrl.isPlaying()) {
             completePendingWin();
         }
 
@@ -4335,6 +4837,23 @@ int main(int argc, char** argv) {
                             handleAct2RangeDecision(RQ_ACT_PRUNE_LEFT);
                         } else if (kp->code == sf::Keyboard::Key::Num3 || kp->code == sf::Keyboard::Key::P) {
                             handleAct2RangeDecision(RQ_ACT_PRUNE_RIGHT);
+                        }
+                    } else if (lid == LEVEL_3_2 && !pendingWin) {
+                        if (kp->code == sf::Keyboard::Key::Num1 || kp->code == sf::Keyboard::Key::L) {
+                            handleAct3SingleRotation(1);
+                        } else if (kp->code == sf::Keyboard::Key::Num2 || kp->code == sf::Keyboard::Key::R) {
+                            handleAct3SingleRotation(2);
+                        }
+                    } else if (lid == LEVEL_3_3 && manualDoubleStep == 0 && !pendingWin) {
+                        if (kp->code == sf::Keyboard::Key::Num1) handleAct3DoubleCase(1);
+                        else if (kp->code == sf::Keyboard::Key::Num2) handleAct3DoubleCase(2);
+                    } else if (lid == LEVEL_3_4 && !pendingWin) {
+                        if (kp->code == sf::Keyboard::Key::Num1) handleAct3Prediction("LL");
+                        else if (kp->code == sf::Keyboard::Key::Num2) handleAct3Prediction("RR");
+                        else if (kp->code == sf::Keyboard::Key::Num3) handleAct3Prediction("LR");
+                        else if (kp->code == sf::Keyboard::Key::Num4) handleAct3Prediction("RL");
+                        else if (kp->code == sf::Keyboard::Key::Num5 || kp->code == sf::Keyboard::Key::N) {
+                            handleAct3Prediction("None");
                         }
                     } else if (lid == LEVEL_4_5 && kp->code == sf::Keyboard::Key::B) {
                         triggerStructuralAction(1);
@@ -4544,6 +5063,18 @@ int main(int argc, char** argv) {
                         if (Ui::inside(mx, my, 1122.f, 705.f, 136.f, 52.f)) { handleAct2RangeDecision(RQ_ACT_REPORT);      continue; }
                         if (Ui::inside(mx, my, 1268.f, 705.f, 136.f, 52.f)) { handleAct2RangeDecision(RQ_ACT_PRUNE_LEFT);  continue; }
                         if (Ui::inside(mx, my, 1414.f, 705.f, 136.f, 52.f)) { handleAct2RangeDecision(RQ_ACT_PRUNE_RIGHT); continue; }
+                    } else if (lid == LEVEL_3_2 && !pendingWin) {
+                        if (Ui::inside(mx, my, 1122.f, 705.f, 206.f, 52.f)) { handleAct3SingleRotation(1); continue; }
+                        if (Ui::inside(mx, my, 1344.f, 705.f, 206.f, 52.f)) { handleAct3SingleRotation(2); continue; }
+                    } else if (lid == LEVEL_3_3 && manualDoubleStep == 0 && !pendingWin) {
+                        if (Ui::inside(mx, my, 1122.f, 705.f, 206.f, 52.f)) { handleAct3DoubleCase(1); continue; }
+                        if (Ui::inside(mx, my, 1344.f, 705.f, 206.f, 52.f)) { handleAct3DoubleCase(2); continue; }
+                    } else if (lid == LEVEL_3_4 && !pendingWin) {
+                        if (Ui::inside(mx, my, 1038.f, 705.f, 96.f, 52.f)) { handleAct3Prediction("LL");   continue; }
+                        if (Ui::inside(mx, my, 1142.f, 705.f, 96.f, 52.f)) { handleAct3Prediction("RR");   continue; }
+                        if (Ui::inside(mx, my, 1246.f, 705.f, 96.f, 52.f)) { handleAct3Prediction("LR");   continue; }
+                        if (Ui::inside(mx, my, 1350.f, 705.f, 96.f, 52.f)) { handleAct3Prediction("RL");   continue; }
+                        if (Ui::inside(mx, my, 1454.f, 705.f, 96.f, 52.f)) { handleAct3Prediction("None"); continue; }
                     } else if (lid == LEVEL_4_5 && !act4Built && Ui::inside(mx, my, 1220.f, 705.f, 310.f, 52.f)) {
                         triggerStructuralAction(1);
                         continue;
@@ -4555,9 +5086,7 @@ int main(int argc, char** argv) {
                         activeL = animCtrl.hasEvents() ? &animCtrl.getRenderLayout() : &btLayout;
                     } else if (lid >= LEVEL_2_1 && lid <= LEVEL_2_5) {
                         activeL = animCtrl.hasEvents() ? &animCtrl.getRenderLayout() : &bstLayout;
-                    } else if (lid >= LEVEL_3_1 && lid <= LEVEL_3_3) {
-                        activeL = &manualLayout;
-                    } else if (lid == LEVEL_3_4 || lid == LEVEL_3_5) {
+                    } else if (lid >= LEVEL_3_1 && lid <= LEVEL_3_5) {
                         activeL = animCtrl.hasEvents() ? &animCtrl.getRenderLayout() : &avlLayout;
                     } else if (lid >= LEVEL_4_1 && lid <= LEVEL_4_5) {
                         activeL = animCtrl.hasEvents() ? &animCtrl.getRenderLayout() : &heapLayout;
@@ -4704,6 +5233,5 @@ int main(int argc, char** argv) {
         renderFrame(in);
     }
 
-    deleteManualTree(manualTree);
     return 0;
 }

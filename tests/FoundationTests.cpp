@@ -6,6 +6,7 @@
 #include "game/HintSystem.h"
 #include "gui/DragDrop.h"
 #include "structures/BST.h"
+#include "structures/AVLTree.h"
 
 using namespace VaultHeist;
 
@@ -307,4 +308,111 @@ TEST(DragDropTest, PickupHoverSnapRejectCancelAndReslot) {
     DropResult rOcc = dd.release(100.f, 300.f);
     EXPECT_EQ(rOcc.outcome, DROP_REJECTED);
     EXPECT_EQ(dd.tokenInSlot(sAny), t10);
+}
+
+// =============================================================================
+// 5. Act 3 Level Data, Real AVLTree Rotations & Order-Statistic Helper Checks
+// =============================================================================
+
+static int kthLargestCheck(const AVLTree& tree, int k, int& outComps) {
+    outComps = 0;
+    const AVLNode* cur = tree.getRoot();
+    if (!cur || k < 1 || k > cur->size) return -1;
+    int rem = k;
+    while (cur) {
+        int rs = cur->right ? cur->right->size : 0;
+        outComps++;
+        if (rem == rs + 1) return cur->key;
+        if (rem <= rs) cur = cur->right;
+        else { rem -= (rs + 1); cur = cur->left; }
+    }
+    return -1;
+}
+
+TEST(Act3AvlTests, Act3JsonRealRotationsSubtreeSizesAndKthLargest) {
+    std::string err;
+    LevelData d31, d32, d33, d34, d35;
+    ASSERT_TRUE(loadLevelById(31, d31, err));
+    ASSERT_TRUE(loadLevelById(32, d32, err));
+    ASSERT_TRUE(loadLevelById(33, d33, err));
+    ASSERT_TRUE(loadLevelById(34, d34, err));
+    ASSERT_TRUE(loadLevelById(35, d35, err));
+
+    EXPECT_EQ(d33.title, "3.3 Double Rotations (LR / RL)");
+    EXPECT_EQ(computeOptimalSteps(d31), 2);
+    EXPECT_EQ(computeOptimalSteps(d32), 2);
+    EXPECT_EQ(computeOptimalSteps(d33), 4);
+    EXPECT_EQ(computeOptimalSteps(d34), 4);
+    EXPECT_EQ(computeOptimalSteps(d35), 2);
+
+    // Real AVLTree::rotateRight (LL) & rotateLeft (RR) preserve validity and subtree sizes
+    {
+        AVLTree t;
+        AVLNode* r = new AVLNode(30);
+        r->left = new AVLNode(20);
+        r->left->parent = r;
+        r->left->left = new AVLNode(10);
+        r->left->left->parent = r->left;
+        t.setRoot(r);
+        EventBatch dummy;
+        t.updateHeightAndSize(r->left->left, dummy);
+        t.updateHeightAndSize(r->left, dummy);
+        t.updateHeightAndSize(r, dummy);
+        EXPECT_EQ(t.balanceFactor(r), 2);
+
+        AVLNode* newR = t.rotateRight(r, dummy, ROTATION_LL);
+        t.setRoot(newR);
+        EXPECT_TRUE(t.isValidAVL());
+        ASSERT_NE(t.getRoot(), nullptr);
+        EXPECT_EQ(t.getRoot()->key, 20);
+        EXPECT_EQ(t.getRoot()->size, 3);
+    }
+
+    // Real AVLTree::rotateLeft + rotateRight (LR double rotation)
+    {
+        AVLTree t;
+        AVLNode* r = new AVLNode(d33.puzzles[0].rootKey);
+        r->left = new AVLNode(d33.puzzles[0].childKey);
+        r->left->parent = r;
+        r->left->right = new AVLNode(d33.puzzles[0].innerKey);
+        r->left->right->parent = r->left;
+        t.setRoot(r);
+        EventBatch dummy;
+        t.updateHeightAndSize(r->left->right, dummy);
+        t.updateHeightAndSize(r->left, dummy);
+        t.updateHeightAndSize(r, dummy);
+        EXPECT_EQ(t.balanceFactor(r), 2);
+        EXPECT_EQ(t.balanceFactor(r->left), -1);
+
+        AVLNode* newC = t.rotateLeft(r->left, dummy, ROTATION_LR);
+        r->left = newC;
+        newC->parent = r;
+        t.updateHeightAndSize(r, dummy);
+        AVLNode* newR = t.rotateRight(r, dummy, ROTATION_LR);
+        t.setRoot(newR);
+        EXPECT_TRUE(t.isValidAVL());
+        ASSERT_NE(t.getRoot(), nullptr);
+        EXPECT_EQ(t.getRoot()->key, d33.puzzles[0].innerKey);
+        EXPECT_EQ(t.getRoot()->size, 3);
+    }
+
+    // 3.5 Order-Statistic Boss: k-th MOST VALUABLE (largest) + live insert 22 LL-rebalance
+    AVLTree boss;
+    for (int i = 0; i < d35.initialKeyCount; ++i) boss.insert(d35.initialKeys[i]);
+    ASSERT_TRUE(boss.isValidAVL());
+    ASSERT_EQ(d35.kQueryCount, 2);
+
+    int c1 = 0;
+    int ans1 = kthLargestCheck(boss, d35.kQueries[0], c1);
+    EXPECT_EQ(ans1, 50); // {10,20,25,30,40,50,60,70}: 3rd largest = 50 (not 3rd smallest 25)
+    EXPECT_LE(c1, boss.getHeight());
+
+    EventBatch rotBatch;
+    boss.insert(22, rotBatch); // triggers LL rotation on 30
+    EXPECT_TRUE(boss.isValidAVL());
+    EXPECT_EQ(boss.getSize(), 9);
+    int c2 = 0;
+    int ans2 = kthLargestCheck(boss, d35.kQueries[1], c2);
+    EXPECT_EQ(ans2, 25); // 6th largest of 9-node tree = 25
+    EXPECT_LE(c2, boss.getHeight());
 }

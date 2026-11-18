@@ -3,7 +3,7 @@
   "act": 3,
   "title": "3.1 Read the Badges",
   "concept": "Balance Factor (|BF| <= 1 for balanced nodes)",
-  "objective": "Click EVERY unbalanced node with a RED badge (|BF| > 1) directly on the tree!",
+  "objective": "Click EVERY unbalanced node with a RED violation badge (|BF| > 1) directly on the tree!",
   "controls": "Click unbalanced nodes (|BF| > 1)  |  Hover for BF & height",
   "start_status": "Click BOTH nodes with RED violation badges (|BF| > 1)!",
   "nodes": [
@@ -18,6 +18,6 @@
     { "key": 90, "left": null, "right": null }
   ],
   "hints": [
-    "Balance factor = left height minus right height. Look for long chains that lean one way."
+    "Balance factor = left height minus right height. Look for unbalanced subtrees whose |BF| exceeds 1."
   ]
 }

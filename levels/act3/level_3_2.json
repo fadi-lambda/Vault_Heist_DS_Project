@@ -3,9 +3,9 @@
   "act": 3,
   "title": "3.2 Single Rotations (LL / RR)",
   "concept": "Single LL and RR Rotations",
-  "objective": "Repair LL and RR imbalances by clicking the unbalanced pivot node (|BF| = 2) on each puzzle!",
-  "controls": "Click the imbalanced pivot node to perform single rotation",
-  "start_status": "Puzzle 1/2 (LL): Click the unbalanced pivot node to rotate right!",
+  "objective": "For each puzzle, click the unbalanced pivot node (|BF| > 1), then choose [LL: Rotate Right] or [RR: Rotate Left] to repair it!",
+  "controls": "Step 1: Click unbalanced pivot node -> Step 2: Click [LL (1/L)] or [RR (2/R)]",
+  "start_status": "Puzzle 1/2: Click the unbalanced pivot node (|BF| > 1) on the AVL tree, then pick [LL] or [RR]!",
   "puzzles": [
     {
       "case": "LL",
@@ -25,7 +25,7 @@
     }
   ],
   "hints": [
-    "The pivot is the topmost node whose |BF| is 2. A left-heavy chain needs a right rotation.",
-    "Now the chain leans right: the topmost node has |BF| 2 and needs a left rotation."
+    "Find the node whose |BF| is 2: if its left subtree is taller (BF = +2), use LL (Rotate Right); if its right subtree is taller (BF = -2), use RR (Rotate Left).",
+    "Now the subtree leans right (BF = -2 at the pivot): select the pivot and pick RR (Rotate Left)."
   ]
 }

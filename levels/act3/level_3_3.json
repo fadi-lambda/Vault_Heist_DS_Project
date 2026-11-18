@@ -3,9 +3,9 @@
   "act": 3,
   "title": "3.3 Double Rotations (LR / RL)",
   "concept": "Double LR and RL Rotations",
-  "objective": "Repair LR and RL double-rotation puzzles: click the child pivot first, then the root pivot!",
-  "controls": "Click child pivot first -> Click root pivot second",
-  "start_status": "Puzzle 1/2 (LR): Step 1 - Click the child pivot to rotate it first!",
+  "objective": "First identify the zig-zag case ([LR] or [RL]), then click the child pivot first and the root pivot second to execute both rotations!",
+  "controls": "Step 1: Pick [LR (1)] or [RL (2)] -> Step 2: Click child pivot -> Step 3: Click root pivot",
+  "start_status": "Puzzle 1/2: Inspect the BF badges and identify the double-rotation case: [Case: LR (1)] or [Case: RL (2)]!",
   "puzzles": [
     {
       "case": "LR",
@@ -27,9 +27,7 @@
     }
   ],
   "hints": [
-    "A zig-zag (LR) cannot be fixed by one rotation. First rotate the child so the chain becomes straight.",
-    "The chain is straight now: rotate the root pivot against the direction it leans.",
-    "RL is the mirror of LR: first rotate the right child to straighten the zig-zag.",
-    "The chain is straight now: rotate the root pivot to the left."
+    "Check the root's BF and its heavy child's BF: opposite signs (+2 with -1 = LR; -2 with +1 = RL) mean a zig-zag.",
+    "Once the zig-zag case is identified, click the heavy child pivot first to straighten the chain, then click the root pivot."
   ]
 }

@@ -33,16 +33,6 @@ private:
     int getNodeSize(AVLNode* node) const { return node ? node->size : 0; }
     int getBalanceFactor(AVLNode* node) const;
 
-    // Updates height/size; appends EVENT_UPDATE_HEIGHT / EVENT_UPDATE_SIZE
-    // (old/new values) only when the stored value actually changes.
-    void updateHeightAndSize(AVLNode* node, EventBatch& events);
-
-    // Rotations (LL, RR, LR, RL). Each emits one EVENT_ROTATE tagged with the
-    // overall case (a double rotation LR/RL emits two ROTATE events, both tagged).
-    AVLNode* rotateRight(AVLNode* y, EventBatch& events, int rotationCase); // LL Case (Single Right Rotation)
-    AVLNode* rotateLeft(AVLNode* x, EventBatch& events, int rotationCase);  // RR Case (Single Left Rotation)
-    AVLNode* rebalance(AVLNode* node, EventBatch& events);
-
     // Recursive helpers
     AVLNode* insertHelper(AVLNode* node, AVLNode* parent, int key, bool& inserted, EventBatch& events);
     AVLNode* deleteHelper(AVLNode* node, int key, bool& deleted, EventBatch& events);
@@ -63,6 +53,14 @@ private:
 public:
     AVLTree();
     ~AVLTree();
+
+    // Direct manual rotation & subtree metadata entry points (Act 3 interactive puzzles)
+    void updateHeightAndSize(AVLNode* node, EventBatch& events);
+    AVLNode* rotateRight(AVLNode* y, EventBatch& events, int rotationCase); // LL Case (Single Right Rotation)
+    AVLNode* rotateLeft(AVLNode* x, EventBatch& events, int rotationCase);  // RR Case (Single Left Rotation)
+    AVLNode* rebalance(AVLNode* node, EventBatch& events);
+    void setRoot(AVLNode* newRoot) { root = newRoot; if (root) root->parent = nullptr; }
+    void clear() { destroyRecursive(root); root = nullptr; }
 
     // Core Operations (Section 5.4)
     bool insert(int key);

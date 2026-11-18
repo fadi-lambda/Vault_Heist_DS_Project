@@ -2,14 +2,14 @@
   "level_id": 35,
   "act": 3,
   "title": "3.5 Boss: Order-Statistic Heist",
-  "concept": "Order-statistic tree augmentation (subtreeSize, kth)",
-  "objective": "Use subtree size badges (sz) to click the target order-statistic treasure directly on the AVL tree!",
-  "controls": "Click the k-th smallest node using subtree sizes (sz)",
-  "start_status": "Challenge 1/2: Click the 3rd-smallest treasure (k=3) using subtree sizes (sz)!",
+  "concept": "Order-statistic AVL tree (k-th most valuable / largest, subtree size invariant)",
+  "objective": "Use subtree size badges (sz) to steal the k-th MOST VALUABLE (k-th largest) treasure in O(log n) while the vault validates sz invariants after rotations!",
+  "controls": "Click the k-th largest (most valuable) node using subtree size (sz) badges",
+  "start_status": "Challenge 1/2: Click the 3rd MOST VALUABLE (3rd-largest, k=3) treasure using subtree sizes (sz)!",
   "initial_keys": [40, 20, 60, 10, 30, 50, 70, 25],
   "k_queries": [3, 6],
   "hints": [
-    "Compare k with the left child's sz badge: go left if k fits inside it; otherwise subtract (left size + 1) and go right.",
-    "Same rule for this k: read the left child's sz at every step."
+    "For the k-th most valuable (largest) key, check the RIGHT child's sz badge: if k <= rightSize go right; if k == rightSize + 1 this room is the answer; otherwise subtract (rightSize + 1) and go left.",
+    "After a rotation updates subtree sizes, apply the same rightSize comparison rule at each step."
   ]
 }
