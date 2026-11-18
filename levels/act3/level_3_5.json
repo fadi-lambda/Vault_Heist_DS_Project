@@ -2,23 +2,14 @@
   "level_id": 35,
   "act": 3,
   "title": "3.5 Boss: Order-Statistic Heist",
-  "concept": "Order-statistic tree augmentation (subtreeSize, kth, rank)",
-  "objective": "Query kth smallest element and key rank in O(log n) time using subtreeSize metadata.",
-  "alarm_capacity": 20,
-  "optimal_steps": 2,
+  "concept": "Order-statistic tree augmentation (subtreeSize, kth)",
+  "objective": "Use subtree size badges (sz) to click the target order-statistic treasure directly on the AVL tree!",
+  "controls": "Click the k-th smallest node using subtree sizes (sz)",
+  "start_status": "Challenge 1/2: Click the 3rd-smallest treasure (k=3) using subtree sizes (sz)!",
   "initial_keys": [40, 20, 60, 10, 30, 50, 70, 25],
-  "queries": [
-    {
-      "query_type": "KTH_SMALLEST",
-      "k": 3,
-      "expected_key": 25,
-      "explanation": "Root 40 has left size 4. Since 3 <= 4, go Left to 20. Left size of 20 is 1. Since 3 > 1+1, go Right to 30 with k = 3 - 2 = 1. Left size of 30 is 1. Since 1 <= 1, go Left to 25."
-    },
-    {
-      "query_type": "RANK",
-      "target_key": 40,
-      "expected_rank": 5,
-      "explanation": "Keys <= 40 are {10, 20, 25, 30, 40}, total count is 5."
-    }
+  "k_queries": [3, 6],
+  "hints": [
+    "Compare k with the left child's sz badge: go left if k fits inside it; otherwise subtract (left size + 1) and go right.",
+    "Same rule for this k: read the left child's sz at every step."
   ]
 }

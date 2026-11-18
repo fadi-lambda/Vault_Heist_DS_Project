@@ -1,0 +1,14 @@
+{
+  "level_id": 23,
+  "act": 2,
+  "title": "2.3 Infiltration Sweep",
+  "concept": "BST minimum, maximum and search",
+  "objective": "Locate and click the Minimum key, the Maximum key, and target frequency 70 on the BST!",
+  "controls": "Click Min node, Max node, and node 70 in any order",
+  "start_status": "Click the Minimum key, Maximum key, and target key 70 on the BST!",
+  "initial_keys": [50, 30, 70, 20, 40, 60, 80],
+  "target_keys": [70],
+  "hints": [
+    "The minimum is the leftmost node and the maximum is the rightmost. The target needs a normal BST search."
+  ]
+}

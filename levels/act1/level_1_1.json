@@ -1,0 +1,22 @@
+{
+  "level_id": 11,
+  "act": 1,
+  "title": "1.1 Traversals Protocol",
+  "concept": "Inorder traversal of a general binary tree",
+  "objective": "Click the 7 tree nodes in exact Inorder sequence (Left -> Root -> Right)!",
+  "controls": "Click nodes in Inorder sequence  |  Hover for node stats",
+  "start_status": "Click nodes in Inorder sequence: start with the leftmost node.",
+  "nodes": [
+    { "key": 50, "left": 30, "right": 70 },
+    { "key": 30, "left": 20, "right": 40 },
+    { "key": 70, "left": 60, "right": 80 },
+    { "key": 20, "left": null, "right": null },
+    { "key": 40, "left": null, "right": null },
+    { "key": 60, "left": null, "right": null },
+    { "key": 80, "left": null, "right": null }
+  ],
+  "hints": [
+    "Inorder = Left, Root, Right. Begin with the leftmost node: keep following left children until there are none.",
+    "After a node, visit the leftmost node of its right subtree; with no right child, climb to the parent."
+  ]
+}

@@ -1,11 +1,11 @@
 {
   "level_id": 32,
   "act": 3,
-  "title": "3.2 Manual Repair - Single Rotations",
+  "title": "3.2 Single Rotations (LL / RR)",
   "concept": "Single LL and RR Rotations",
-  "objective": "Perform LL and RR single rotations to balance the tree.",
-  "alarm_capacity": 20,
-  "optimal_steps": 2,
+  "objective": "Repair LL and RR imbalances by clicking the unbalanced pivot node (|BF| = 2) on each puzzle!",
+  "controls": "Click the imbalanced pivot node to perform single rotation",
+  "start_status": "Puzzle 1/2 (LL): Click the unbalanced pivot node to rotate right!",
   "puzzles": [
     {
       "case": "LL",
@@ -23,5 +23,9 @@
       "correct_rotation": "LEFT",
       "new_root": 20
     }
+  ],
+  "hints": [
+    "The pivot is the topmost node whose |BF| is 2. A left-heavy chain needs a right rotation.",
+    "Now the chain leans right: the topmost node has |BF| 2 and needs a left rotation."
   ]
 }

@@ -5,7 +5,13 @@ add_executable(Vault_Heist_Tests
     BinaryTreeTests.cpp
     BSTTests.cpp
     EventLogTests.cpp
+    FoundationTests.cpp
     ${PROJECT_SOURCE_DIR}/src/events/EventLog.cpp
+    ${PROJECT_SOURCE_DIR}/src/game/Json.cpp
+    ${PROJECT_SOURCE_DIR}/src/game/LevelLoader.cpp
+    ${PROJECT_SOURCE_DIR}/src/game/Scoring.cpp
+    ${PROJECT_SOURCE_DIR}/src/game/HintSystem.cpp
+    ${PROJECT_SOURCE_DIR}/src/gui/DragDrop.cpp
     ${PROJECT_SOURCE_DIR}/src/structures/MaxHeap.cpp
     ${PROJECT_SOURCE_DIR}/src/structures/AVLTree.cpp
     ${PROJECT_SOURCE_DIR}/src/structures/BinaryTree.cpp

@@ -35,6 +35,11 @@ struct GameSnapshot {
     // Level & HUD state
     int alarmSteps;
     int score;
+    int stepCount;
+    int penaltyCount;
+    int penaltyPts;
+    int bonus;
+    bool hintUsed;
     bool act1Reconstructed;
     int act2Step21;
     int act2DelStage;
@@ -56,6 +61,7 @@ struct GameSnapshot {
     GameSnapshot()
         : btLen(0), bstLen(0), avlLen(0), heapLen(0), sortedLen(0),
           useRealHeap(false), alarmSteps(0), score(1000),
+          stepCount(0), penaltyCount(0), penaltyPts(0), bonus(0), hintUsed(false),
           act1Reconstructed(false), act2Step21(0), act2DelStage(0),
           act2BossStage(0), act2Clicked24Mask(0), avlQueuePos(0),
           bossQueryIdx(1), buildStepIdx(-1), act4Built(false),

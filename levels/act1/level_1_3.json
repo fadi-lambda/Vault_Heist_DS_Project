@@ -1,0 +1,15 @@
+{
+  "level_id": 13,
+  "act": 1,
+  "title": "1.3 Blueprint Reconstruction",
+  "concept": "Rebuilding a binary tree from Preorder + Inorder",
+  "objective": "Rebuild from Pre {10,5,2,7,15,12,20} & In {2,5,7,10,12,15,20}, then click the reconstructed root!",
+  "controls": "Click [Reconstruct Pre+In] -> Click reconstructed root node (10)",
+  "start_status": "Blueprint shredded! Click [Reconstruct Pre+In [R]], then click the reconstructed root!",
+  "preorder": [10, 5, 2, 7, 15, 12, 20],
+  "inorder": [2, 5, 7, 10, 12, 15, 20],
+  "hints": [
+    "The first Preorder value is always the root. Press Reconstruct to rebuild the tree.",
+    "The root of the rebuilt tree is the first value of the Preorder list."
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "level_id": 25,
+  "act": 2,
+  "title": "2.5 Boss: Range Vault Heist",
+  "concept": "BST range query and kth smallest",
+  "objective": "Click all 5 keys inside Range [25..75], then click the 4th-smallest key to breach Wing 3!",
+  "controls": "Click all keys in [25..75] -> Click 4th-smallest node",
+  "start_status": "Stage 1/2: Click all 5 BST keys in Range [25..75].",
+  "initial_keys": [50, 30, 70, 20, 40, 60, 80],
+  "range_lo": 25,
+  "range_hi": 75,
+  "k_queries": [4],
+  "hints": [
+    "Check every node against both bounds - in-range keys appear on both sides of the root.",
+    "The kth smallest is the kth node in Inorder order. Count up from the smallest key."
+  ]
+}

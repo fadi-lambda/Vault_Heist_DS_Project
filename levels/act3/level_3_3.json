@@ -1,11 +1,11 @@
 {
   "level_id": 33,
   "act": 3,
-  "title": "3.3 Manual Repair - Double Rotations",
+  "title": "3.3 Double Rotations (LR / RL)",
   "concept": "Double LR and RL Rotations",
-  "objective": "Identify and perform two-step LR and RL double rotations.",
-  "alarm_capacity": 22,
-  "optimal_steps": 4,
+  "objective": "Repair LR and RL double-rotation puzzles: click the child pivot first, then the root pivot!",
+  "controls": "Click child pivot first -> Click root pivot second",
+  "start_status": "Puzzle 1/2 (LR): Step 1 - Click the child pivot to rotate it first!",
   "puzzles": [
     {
       "case": "LR",
@@ -25,5 +25,11 @@
       "step_2": "LEFT_ROTATE_ROOT",
       "final_root": 20
     }
+  ],
+  "hints": [
+    "A zig-zag (LR) cannot be fixed by one rotation. First rotate the child so the chain becomes straight.",
+    "The chain is straight now: rotate the root pivot against the direction it leans.",
+    "RL is the mirror of LR: first rotate the right child to straighten the zig-zag.",
+    "The chain is straight now: rotate the root pivot to the left."
   ]
 }

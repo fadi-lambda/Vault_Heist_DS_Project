@@ -3,15 +3,17 @@
   "act": 3,
   "title": "3.4 Auto Mode and Prediction",
   "concept": "Automatic AVL rebalancing and rotation prediction",
-  "objective": "Predict which rotation (LL, RR, LR, RL, None) will occur before each insertion.",
-  "alarm_capacity": 25,
-  "optimal_steps": 5,
+  "objective": "Predict the rotation pivot (or attachment parent if balanced) by clicking that node before each insert!",
+  "controls": "Click predicted pivot/parent node to trigger next AVL insert",
+  "start_status": "Click the rotation pivot node on the AVL tree to insert!",
   "initial_keys": [40, 20],
   "insertion_sequence": [
-    { "key": 10, "expected_rotation": "LL" },
-    { "key": 25, "expected_rotation": "LR" },
-    { "key": 60, "expected_rotation": "None" },
-    { "key": 50, "expected_rotation": "None" },
-    { "key": 70, "expected_rotation": "RR" }
+    { "key": 10, "pivot_key": 40, "expected_rotation": "LL" },
+    { "key": 60, "pivot_key": 40, "expected_rotation": "None" },
+    { "key": 70, "pivot_key": 40, "expected_rotation": "RR" },
+    { "key": 50, "pivot_key": 20, "expected_rotation": "RL" }
+  ],
+  "hints": [
+    "Walk the incoming key down from the root. The pivot is the lowest node that becomes unbalanced - or the parent it attaches to if nothing breaks."
   ]
 }

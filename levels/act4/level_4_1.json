@@ -3,10 +3,14 @@
   "act": 4,
   "title": "4.1 Activate the Vault",
   "concept": "Complete Binary Tree representation and bottom-up Max Heap construction",
-  "objective": "Transform an unsorted array into a valid Max Heap in O(n) time using bottom-up sift-down.",
-  "alarm_capacity": 25,
-  "optimal_steps": 4,
+  "objective": "Build a Max Heap bottom-up: click each violating non-leaf (or swap child) from [2] -> [1] -> [0]!",
+  "controls": "Click violating node/cell [2] -> [1] -> [0] to sift down",
+  "start_status": "Step 1/3: Click the last non-leaf node (or its larger child) to sift down!",
   "initial_array": [15, 60, 25, 90, 75, 40, 80],
-  "start_index": 2,
-  "expected_final_heap": [90, 75, 80, 15, 60, 40, 25]
+  "expected_final_heap": [90, 75, 80, 15, 60, 40, 25],
+  "hints": [
+    "Bottom-up build starts at the last non-leaf index, n/2 - 1. Sift it down below its larger child.",
+    "Move one index up and sift that node down the same way.",
+    "Finish with the root: it may need to sink more than one level."
+  ]
 }

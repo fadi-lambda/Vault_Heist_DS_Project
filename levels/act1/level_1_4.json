@@ -1,0 +1,22 @@
+{
+  "level_id": 14,
+  "act": 1,
+  "title": "1.4 Structural Analysis",
+  "concept": "Tree diameter through deepest leaves on opposite wings",
+  "objective": "Click two deepest leaves on opposite wings to trace the longest transmission path (Diameter = 5)!",
+  "controls": "Click one deepest leaf on left wing + one on right wing",
+  "start_status": "Click two deepest leaves on OPPOSITE subtrees to trace the tree diameter!",
+  "nodes": [
+    { "key": 50, "left": 30, "right": 70 },
+    { "key": 30, "left": 20, "right": 40 },
+    { "key": 70, "left": 60, "right": 80 },
+    { "key": 20, "left": null, "right": null },
+    { "key": 40, "left": null, "right": null },
+    { "key": 60, "left": null, "right": null },
+    { "key": 80, "left": null, "right": null }
+  ],
+  "hints": [
+    "The diameter here runs leaf-to-leaf through the root: pick a deepest leaf in each wing.",
+    "You have one wing's leaf. Pick a deepest leaf on the opposite wing."
+  ]
+}

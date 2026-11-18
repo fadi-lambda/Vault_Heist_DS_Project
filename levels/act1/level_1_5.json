@@ -1,0 +1,22 @@
+{
+  "level_id": 15,
+  "act": 1,
+  "title": "1.5 Boss: The Vault Nexus",
+  "concept": "Lowest Common Ancestor",
+  "objective": "Find the Lowest Common Ancestor (LCA) of nodes 20 and 40 by clicking the LCA node directly!",
+  "controls": "Click the LCA node of 20 and 40 on the tree",
+  "start_status": "Targets 20 and 40 highlighted! Click their Lowest Common Ancestor (LCA).",
+  "nodes": [
+    { "key": 50, "left": 30, "right": 70 },
+    { "key": 30, "left": 20, "right": 40 },
+    { "key": 70, "left": 60, "right": 80 },
+    { "key": 20, "left": null, "right": null },
+    { "key": 40, "left": null, "right": null },
+    { "key": 60, "left": null, "right": null },
+    { "key": 80, "left": null, "right": null }
+  ],
+  "target_keys": [20, 40],
+  "hints": [
+    "The LCA is the lowest node that has both highlighted nodes somewhere below it. Find where their root paths split."
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "level_id": 12,
+  "act": 1,
+  "title": "1.2 Security Laser Mirror",
+  "concept": "Mirroring (inverting) a binary tree",
+  "objective": "Mirror the binary tree branches, then click the root node (50) to confirm laser alignment!",
+  "controls": "Click [Mirror Tree] or root node -> Click root (50) to confirm",
+  "start_status": "Step 1: Click [Mirror Tree [M]] or the root node to mirror branches.",
+  "nodes": [
+    { "key": 50, "left": 30, "right": 70 },
+    { "key": 30, "left": 20, "right": 40 },
+    { "key": 70, "left": 60, "right": 80 },
+    { "key": 20, "left": null, "right": null },
+    { "key": 40, "left": null, "right": null },
+    { "key": 60, "left": null, "right": null },
+    { "key": 80, "left": null, "right": null }
+  ],
+  "hints": [
+    "Mirroring swaps every node's left and right child. Use the Mirror button or click the root.",
+    "The root keeps its place after mirroring - click it to confirm the alignment."
+  ]
+}

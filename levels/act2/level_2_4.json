@@ -1,0 +1,14 @@
+{
+  "level_id": 24,
+  "act": 2,
+  "title": "2.4 Key Recovery (Succ & Pred)",
+  "concept": "BST inorder predecessor and successor",
+  "objective": "Node 40 is compromised! Click both its Inorder Predecessor and Inorder Successor on the BST!",
+  "controls": "Click Predecessor and Successor of node 40",
+  "start_status": "Target 40 highlighted! Click both its Predecessor and Successor on the BST.",
+  "initial_keys": [50, 30, 70, 20, 40, 60, 80],
+  "target_keys": [40],
+  "hints": [
+    "Predecessor = next smaller key, successor = next larger key. With no left/right subtree to descend into, look to the ancestors."
+  ]
+}
