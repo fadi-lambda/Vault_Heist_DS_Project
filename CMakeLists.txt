@@ -22,6 +22,13 @@ find_package(GTest CONFIG REQUIRED)
 add_executable(Vault_Heist
     src/main.cpp
     src/events/EventLog.cpp
+    src/gui/LayoutEngine.cpp
+    src/gui/Renderer.cpp
+    src/gui/AnimationController.cpp
+    src/gui/UndoStack.cpp
+    src/gui/ToastQueue.cpp
+    src/gui/Ui.cpp
+    src/gui/ScoreLog.cpp
     src/structures/MaxHeap.cpp
     src/structures/AVLTree.cpp
     src/structures/BinaryTree.cpp
