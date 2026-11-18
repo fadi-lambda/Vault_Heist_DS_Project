@@ -5,6 +5,7 @@
 #include "game/Scoring.h"
 #include "game/HintSystem.h"
 #include "gui/DragDrop.h"
+#include "structures/BST.h"
 
 using namespace VaultHeist;
 
@@ -72,6 +73,14 @@ TEST(ScoringEngineTest, PenaltiesAndScoreFloor) {
 
     // Score floors at 0
     EXPECT_EQ(ScoringEngine::scoreFor(120, 100, 0), 0);
+
+    // Shrinking capacity (used in Act 2 Boss) triggers full-alarm cleanly
+    sc.setCapacity(4);
+    EXPECT_EQ(sc.capacity(), 4);
+    EXPECT_TRUE(sc.isAlarmFull());
+    EXPECT_EQ(sc.stars(), 0);
+    sc.setCapacity(0);
+    EXPECT_EQ(sc.capacity(), 1);
 }
 
 // =============================================================================
@@ -87,7 +96,7 @@ TEST(LevelLoaderTest, LoadsAllTwentyLevelsAndComputesOptimalSteps) {
     };
     const int expectedOpt[20] = {
         7, 7, 8, 8, 7,
-        3, 3, 3, 2, 6,
+        3, 6, 3, 5, 15,
         2, 2, 4, 4, 2,
         3, 1, 7, 7, 9
     };
@@ -133,6 +142,60 @@ TEST(LevelLoaderTest, LoadsAllTwentyLevelsAndComputesOptimalSteps) {
     EXPECT_EQ(d15.title.find("Boss"), std::string::npos);
     EXPECT_EQ(computeOptimalSteps(d15), 7);
 
+    // Act 2 corrected level sequence & data checks
+    LevelData d21, d22, d23, d24, d25;
+    ASSERT_TRUE(loadLevelById(21, d21, aerr));
+    EXPECT_EQ(d21.title, "2.1 Search Heist");
+    EXPECT_EQ(computeOptimalSteps(d21), 3);
+
+    ASSERT_TRUE(loadLevelById(22, d22, aerr));
+    EXPECT_EQ(d22.title, "2.2 Stash the Loot");
+    EXPECT_EQ(computeOptimalSteps(d22), 6);
+
+    ASSERT_TRUE(loadLevelById(23, d23, aerr));
+    EXPECT_EQ(d23.title, "2.3 Steal and Collapse");
+    ASSERT_EQ(d23.deleteSequenceCount, 3);
+    EXPECT_EQ(d23.deleteSequence[0], 80);
+    EXPECT_EQ(d23.deleteSequence[1], 70);
+    EXPECT_EQ(d23.deleteSequence[2], 30);
+    {
+        BST bst23;
+        for (int k = 0; k < d23.initialKeyCount; ++k) bst23.insert(d23.initialKeys[k]);
+        auto findKey = [](const TreeNode* root, int target) -> const TreeNode* {
+            const TreeNode* c = root;
+            while (c) {
+                if (target == c->value) return c;
+                c = (target < c->value) ? c->left : c->right;
+            }
+            return nullptr;
+        };
+        const TreeNode* n0 = findKey(bst23.getRoot(), d23.deleteSequence[0]);
+        ASSERT_NE(n0, nullptr);
+        EXPECT_TRUE(!n0->left && !n0->right); // Case 1: Leaf (80)
+        bst23.deleteKey(d23.deleteSequence[0]);
+
+        const TreeNode* n1 = findKey(bst23.getRoot(), d23.deleteSequence[1]);
+        ASSERT_NE(n1, nullptr);
+        EXPECT_TRUE((n1->left != nullptr) != (n1->right != nullptr)); // Case 2: One-Child (70 -> 60)
+        bst23.deleteKey(d23.deleteSequence[1]);
+
+        const TreeNode* n2 = findKey(bst23.getRoot(), d23.deleteSequence[2]);
+        ASSERT_NE(n2, nullptr);
+        EXPECT_TRUE(n2->left != nullptr && n2->right != nullptr); // Case 3: Two-Children (30 -> 20 & 40)
+        bst23.deleteKey(d23.deleteSequence[2]);
+        EXPECT_TRUE(bst23.isValidBST());
+    }
+
+    ASSERT_TRUE(loadLevelById(24, d24, aerr));
+    EXPECT_EQ(d24.title, "2.4 Range Raid");
+    EXPECT_EQ(d24.rangeLo, 30);
+    EXPECT_EQ(d24.rangeHi, 70);
+    EXPECT_EQ(computeOptimalSteps(d24), 5);
+
+    ASSERT_TRUE(loadLevelById(25, d25, aerr));
+    EXPECT_EQ(d25.title, "2.5 Boss: The Lazy Architect");
+    EXPECT_EQ(computeOptimalSteps(d25), 15);
+
     // Specific structural assertions on loaded data
     LevelData d31;
     std::string err;
@@ -160,7 +223,7 @@ TEST(LevelLoaderTest, LoadsAllTwentyLevelsAndComputesOptimalSteps) {
 TEST(HintSystemTest, OncePerLevelNudgeAndStarCap) {
     LevelData d;
     std::string err;
-    ASSERT_TRUE(loadLevelById(21, d, err));
+    ASSERT_TRUE(loadLevelById(14, d, err));
     ASSERT_EQ(d.hintCount, 3);
 
     ScoringEngine sc;

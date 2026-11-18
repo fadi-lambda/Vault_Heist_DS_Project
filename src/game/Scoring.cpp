@@ -38,6 +38,10 @@ void ScoringEngine::begin(int optimal) {
     hintUsed = false;
 }
 
+void ScoringEngine::setCapacity(int newCapacity) {
+    alarmCapacity = newCapacity < 1 ? 1 : newCapacity;
+}
+
 void ScoringEngine::addStep(int n) {
     if (n <= 0) return;
     stepCount += n;

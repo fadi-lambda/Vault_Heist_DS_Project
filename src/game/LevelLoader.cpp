@@ -162,6 +162,88 @@ int heightOfKey(const LevelData& d, int key) {
     return 1 + (lh > rh ? lh : rh);
 }
 
+struct SimBstNode {
+    int key;
+    int left;
+    int right;
+    SimBstNode() : key(0), left(-1), right(-1) {}
+};
+
+int simInsertSteps(SimBstNode* pool, int& count, int cap, int key) {
+    if (count == 0) {
+        if (count < cap) {
+            pool[count].key = key;
+            pool[count].left = -1;
+            pool[count].right = -1;
+            ++count;
+        }
+        return 1;
+    }
+    int steps = 0;
+    int cur = 0;
+    while (cur >= 0 && cur < count) {
+        ++steps;
+        if (key < pool[cur].key) {
+            if (pool[cur].left < 0) {
+                if (count < cap) {
+                    int ni = count++;
+                    pool[ni].key = key;
+                    pool[ni].left = -1;
+                    pool[ni].right = -1;
+                    pool[cur].left = ni;
+                }
+                break;
+            }
+            cur = pool[cur].left;
+        } else if (key > pool[cur].key) {
+            if (pool[cur].right < 0) {
+                if (count < cap) {
+                    int ni = count++;
+                    pool[ni].key = key;
+                    pool[ni].left = -1;
+                    pool[ni].right = -1;
+                    pool[cur].right = ni;
+                }
+                break;
+            }
+            cur = pool[cur].right;
+        } else {
+            // Duplicate found -> 1 step to reject
+            break;
+        }
+    }
+    return steps;
+}
+
+int simSearchSteps(const SimBstNode* pool, int count, int key) {
+    int steps = 0;
+    int cur = (count > 0) ? 0 : -1;
+    while (cur >= 0 && cur < count) {
+        ++steps;
+        if (key == pool[cur].key) break;
+        cur = (key < pool[cur].key) ? pool[cur].left : pool[cur].right;
+    }
+    return steps;
+}
+
+int simRangeSteps(const SimBstNode* pool, int count, int idx, int lo, int hi) {
+    if (idx < 0 || idx >= count) return 0;
+    int steps = 0;
+    if (pool[idx].key >= lo && pool[idx].key <= hi) ++steps;
+    if (pool[idx].key <= lo && pool[idx].left >= 0) ++steps;
+    if (pool[idx].key >= hi && pool[idx].right >= 0) ++steps;
+    if (pool[idx].key > lo) steps += simRangeSteps(pool, count, pool[idx].left, lo, hi);
+    if (pool[idx].key < hi) steps += simRangeSteps(pool, count, pool[idx].right, lo, hi);
+    return steps;
+}
+
+void buildSimBst(const LevelData& d, SimBstNode* pool, int& count) {
+    count = 0;
+    for (int i = 0; i < d.initialKeyCount && count < LEVEL_MAX_INTS; ++i) {
+        simInsertSteps(pool, count, LEVEL_MAX_INTS, d.initialKeys[i]);
+    }
+}
+
 } // namespace
 
 int findUnbalancedKeys(const LevelData& data, int* outKeys, int cap) {
@@ -211,16 +293,44 @@ int computeOptimalSteps(const LevelData& d) {
             return 3 + diam;
         }
         case 15: return d.nodeCount;                       // bottom-up swaps (up to N) or Auto Mirror
-        case 21: return d.targetKeyCount + 1;              // duplicate test + attachment parent + new leaf
-        case 22: return d.deleteSequenceCount;             // one click per deletion
-        case 23: return (d.initialKeyCount >= 2 ? 2 : d.initialKeyCount) + d.targetKeyCount; // min + max + targets
-        case 24: return d.targetKeyCount * 2;              // predecessor + successor per target
-        case 25: {                                         // every in-range key + k queries
-            int inRange = 0;
-            for (int i = 0; i < d.initialKeyCount; ++i) {
-                if (d.initialKeys[i] >= d.rangeLo && d.initialKeys[i] <= d.rangeHi) ++inRange;
+        case 21: {                                         // root-to-target comparisons + Found
+            SimBstNode pool[LEVEL_MAX_INTS];
+            int cnt = 0;
+            buildSimBst(d, pool, cnt);
+            int total = 0;
+            for (int i = 0; i < d.targetKeyCount; ++i) total += simSearchSteps(pool, cnt, d.targetKeys[i]);
+            return total;
+        }
+        case 22: {                                         // walk-to-slot inserts + duplicate rejection
+            SimBstNode pool[LEVEL_MAX_INTS];
+            int cnt = 0;
+            buildSimBst(d, pool, cnt);
+            int total = 0;
+            for (int i = 0; i < d.targetKeyCount; ++i) {
+                total += simInsertSteps(pool, cnt, LEVEL_MAX_INTS, d.targetKeys[i]);
             }
-            return inRange + d.kQueryCount;
+            return total;
+        }
+        case 23: return d.deleteSequenceCount;             // one case-classification click per deletion
+        case 24: {                                         // range report + subtree pruning decisions
+            SimBstNode pool[LEVEL_MAX_INTS];
+            int cnt = 0;
+            buildSimBst(d, pool, cnt);
+            return simRangeSteps(pool, cnt, 0, d.rangeLo, d.rangeHi);
+        }
+        case 25: {                                         // sorted degenerate inserts + search on chain
+            SimBstNode pool[LEVEL_MAX_INTS];
+            int cnt = 0;
+            buildSimBst(d, pool, cnt);
+            int total = 0;
+            for (int i = 0; i < d.targetKeyCount; ++i) {
+                total += simInsertSteps(pool, cnt, LEVEL_MAX_INTS, d.targetKeys[i]);
+            }
+            int searchKey = (d.kQueryCount > 0)
+                                ? d.kQueries[0]
+                                : (d.targetKeyCount > 0 ? d.targetKeys[d.targetKeyCount - 1] : -1);
+            if (searchKey >= 0) total += simSearchSteps(pool, cnt, searchKey);
+            return total;
         }
         case 31: {
             int keys[LEVEL_MAX_NODES];

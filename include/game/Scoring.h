@@ -31,6 +31,8 @@ public:
 
     // Start a new level attempt. optimalSteps must be computed from the level data.
     void begin(int optimalSteps);
+    // Adjust alarm capacity during a level (e.g. Act 2 Boss shrinking capacity).
+    void setCapacity(int newCapacity);
 
     // A valid progress step: +n steps and +n alarm.
     void addStep(int n = 1);
