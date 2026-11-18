@@ -586,6 +586,25 @@ static void siftDownHeapArrayWithEvents(int* arr, int n, int startIdx, EventBatc
     batch.append(dn);
 }
 
+static void insertExtractedMaxIntoSortedTail(int* sortedArr, int& sortedCount, int maxVal) {
+    if (sortedCount < 0) sortedCount = 0;
+    if (sortedCount >= 30) sortedCount = 29;
+    for (int i = sortedCount; i > 0; --i) {
+        sortedArr[i] = sortedArr[i - 1];
+    }
+    sortedArr[0] = maxVal;
+    sortedCount++;
+}
+
+static bool validateAct4SortedResult(const LevelData& d, const int* sortedArr, int sortedCount) {
+    if (d.expectedSortedResultCount <= 0) return false;
+    if (sortedCount != d.expectedSortedResultCount) return false;
+    for (int i = 0; i < sortedCount; ++i) {
+        if (sortedArr[i] != d.expectedSortedResult[i]) return false;
+    }
+    return true;
+}
+
 struct LevelInfo {
     int id;
     int act;
@@ -641,6 +660,7 @@ int main(int argc, char** argv) {
     bool verifyAct1 = false;
     bool verifyAct2 = false;
     bool verifyAct3 = false;
+    bool verifyAct4 = false;
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--verify-screenshots") == 0 && i + 1 < argc) {
             verifyDir = argv[++i];
@@ -652,6 +672,8 @@ int main(int argc, char** argv) {
             verifyAct2 = true;
         } else if (std::strcmp(argv[i], "--verify-act3") == 0) {
             verifyAct3 = true;
+        } else if (std::strcmp(argv[i], "--verify-act4") == 0) {
+            verifyAct4 = true;
         }
     }
 
@@ -1157,7 +1179,13 @@ int main(int argc, char** argv) {
             act4Heap.buildMaxHeap(d.initialArray, d.initialArrayCount);
             act4Built = true;
             hlIndex1 = 0;
-            status = d.startStatus;
+            if (lid == LEVEL_4_4) {
+                status = "Steps: 0/" + std::to_string(opt) + " (" + std::to_string(opt) +
+                         " extractions, O(log n) sift-down each = Theta(n log n)). Click root [0] (" +
+                         std::to_string(act4Heap.getMax()) + ")!";
+            } else {
+                status = d.startStatus;
+            }
         } else if (lid == LEVEL_4_5) {
             activeHeapSize = minInt(30, d.initialArrayCount);
             for (int i = 0; i < activeHeapSize; ++i) heapArr[i] = d.initialArray[i];
@@ -1359,9 +1387,23 @@ int main(int argc, char** argv) {
         }
         else if (lid == LEVEL_4_1) finishLevelWin(stars, "Bottom-up Max Heap activated in O(n)!");
         else if (lid == LEVEL_4_2) finishLevelWin(stars, "Sabotaged root sifted down; Max Heap restored!");
-        else if (lid == LEVEL_4_3) finishLevelWin(stars, "All treasures extracted to sorted region!");
-        else if (lid == LEVEL_4_4) finishLevelWin(stars, "Race won before guards arrived!");
-        else if (lid == LEVEL_4_5) finishLevelWin(stars, "Final Vault unlocked! Heap Sort complete!");
+        else if (lid == LEVEL_4_3 || lid == LEVEL_4_4 || lid == LEVEL_4_5) {
+            if (!validateAct4SortedResult(levelData[currentLevelIdx], sortedArr, sortedCount)) {
+                pendingWin = false;
+                raisePenalty(PENALTY_ACT4_INVALID, "Sorted array mismatch against expected_sorted_result!");
+                return;
+            }
+            if (lid == LEVEL_4_3) {
+                finishLevelWin(stars, "All treasures extracted in ascending order!");
+            } else if (lid == LEVEL_4_4) {
+                int optS = computeOptimalSteps(levelData[currentLevelIdx]);
+                finishLevelWin(stars, "Race won! Steps: " + std::to_string(scoring.steps()) + "/" +
+                                      std::to_string(optS) + " (" + std::to_string(optS) +
+                                      " extractions, O(log n) each = Theta(n log n))!");
+            } else {
+                finishLevelWin(stars, "Final Vault unlocked! In-place ascending Heap Sort complete!");
+            }
+        }
         else finishLevelWin(stars, "Level Complete!");
     };
 
@@ -2610,18 +2652,40 @@ int main(int argc, char** argv) {
                                                 CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
                     EventBatch batch;
                     int maxVal = act4Heap.extractMax(batch);
-                    sortedArr[sortedCount++] = maxVal;
+                    insertExtractedMaxIntoSortedTail(sortedArr, sortedCount, maxVal);
                     layoutHeapForScreen(true, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
                     animCtrl.loadOperation(batch, before, heapLayout, true, autoPlayEvents);
                     scoring.addStep(1);
                     syncScoringHud();
-                    toastQueue.push("Extracted max " + std::to_string(maxVal) + "!", TOAST_KIND_SUCCESS);
+                    int optS = computeOptimalSteps(d);
                     if (act4Heap.isEmpty()) {
-                        pendingWin = true;
-                        status = "Extracted final treasure " + std::to_string(maxVal) + "! Finishing...";
+                        if (!validateAct4SortedResult(d, sortedArr, sortedCount)) {
+                            pendingWin = false;
+                            raisePenalty(PENALTY_ACT4_INVALID, "Sorted region does not match expected ascending order!");
+                            status = "ERROR: Sorted array mismatch against expected_sorted_result!";
+                        } else {
+                            toastQueue.push("Extracted max " + std::to_string(maxVal) + " (ascending order verified)!",
+                                            TOAST_KIND_SUCCESS);
+                            pendingWin = true;
+                            if (lid == LEVEL_4_4) {
+                                status = "All " + std::to_string(optS) + " extracted! Steps: " +
+                                         std::to_string(scoring.steps()) + "/" + std::to_string(optS) +
+                                         " (" + std::to_string(optS) + " extractions, O(log n) each = Theta(n log n))!";
+                            } else {
+                                status = "Extracted final treasure " + std::to_string(maxVal) + "! Ascending sorted array verified.";
+                            }
+                        }
                     } else {
-                        status = "Extracted " + std::to_string(maxVal) + "! Click root [0] (" +
-                                 std::to_string(act4Heap.getMax()) + ") to extract next.";
+                        toastQueue.push("Extracted max " + std::to_string(maxVal) + " to sorted tail!", TOAST_KIND_SUCCESS);
+                        if (lid == LEVEL_4_4) {
+                            status = "Extracted " + std::to_string(maxVal) + " | Steps: " +
+                                     std::to_string(scoring.steps()) + "/" + std::to_string(optS) +
+                                     " (" + std::to_string(optS) + " extractions, O(log n) each = Theta(n log n)). Next root [0]=" +
+                                     std::to_string(act4Heap.getMax()) + "!";
+                        } else {
+                            status = "Extracted " + std::to_string(maxVal) + "! Click root [0] (" +
+                                     std::to_string(act4Heap.getMax()) + ") to extract next.";
+                        }
                     }
                     if (scoring.isAlarmFull()) triggerAlarmFullFail();
                 } else {
@@ -2643,16 +2707,23 @@ int main(int argc, char** argv) {
                                                 CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
                     EventBatch batch;
                     int maxVal = act4Heap.extractMax(batch);
-                    sortedArr[sortedCount++] = maxVal;
+                    insertExtractedMaxIntoSortedTail(sortedArr, sortedCount, maxVal);
                     layoutHeapForScreen(true, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
                     animCtrl.loadOperation(batch, before, heapLayout, true, autoPlayEvents);
                     scoring.addStep(1);
                     syncScoringHud();
-                    toastQueue.push("Extracted " + std::to_string(maxVal) + " to sorted region", TOAST_KIND_SUCCESS);
                     if (act4Heap.isEmpty()) {
-                        pendingWin = true;
-                        status = "All treasures heap-sorted! Unlocking final vault...";
+                        if (!validateAct4SortedResult(d, sortedArr, sortedCount)) {
+                            pendingWin = false;
+                            raisePenalty(PENALTY_ACT4_INVALID, "Sorted region does not match expected ascending order!");
+                            status = "ERROR: Sorted array mismatch against expected_sorted_result!";
+                        } else {
+                            toastQueue.push("In-place ascending Heap Sort verified!", TOAST_KIND_SUCCESS);
+                            pendingWin = true;
+                            status = "All treasures heap-sorted ascending! Unlocking final vault...";
+                        }
                     } else {
+                        toastQueue.push("Extracted " + std::to_string(maxVal) + " to ascending tail", TOAST_KIND_SUCCESS);
                         status = "Extracted " + std::to_string(maxVal) + ". Click root [0] (" +
                                  std::to_string(act4Heap.getMax()) + ") next!";
                     }
@@ -2969,7 +3040,7 @@ int main(int argc, char** argv) {
             LayoutEngine::layoutMaxHeap(act4Heap, sortedArr, sortedCount, 605.f, 95.f, 565.f, 540.f, before);
             EventBatch batch;
             int mxVal = act4Heap.extractMax(batch);
-            sortedArr[sortedCount++] = mxVal;
+            insertExtractedMaxIntoSortedTail(sortedArr, sortedCount, mxVal);
             layoutHeapForScreen(true, 605.f, 95.f, 565.f, 540.f);
             animCtrl.loadOperation(batch, before, heapLayout, true, autoPlayEvents);
             status = "Sandbox Heap Extracted max=" + std::to_string(mxVal) + "!";
@@ -3395,6 +3466,9 @@ int main(int argc, char** argv) {
             } else if (lid == LEVEL_3_5) {
                 act3PromptA = bossQueryIdx;
                 act3PromptB = avl.getSize();
+            } else if (lid >= LEVEL_4_1 && lid <= LEVEL_4_5) {
+                act3PromptA = scoring.steps();
+                act3PromptB = sortedCount * 10 + (act4Built ? 1 : 0);
             }
 
             if (cachedPromptLid != lid || cachedPromptSeq != act1SeqIdx || cachedPromptAvl != avlQueuePos ||
@@ -3500,6 +3574,28 @@ int main(int argc, char** argv) {
                         cachedPromptHead = "BOSS STAGE 2 - Search Key [" + std::to_string(sk) +
                                            "] down Height-" + std::to_string(act2Bst.getHeight()) +
                                            " Chain  |  Room [" + std::to_string(act2CurKey) + "]:";
+                    }
+                } else if (lid == LEVEL_4_1) {
+                    cachedPromptHead = "ACTIVATE THE VAULT - Click bottom-up violation [" +
+                                       std::to_string(maxInt(0, buildStepIdx)) + "] (or its larger child) to sift down:";
+                } else if (lid == LEVEL_4_2) {
+                    cachedPromptHead = "REPAIR SECURITY LOCKS - Click sabotaged root [0] (or larger child [1]):";
+                } else if (lid == LEVEL_4_3) {
+                    cachedPromptHead = "EXTRACT GREATEST [" + std::to_string(sortedCount) + "/" +
+                                       std::to_string(curD.initialArrayCount) +
+                                       "] - Click root [0] to fill ascending sorted tail:";
+                } else if (lid == LEVEL_4_4) {
+                    int optS = computeOptimalSteps(curD);
+                    cachedPromptHead = "RACE AGAINST THE GUARDS - Steps: " + std::to_string(scoring.steps()) + "/" +
+                                       std::to_string(optS) + " (" + std::to_string(optS) +
+                                       " extractions, O(log n) each = Theta(n log n)):";
+                } else if (lid == LEVEL_4_5) {
+                    if (!act4Built) {
+                        cachedPromptHead = "FINAL VAULT BOSS - Phase 1/2: Click [Build Max Heap [B]] to heapify:";
+                    } else {
+                        cachedPromptHead = "FINAL VAULT BOSS - Phase 2/2 [" + std::to_string(sortedCount) + "/" +
+                                           std::to_string(curD.initialArrayCount) +
+                                           "] - Click root [0] to fill ascending tail:";
                     }
                 }
             }
@@ -4115,6 +4211,31 @@ int main(int argc, char** argv) {
         }
         saveShot("24_act3_5_order_stat_boss", idle);
 
+        // Act 4 Levels (4.3..4.5 ascending sorted tail & 4.4 step/complexity readout)
+        toastQueue.clear();
+        startLevel(17); showingBriefing = false; layoutHeapForScreen(true, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
+        for (int e = 0; e < 4; ++e) {
+            handleLevelNodeClick(0, act4Heap.getMax());
+            animCtrl.finishInstant();
+        }
+        saveShot("25_act4_3_extract_ascending", idle);
+
+        startLevel(18); showingBriefing = false; layoutHeapForScreen(true, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
+        for (int e = 0; e < 3; ++e) {
+            handleLevelNodeClick(0, act4Heap.getMax());
+            animCtrl.finishInstant();
+        }
+        saveShot("26_act4_4_race_complexity", idle);
+
+        startLevel(19); showingBriefing = false; layoutHeapForScreen(false, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
+        triggerStructuralAction(1);
+        animCtrl.finishInstant();
+        for (int e = 0; e < 4; ++e) {
+            handleLevelNodeClick(0, act4Heap.getMax());
+            animCtrl.finishInstant();
+        }
+        saveShot("27_act4_5_boss_heapsort", idle);
+
         return 0;
     }
 
@@ -4573,6 +4694,154 @@ int main(int argc, char** argv) {
             }
         }
         std::cout << "PASS 3.5: Order-Statistic Boss (k-th largest {50,25}, O(log n) comps, live rotation sz check) verified (3 stars)\n";
+
+        return 0;
+    }
+
+    // End-to-end automated sanity check for all 5 Act 4 levels (--verify-act4)
+    if (verifyAct4) {
+        scoreLog.load(""); // do not modify workspace scores.txt
+        auto failCheck = [&](const char* msg) -> int {
+            std::cerr << "FAIL: " << msg << "\n";
+            return 1;
+        };
+        auto checkArrayMaxHeap = [&](const int* arr, int n) -> bool {
+            for (int i = 1; i < n; ++i) {
+                if (arr[(i - 1) / 2] < arr[i]) return false;
+            }
+            return true;
+        };
+
+        // 4.1: Activate the Vault (bottom-up build + invalid penalty + 3 stars)
+        startLevel(15);
+        showingBriefing = false;
+        handleLevelNodeClick(0, heapArr[0]); // wrong order click (expected 2 or 6) -> PENALTY_ACT4_INVALID
+        if (scoring.alarm() != 1 || scoring.penaltyEvents() != 1) return failCheck("4.1 wrong click must add +1 alarm");
+
+        startLevel(15);
+        showingBriefing = false;
+        while (buildStepIdx >= 0) {
+            handleLevelNodeClick(buildStepIdx, heapArr[buildStepIdx]);
+            animCtrl.finishInstant();
+        }
+        completePendingWin();
+        if (currentScreen != SCREEN_RESULT || scoring.stars() != 3 || !checkArrayMaxHeap(heapArr, activeHeapSize)) {
+            return failCheck("4.1 clean bottom-up build failed");
+        }
+        std::cout << "PASS 4.1: Bottom-up Max Heap construction & +1 penalty verified (3 stars)\n";
+
+        // 4.2: Repair Security Locks (sift-down root + invalid penalty + 3 stars)
+        startLevel(16);
+        showingBriefing = false;
+        handleLevelNodeClick(4, heapArr[4]); // wrong node -> PENALTY_ACT4_INVALID
+        if (scoring.alarm() != 1 || scoring.penaltyEvents() != 1) return failCheck("4.2 wrong click must add +1 alarm");
+
+        startLevel(16);
+        showingBriefing = false;
+        handleLevelNodeClick(buildStepIdx, heapArr[buildStepIdx]);
+        animCtrl.finishInstant();
+        completePendingWin();
+        if (currentScreen != SCREEN_RESULT || scoring.stars() != 3 || !checkArrayMaxHeap(heapArr, activeHeapSize)) {
+            return failCheck("4.2 root sift-down repair failed");
+        }
+        std::cout << "PASS 4.2: Sabotaged root sift-down repair verified (3 stars)\n";
+
+        // 4.3: Extract the Greatest Treasure (reject deliberately wrong sorted order, accept ascending tail)
+        startLevel(17);
+        showingBriefing = false;
+        for (int e = 0; e < 6; ++e) {
+            handleLevelNodeClick(0, act4Heap.getMax());
+            animCtrl.finishInstant();
+        }
+        sortedArr[0] = 999; // tamper sorted region before final extraction
+        handleLevelNodeClick(0, act4Heap.getMax());
+        animCtrl.finishInstant();
+        completePendingWin();
+        if (pendingWin || currentScreen == SCREEN_RESULT || scoring.penaltyEvents() < 1) {
+            return failCheck("4.3 must reject mismatched sortedArr instead of winning");
+        }
+
+        startLevel(17);
+        showingBriefing = false;
+        while (!act4Heap.isEmpty()) {
+            handleLevelNodeClick(0, act4Heap.getMax());
+            animCtrl.finishInstant();
+        }
+        if (!pendingWin || sortedCount != levelData[17].expectedSortedResultCount ||
+            !validateAct4SortedResult(levelData[17], sortedArr, sortedCount)) {
+            return failCheck("4.3 extracted sorted region is not strictly ascending expected_sorted_result");
+        }
+        completePendingWin();
+        if (currentScreen != SCREEN_RESULT || scoring.stars() != 3) {
+            return failCheck("4.3 clean optimal run must earn 3 stars");
+        }
+        std::cout << "PASS 4.3: Ascending tail [40..95] & expected_sorted_result mismatch guard verified (3 stars)\n";
+
+        // 4.4: Race Against the Guards (complexity/step HUD readout + ascending extraction + 3 stars)
+        startLevel(18);
+        showingBriefing = false;
+        if (status.find("0/7") == std::string::npos || status.find("O(log n)") == std::string::npos) {
+            return failCheck("4.4 initial status missing step/O(log n) complexity readout");
+        }
+        handleLevelNodeClick(2, act4Heap.getElementAt(2)); // wrong click != root 0
+        if (scoring.alarm() != 1 || scoring.penaltyEvents() != 1) return failCheck("4.4 non-root click must add +1 alarm");
+
+        startLevel(18);
+        showingBriefing = false;
+        for (int e = 0; e < 3; ++e) {
+            handleLevelNodeClick(0, act4Heap.getMax());
+            animCtrl.finishInstant();
+        }
+        if (status.find("3/7") == std::string::npos || status.find("O(log n)") == std::string::npos) {
+            return failCheck("4.4 live status missing step/complexity progress readout");
+        }
+        while (!act4Heap.isEmpty()) {
+            handleLevelNodeClick(0, act4Heap.getMax());
+            animCtrl.finishInstant();
+        }
+        if (!validateAct4SortedResult(levelData[18], sortedArr, sortedCount)) {
+            return failCheck("4.4 ascending sorted result mismatch");
+        }
+        completePendingWin();
+        if (currentScreen != SCREEN_RESULT || scoring.stars() != 3 ||
+            status.find("7/7") == std::string::npos || status.find("O(log n)") == std::string::npos) {
+            return failCheck("4.4 clean optimal race failed or missing final complexity summary");
+        }
+        std::cout << "PASS 4.4: Race Against the Guards live Theta(n log n) step readout & ascending tail verified (3 stars)\n";
+
+        // 4.5: Final Vault Boss (wrong sortedArr guard + Build Max Heap + 8 extractions = 9 optimal steps -> 3 stars)
+        startLevel(19);
+        showingBriefing = false;
+        triggerStructuralAction(1);
+        animCtrl.finishInstant();
+        for (int e = 0; e < 7; ++e) {
+            handleLevelNodeClick(0, act4Heap.getMax());
+            animCtrl.finishInstant();
+        }
+        sortedArr[0] = 1; // deliberately break ascending order before last extraction
+        handleLevelNodeClick(0, act4Heap.getMax());
+        animCtrl.finishInstant();
+        completePendingWin();
+        if (pendingWin || currentScreen == SCREEN_RESULT || scoring.penaltyEvents() < 1) {
+            return failCheck("4.5 boss must reject wrong sorted array against expected_sorted_result");
+        }
+
+        startLevel(19);
+        showingBriefing = false;
+        triggerStructuralAction(1); // Phase 1: Build Max Heap (1 step)
+        animCtrl.finishInstant();
+        while (!act4Heap.isEmpty()) {
+            handleLevelNodeClick(0, act4Heap.getMax());
+            animCtrl.finishInstant();
+        }
+        if (!validateAct4SortedResult(levelData[19], sortedArr, sortedCount)) {
+            return failCheck("4.5 boss sorted tail did not match ascending expected_sorted_result");
+        }
+        completePendingWin();
+        if (currentScreen != SCREEN_RESULT || scoring.stars() != 3 || scoring.steps() != 9) {
+            return failCheck("4.5 boss clean optimal run failed to earn 3 stars in 9 steps");
+        }
+        std::cout << "PASS 4.5: Final Vault Boss (Build Max Heap + ascending tail + mismatch guard) verified (3 stars)\n";
 
         return 0;
     }

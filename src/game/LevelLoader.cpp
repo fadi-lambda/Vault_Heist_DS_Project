@@ -75,8 +75,9 @@ bool loadLevelFromJson(const std::string& path, LevelData& out, std::string& err
         }
     }
 
-    out.initialKeyCount     = readIntArray(root, "initial_keys",   out.initialKeys,    LEVEL_MAX_INTS);
-    out.initialArrayCount   = readIntArray(root, "initial_array",  out.initialArray,   LEVEL_MAX_INTS);
+    out.initialKeyCount        = readIntArray(root, "initial_keys",           out.initialKeys,          LEVEL_MAX_INTS);
+    out.initialArrayCount      = readIntArray(root, "initial_array",          out.initialArray,         LEVEL_MAX_INTS);
+    out.expectedSortedResultCount = readIntArray(root, "expected_sorted_result", out.expectedSortedResult, LEVEL_MAX_INTS);
     out.preorderCount       = readIntArray(root, "preorder",       out.preorder,       LEVEL_MAX_INTS);
     out.inorderCount        = readIntArray(root, "inorder",        out.inorder,        LEVEL_MAX_INTS);
     out.targetKeyCount      = readIntArray(root, "target_keys",    out.targetKeys,     LEVEL_MAX_INTS);

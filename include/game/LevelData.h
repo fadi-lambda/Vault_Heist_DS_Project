@@ -65,6 +65,7 @@ struct LevelData {
 
     int initialKeys[LEVEL_MAX_INTS];   int initialKeyCount;
     int initialArray[LEVEL_MAX_INTS];  int initialArrayCount;
+    int expectedSortedResult[LEVEL_MAX_INTS]; int expectedSortedResultCount;
     int preorder[LEVEL_MAX_INTS];      int preorderCount;
     int inorder[LEVEL_MAX_INTS];       int inorderCount;
     int targetKeys[LEVEL_MAX_INTS];    int targetKeyCount;
@@ -82,8 +83,9 @@ struct LevelData {
 
     LevelData()
         : id(0), act(0), nodeCount(0), initialKeyCount(0), initialArrayCount(0),
-          preorderCount(0), inorderCount(0), targetKeyCount(0), deleteSequenceCount(0),
-          kQueryCount(0), rangeLo(0), rangeHi(0), insertCount(0), puzzleCount(0), hintCount(0) {}
+          expectedSortedResultCount(0), preorderCount(0), inorderCount(0), targetKeyCount(0),
+          deleteSequenceCount(0), kQueryCount(0), rangeLo(0), rangeHi(0),
+          insertCount(0), puzzleCount(0), hintCount(0) {}
 };
 
 } // namespace VaultHeist

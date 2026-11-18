@@ -7,6 +7,7 @@
 #include "gui/DragDrop.h"
 #include "structures/BST.h"
 #include "structures/AVLTree.h"
+#include "structures/MaxHeap.h"
 
 using namespace VaultHeist;
 
@@ -415,4 +416,61 @@ TEST(Act3AvlTests, Act3JsonRealRotationsSubtreeSizesAndKthLargest) {
     int ans2 = kthLargestCheck(boss, d35.kQueries[1], c2);
     EXPECT_EQ(ans2, 25); // 6th largest of 9-node tree = 25
     EXPECT_LE(c2, boss.getHeight());
+}
+
+// =============================================================================
+// 6. Act 4 Level Data (expected_sorted_result) & Ascending Heap-Sort Check
+// =============================================================================
+
+TEST(Act4HeapTests, ExpectedSortedResultAndAscendingHeapSortValidation) {
+    std::string err;
+    LevelData d41, d42, d43, d44, d45;
+    ASSERT_TRUE(loadLevelById(41, d41, err));
+    ASSERT_TRUE(loadLevelById(42, d42, err));
+    ASSERT_TRUE(loadLevelById(43, d43, err));
+    ASSERT_TRUE(loadLevelById(44, d44, err));
+    ASSERT_TRUE(loadLevelById(45, d45, err));
+
+    EXPECT_EQ(computeOptimalSteps(d41), 3);
+    EXPECT_EQ(computeOptimalSteps(d42), 1);
+    EXPECT_EQ(computeOptimalSteps(d43), 7);
+    EXPECT_EQ(computeOptimalSteps(d44), 7);
+    EXPECT_EQ(computeOptimalSteps(d45), 9);
+
+    ASSERT_EQ(d43.expectedSortedResultCount, 7);
+    const int exp43[] = { 40, 50, 60, 70, 75, 80, 95 };
+    for (int i = 0; i < 7; ++i) EXPECT_EQ(d43.expectedSortedResult[i], exp43[i]);
+
+    ASSERT_EQ(d44.expectedSortedResultCount, 7);
+    const int exp44[] = { 30, 40, 50, 60, 70, 80, 90 };
+    for (int i = 0; i < 7; ++i) EXPECT_EQ(d44.expectedSortedResult[i], exp44[i]);
+
+    ASSERT_EQ(d45.expectedSortedResultCount, 8);
+    const int exp45[] = { 15, 25, 30, 40, 60, 70, 80, 95 };
+    for (int i = 0; i < 8; ++i) EXPECT_EQ(d45.expectedSortedResult[i], exp45[i]);
+
+    const LevelData* sortLevels[3] = { &d43, &d44, &d45 };
+    for (int li = 0; li < 3; ++li) {
+        const LevelData& ld = *sortLevels[li];
+        MaxHeap h;
+        h.buildMaxHeap(ld.initialArray, ld.initialArrayCount);
+        int ascTail[LEVEL_MAX_INTS];
+        int descFront[LEVEL_MAX_INTS];
+        int ascCount = 0;
+        int descCount = 0;
+        while (!h.isEmpty()) {
+            int mv = h.extractMax();
+            for (int k = ascCount; k > 0; --k) ascTail[k] = ascTail[k - 1];
+            ascTail[0] = mv;
+            ascCount++;
+            descFront[descCount++] = mv;
+        }
+        ASSERT_EQ(ascCount, ld.expectedSortedResultCount);
+        bool descMatchedAll = (descCount == ld.expectedSortedResultCount);
+        for (int i = 0; i < ascCount; ++i) {
+            EXPECT_EQ(ascTail[i], ld.expectedSortedResult[i]);
+            if (descFront[i] != ld.expectedSortedResult[i]) descMatchedAll = false;
+        }
+        EXPECT_FALSE(descMatchedAll); // descending extraction order must never match ascending JSON
+    }
 }
