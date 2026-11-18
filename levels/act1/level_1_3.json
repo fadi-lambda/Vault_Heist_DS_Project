@@ -1,15 +1,22 @@
 {
   "level_id": 13,
   "act": 1,
-  "title": "1.3 Blueprint Reconstruction",
-  "concept": "Rebuilding a binary tree from Preorder + Inorder",
-  "objective": "Rebuild from Pre {10,5,2,7,15,12,20} & In {2,5,7,10,12,15,20}, then click the reconstructed root!",
-  "controls": "Click [Reconstruct Pre+In] -> Click reconstructed root node (10)",
-  "start_status": "Blueprint shredded! Click [Reconstruct Pre+In [R]], then click the reconstructed root!",
-  "preorder": [10, 5, 2, 7, 15, 12, 20],
-  "inorder": [2, 5, 7, 10, 12, 15, 20],
+  "title": "1.3 The Alarm Spreads",
+  "concept": "Bottom-up subtree height in postorder (leaf = 1) and tree diameter",
+  "objective": "Enter the height of each room in Postorder (leaves first), then enter the tree's total Diameter!",
+  "controls": "Use [-]/[+]/1-9 and [Enter] (or Submit button) to enter the highlighted room's height, then Diameter",
+  "start_status": "Postorder height check: enter the height of the highlighted leaf room (leaf = 1) and press Submit [Enter]!",
+  "nodes": [
+    { "key": 50, "left": 30, "right": 70 },
+    { "key": 30, "left": 20, "right": 40 },
+    { "key": 70, "left": 60, "right": 80 },
+    { "key": 20, "left": null, "right": null },
+    { "key": 40, "left": null, "right": null },
+    { "key": 60, "left": null, "right": null },
+    { "key": 80, "left": null, "right": null }
+  ],
   "hints": [
-    "The first Preorder value is always the root. Press Reconstruct to rebuild the tree.",
-    "The root of the rebuilt tree is the first value of the Preorder list."
+    "Under the course convention, an empty child has height 0, a leaf has height 1, and a parent's height is 1 + max(leftHeight, rightHeight).",
+    "The longest path (diameter, in nodes) through a root is leftHeight + rightHeight + 1 using the heights of its two subtrees."
   ]
 }

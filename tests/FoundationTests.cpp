@@ -86,7 +86,7 @@ TEST(LevelLoaderTest, LoadsAllTwentyLevelsAndComputesOptimalSteps) {
         41, 42, 43, 44, 45
     };
     const int expectedOpt[20] = {
-        7, 2, 2, 2, 1,
+        7, 7, 8, 8, 7,
         3, 3, 3, 2, 6,
         2, 2, 4, 4, 2,
         3, 1, 7, 7, 9
@@ -105,6 +105,33 @@ TEST(LevelLoaderTest, LoadsAllTwentyLevelsAndComputesOptimalSteps) {
         EXPECT_GE(d.hintCount, 1);
         EXPECT_EQ(computeOptimalSteps(d), expectedOpt[i]) << "Mismatch for level " << ids[i];
     }
+
+    // Act 1 corrected level sequence & data checks
+    LevelData d11, d12, d13, d14, d15;
+    std::string aerr;
+    ASSERT_TRUE(loadLevelById(11, d11, aerr));
+    EXPECT_EQ(d11.hintCount, 4);
+    EXPECT_EQ(d11.nodeCount, 7);
+
+    ASSERT_TRUE(loadLevelById(12, d12, aerr));
+    EXPECT_EQ(d12.title, "1.2 Decode the Blueprint");
+    EXPECT_EQ(d12.preorderCount, 7);
+    EXPECT_EQ(d12.inorderCount, 7);
+
+    ASSERT_TRUE(loadLevelById(13, d13, aerr));
+    EXPECT_EQ(d13.title, "1.3 The Alarm Spreads");
+    EXPECT_EQ(d13.nodeCount, 7);
+    EXPECT_EQ(computeOptimalSteps(d13), 8);
+
+    ASSERT_TRUE(loadLevelById(14, d14, aerr));
+    EXPECT_EQ(d14.title, "1.4 Find Where Two Routes Meet");
+    EXPECT_EQ(d14.title.find("Boss"), std::string::npos);
+    EXPECT_EQ(computeOptimalSteps(d14), 8);
+
+    ASSERT_TRUE(loadLevelById(15, d15, aerr));
+    EXPECT_EQ(d15.title, "1.5 Mirror the Vault");
+    EXPECT_EQ(d15.title.find("Boss"), std::string::npos);
+    EXPECT_EQ(computeOptimalSteps(d15), 7);
 
     // Specific structural assertions on loaded data
     LevelData d31;

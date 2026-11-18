@@ -54,12 +54,18 @@ static const int SCREEN_ACT2_DEMO     = 7;
 static const int SCREEN_LEADERBOARD   = 8;
 static const int SCREEN_SETTINGS      = 9;
 
+// Traversal Mode Constants for Level 1.1 (no enum allowed)
+static const int TRAV_PREORDER    = 0;
+static const int TRAV_INORDER     = 1;
+static const int TRAV_POSTORDER   = 2;
+static const int TRAV_LEVEL_ORDER = 3;
+
 // Level ID Constants (no enum allowed)
-static const int LEVEL_1_1 = 11;  // Traversals Protocol
-static const int LEVEL_1_2 = 12;  // Security Laser Mirror
-static const int LEVEL_1_3 = 13;  // Blueprint Reconstruction
-static const int LEVEL_1_4 = 14;  // Height & Diameter
-static const int LEVEL_1_5 = 15;  // Boss: LCA & Escape Path
+static const int LEVEL_1_1 = 11;  // Traversals Protocol (Pre / In / Post / Level)
+static const int LEVEL_1_2 = 12;  // Decode the Blueprint (Pre + In Drag-Drop Reconstruction)
+static const int LEVEL_1_3 = 13;  // The Alarm Spreads (Postorder Heights + Diameter)
+static const int LEVEL_1_4 = 14;  // Find Where Two Routes Meet (LCA + Path Trace)
+static const int LEVEL_1_5 = 15;  // Mirror the Vault (Bottom-up Swap or Auto Mirror)
 
 static const int LEVEL_2_1 = 21;  // Duplicate Rejection Gateway
 static const int LEVEL_2_2 = 22;  // Firewall Disarm (3 Cases)
@@ -333,6 +339,131 @@ static void buildBinaryTreeFromData(BinaryTree& tree, const LevelData& d) {
     if (d.nodeCount > 0) attachBinaryTreeFromSpec(tree, d, d.nodes[0].key, nullptr, true);
 }
 
+static const char* traversalModeName(int mode) {
+    switch (mode) {
+        case TRAV_PREORDER:    return "PREORDER (Root -> Left -> Right)";
+        case TRAV_INORDER:     return "INORDER (Left -> Root -> Right)";
+        case TRAV_POSTORDER:   return "POSTORDER (Left -> Right -> Root)";
+        case TRAV_LEVEL_ORDER: return "LEVEL-ORDER (Breadth-First)";
+        default:               return "INORDER (Left -> Root -> Right)";
+    }
+}
+
+static const char* traversalModeShort(int mode) {
+    switch (mode) {
+        case TRAV_PREORDER:    return "Preorder";
+        case TRAV_INORDER:     return "Inorder";
+        case TRAV_POSTORDER:   return "Postorder";
+        case TRAV_LEVEL_ORDER: return "Level-Order";
+        default:               return "Inorder";
+    }
+}
+
+static int* getAct1Traversal(const BinaryTree& tree, int mode, int& cnt, EventBatch* events = nullptr) {
+    cnt = 0;
+    if (events) {
+        if (mode == TRAV_PREORDER)    return tree.preorderIterative(cnt, *events);
+        if (mode == TRAV_POSTORDER)   return tree.postorderIterative(cnt, *events);
+        if (mode == TRAV_LEVEL_ORDER) return tree.levelOrder(cnt, *events);
+        return tree.inorderIterative(cnt, *events);
+    }
+    if (mode == TRAV_PREORDER)    return tree.preorderRecursive(cnt);
+    if (mode == TRAV_POSTORDER)   return tree.postorderRecursive(cnt);
+    if (mode == TRAV_LEVEL_ORDER) return tree.levelOrder(cnt);
+    return tree.inorderRecursive(cnt);
+}
+
+static const TreeNode* findTreeNodeConst(const TreeNode* node, int key) {
+    if (!node) return nullptr;
+    if (node->value == key) return node;
+    const TreeNode* l = findTreeNodeConst(node->left, key);
+    return l ? l : findTreeNodeConst(node->right, key);
+}
+
+static TreeNode* findTreeNodeMutable(TreeNode* node, int key) {
+    if (!node) return nullptr;
+    if (node->value == key) return node;
+    TreeNode* l = findTreeNodeMutable(node->left, key);
+    return l ? l : findTreeNodeMutable(node->right, key);
+}
+
+static void buildTreeFromSlotsRec(const LayoutResult& slotLayout, const DragDropController& dd,
+                                  int slotIdx, TreeNode* parentOut, bool asLeft, BinaryTree& outTree) {
+    if (slotIdx < 0 || slotIdx >= slotLayout.nodeCount) return;
+    int tokId = dd.tokenInSlot(slotIdx);
+    const DragToken* tok = dd.token(tokId);
+    if (!tok) return;
+    TreeNode* created = outTree.addNode(tok->value, parentOut, asLeft);
+    int myId = slotLayout.nodes[slotIdx].id;
+    float myX = slotLayout.nodes[slotIdx].x;
+    int leftSlot = -1, rightSlot = -1;
+    for (int i = 0; i < slotLayout.nodeCount; ++i) {
+        if (slotLayout.nodes[i].parentId == myId) {
+            if (slotLayout.nodes[i].x < myX) leftSlot = i;
+            else rightSlot = i;
+        }
+    }
+    if (leftSlot >= 0)  buildTreeFromSlotsRec(slotLayout, dd, leftSlot,  created, true,  outTree);
+    if (rightSlot >= 0) buildTreeFromSlotsRec(slotLayout, dd, rightSlot, created, false, outTree);
+}
+
+static void buildTreeFromSlots(const LayoutResult& slotLayout, const DragDropController& dd, BinaryTree& outTree) {
+    outTree = BinaryTree();
+    int rootSlot = -1;
+    for (int i = 0; i < slotLayout.nodeCount; ++i) {
+        if (slotLayout.nodes[i].parentId == -1) { rootSlot = i; break; }
+    }
+    if (rootSlot >= 0) buildTreeFromSlotsRec(slotLayout, dd, rootSlot, nullptr, true, outTree);
+}
+
+static void buildRouteBetween(const BinaryTree& tree, int keyA, int keyB, int* outPath, int& outLen) {
+    outLen = 0;
+    int lenA = 0, lenB = 0;
+    int* pA = tree.pathTo(keyA, lenA);
+    int* pB = tree.pathTo(keyB, lenB);
+    if (pA && pB && lenA > 0 && lenB > 0) {
+        int lcaIdx = 0;
+        int minLen = minInt(lenA, lenB);
+        while (lcaIdx + 1 < minLen && pA[lcaIdx + 1] == pB[lcaIdx + 1]) {
+            ++lcaIdx;
+        }
+        for (int i = lenA - 1; i >= lcaIdx && outLen < 16; --i) {
+            outPath[outLen++] = pA[i];
+        }
+        for (int i = lcaIdx + 1; i < lenB && outLen < 16; ++i) {
+            outPath[outLen++] = pB[i];
+        }
+    }
+    delete[] pA;
+    delete[] pB;
+}
+
+static bool containsInt(const int* arr, int count, int val) {
+    for (int i = 0; i < count; ++i) {
+        if (arr[i] == val) return true;
+    }
+    return false;
+}
+
+static bool allSubtreeInternalsSwapped(const TreeNode* sub, const int* swappedKeys, int swappedCount) {
+    if (!sub) return true;
+    if (sub->left || sub->right) {
+        if (!containsInt(swappedKeys, swappedCount, sub->value)) return false;
+    }
+    return allSubtreeInternalsSwapped(sub->left, swappedKeys, swappedCount) &&
+           allSubtreeInternalsSwapped(sub->right, swappedKeys, swappedCount);
+}
+
+static bool allInternalDescendantsSwapped(const TreeNode* node, const int* swappedKeys, int swappedCount) {
+    if (!node) return true;
+    return allSubtreeInternalsSwapped(node->left, swappedKeys, swappedCount) &&
+           allSubtreeInternalsSwapped(node->right, swappedKeys, swappedCount);
+}
+
+static bool allInternalNodesSwapped(const TreeNode* root, const int* swappedKeys, int swappedCount) {
+    return allSubtreeInternalsSwapped(root, swappedKeys, swappedCount);
+}
+
 static void buildBstFromData(BST& bst, const LevelData& d) {
     bst = BST();
     for (int i = 0; i < d.initialKeyCount; ++i) bst.insert(d.initialKeys[i]);
@@ -380,19 +511,6 @@ static int treeHeightNodes(const TreeNode* node) {
     int lh = treeHeightNodes(node->left);
     int rh = treeHeightNodes(node->right);
     return 1 + maxInt(lh, rh);
-}
-
-static bool containsAtDepth(const TreeNode* node, int depth, int targetDepth, int key) {
-    if (!node) return false;
-    if (!node->left && !node->right && depth == targetDepth && node->value == key) return true;
-    return containsAtDepth(node->left, depth + 1, targetDepth, key) ||
-           containsAtDepth(node->right, depth + 1, targetDepth, key);
-}
-
-static bool isDeepestLeafInSubtree(const TreeNode* sub, int key) {
-    int h = treeHeightNodes(sub);
-    if (h <= 0) return false;
-    return containsAtDepth(sub, 1, h, key);
 }
 
 static int findBstInsertParent(const TreeNode* root, int newKey) {
@@ -504,11 +622,14 @@ int main(int argc, char** argv) {
 
     std::string verifyDir;
     bool profileFps = false;
+    bool verifyAct1 = false;
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--verify-screenshots") == 0 && i + 1 < argc) {
             verifyDir = argv[++i];
         } else if (std::strcmp(argv[i], "--profile-fps") == 0) {
             profileFps = true;
+        } else if (std::strcmp(argv[i], "--verify-act1") == 0) {
+            verifyAct1 = true;
         }
     }
 
@@ -561,8 +682,19 @@ int main(int argc, char** argv) {
     bool act1Reconstructed = false;
     bool act1Mirrored = false;
     int act1SeqIdx = 0;
-    int act1DiamLeft = -1;
-    int act1DiamRight = -1;
+    int act1TravMode = TRAV_PREORDER;
+    int act1TravCounter = 0;
+    int act1PostIdx = 0;
+    int act1StepperVal = 1;
+    int act1ConfirmedHeight[32];
+    int act1LcaStage = 0;
+    int act1LcaA = -1;
+    int act1LcaB = -1;
+    int act1RoutePath[16];
+    int act1RouteLen = 0;
+    int act1RouteIdx = 0;
+    int act1SwappedKeys[32];
+    int act1SwappedCount = 0;
 
     int act2Step21 = 0;
     int act2DelStage = 0;
@@ -622,6 +754,7 @@ int main(int argc, char** argv) {
     // Act 1 (General Binary Tree) State
     bool layoutDirty = true;
     BinaryTree act1Tree;
+    BinaryTree act1RefTree;
     int act1Hl1 = -9999, act1Hl2 = -9999;
     std::string act1TraversalStr = "";
     auto resetAct1 = [&]() {
@@ -663,6 +796,7 @@ int main(int argc, char** argv) {
     int cachedHudAlarm = -1, cachedHudCap = -1, cachedHudScore = -1;
     std::string cachedHudAlarmScore;
     int cachedPromptLid = -1, cachedPromptSeq = -1, cachedPromptAvl = -1;
+    int cachedPromptMode = -1, cachedPromptPost = -1, cachedPromptLca = -1;
     std::string cachedPromptHead;
     int cachedBriefLid = -1, cachedBriefCap = -1;
     std::string cachedBriefAct, cachedBriefObj, cachedBriefInt;
@@ -780,10 +914,17 @@ int main(int argc, char** argv) {
         if (currentLevelIdx < 0) return 0;
         const LevelData& d = levelData[currentLevelIdx];
         int lid = d.id;
-        if (lid == LEVEL_1_1) return (act1SeqIdx == 0) ? 0 : 1;
-        if (lid == LEVEL_1_2) return act1Mirrored ? 1 : 0;
-        if (lid == LEVEL_1_3) return act1Reconstructed ? 1 : 0;
-        if (lid == LEVEL_1_4) return (act1DiamLeft != -1 || act1DiamRight != -1) ? 1 : 0;
+        if (lid == LEVEL_1_1) return act1TravMode;
+        if (lid == LEVEL_1_2) {
+            int rootSlot = -1;
+            for (int i = 0; i < btLayout.nodeCount; ++i) {
+                if (btLayout.nodes[i].isRoot) { rootSlot = i; break; }
+            }
+            return (rootSlot >= 0 && dragDrop.tokenInSlot(rootSlot) >= 0) ? 1 : 0;
+        }
+        if (lid == LEVEL_1_3) return (act1PostIdx >= act1Tree.getSize()) ? 1 : 0;
+        if (lid == LEVEL_1_4) return (act1LcaStage < 2) ? 0 : (act1LcaStage == 2 ? 1 : 2);
+        if (lid == LEVEL_1_5) return 0;
         if (lid == LEVEL_2_1) return act2Step21;
         if (lid == LEVEL_2_2) return act2DelStage;
         if (lid == LEVEL_2_5) return act2BossStage;
@@ -832,8 +973,16 @@ int main(int argc, char** argv) {
         act1Reconstructed = false;
         act1Mirrored = false;
         act1SeqIdx = 0;
-        act1DiamLeft = -1;
-        act1DiamRight = -1;
+        act1PostIdx = 0;
+        act1StepperVal = 1;
+        for (int i = 0; i < 32; ++i) act1ConfirmedHeight[i] = 0;
+        act1LcaStage = 0;
+        act1LcaA = -1;
+        act1LcaB = -1;
+        act1RouteLen = 0;
+        act1RouteIdx = 0;
+        act1SwappedCount = 0;
+        for (int i = 0; i < 32; ++i) act1SwappedKeys[i] = 0;
         act2Step21 = 0;
         act2DelStage = 0;
         act2SweepMask = 0;
@@ -855,19 +1004,46 @@ int main(int argc, char** argv) {
         levelCam.reset();
         layoutDirty = true;
 
-        if (lid == LEVEL_1_1 || lid == LEVEL_1_2 || lid == LEVEL_1_4) {
+        if (lid == LEVEL_1_1) {
             buildBinaryTreeFromData(act1Tree, d);
+            act1TravMode = (act1TravCounter++) % 4;
+            act1Hl1 = -9999; act1Hl2 = -9999; act1TraversalStr = "";
+            status = std::string(traversalModeName(act1TravMode)) + " - click all rooms in exact order!";
+        } else if (lid == LEVEL_1_2) {
+            act1Tree = BinaryTree();
+            act1RefTree = BinaryTree();
+            act1RefTree.buildFromPreorderInorder(d.preorder, d.inorder, d.preorderCount);
+            LayoutEngine::layoutBinaryTree(act1RefTree, CANVAS_X, CANVAS_Y + 75.f, CANVAS_W, CANVAS_H - 95.f, btLayout);
+            layoutDirty = false;
+            int nTok = btLayout.nodeCount;
+            for (int i = 0; i < nTok; ++i) {
+                int sId = dragDrop.addSlot(btLayout.nodes[i].x, btLayout.nodes[i].y, 26.f, DRAG_ANY_VALUE);
+                dragDrop.setSlotLabel(sId, "?");
+            }
+            float traySpan = (nTok > 1) ? 700.f : 0.f;
+            float trayStartX = CANVAS_X + CANVAS_W * 0.5f - traySpan * 0.5f;
+            float trayStepX = (nTok > 1) ? (traySpan / static_cast<float>(nTok - 1)) : 0.f;
+            for (int i = 0; i < d.preorderCount && i < nTok; ++i) {
+                float tx = trayStartX + static_cast<float>(i) * trayStepX;
+                dragDrop.addToken(d.preorder[i], tx, CANVAS_Y + 46.f, 22.f);
+            }
             act1Hl1 = -9999; act1Hl2 = -9999; act1TraversalStr = "";
             status = d.startStatus;
         } else if (lid == LEVEL_1_3) {
-            act1Tree = BinaryTree();
-            act1Hl1 = -9999; act1Hl2 = -9999; act1TraversalStr = "";
-            status = d.startStatus;
-        } else if (lid == LEVEL_1_5) {
             buildBinaryTreeFromData(act1Tree, d);
-            act1Hl1 = (d.targetKeyCount > 0) ? d.targetKeys[0] : -9999;
-            act1Hl2 = (d.targetKeyCount > 1) ? d.targetKeys[1] : -9999;
+            int postCnt = 0;
+            int* postSeq = act1Tree.postorderRecursive(postCnt);
+            act1Hl1 = (postSeq && postCnt > 0) ? postSeq[0] : -9999;
+            act1Hl2 = -9999;
+            delete[] postSeq;
             act1TraversalStr = "";
+            status = (act1Hl1 != -9999)
+                ? ("Postorder height check [1/" + std::to_string(postCnt) + "]: enter height of highlighted room " +
+                   std::to_string(act1Hl1) + " (leaf = 1) and press Submit!")
+                : d.startStatus;
+        } else if (lid == LEVEL_1_4 || lid == LEVEL_1_5) {
+            buildBinaryTreeFromData(act1Tree, d);
+            act1Hl1 = -9999; act1Hl2 = -9999; act1TraversalStr = "";
             status = d.startStatus;
         } else if (lid == LEVEL_2_1 || lid == LEVEL_2_2 || lid == LEVEL_2_3 || lid == LEVEL_2_5) {
             buildBstFromData(act2Bst, d);
@@ -995,8 +1171,8 @@ int main(int argc, char** argv) {
         }
         int lid = levels[currentLevelIdx].id;
         int stars = scoring.stars();
-        if (lid == LEVEL_1_1) finishLevelWin(stars, "Inorder sequence decoded the blueprint protocol!");
-        else if (lid == LEVEL_1_4) finishLevelWin(stars, "Tree Diameter verified across opposite deepest leaves!");
+        if (lid == LEVEL_1_1) finishLevelWin(stars, std::string(traversalModeShort(act1TravMode)) + " sequence decoded the blueprint protocol!");
+        else if (lid == LEVEL_1_5) finishLevelWin(stars, "Vault mirrored! Inverted security tree verified.");
         else if (lid == LEVEL_2_2) finishLevelWin(stars, "All BST deletion cases executed cleanly!");
         else if (lid == LEVEL_2_3) finishLevelWin(stars, "Infiltration Sweep complete (Min, Max, Search)!");
         else if (lid == LEVEL_3_4) finishLevelWin(stars, "AVL Tree auto-balanced every incoming key!");
@@ -1019,7 +1195,123 @@ int main(int argc, char** argv) {
         }
     };
 
-    // Minimal non-choice structural triggers (e.g., 1.2 Mirror, 1.3 Reconstruct, 4.5 Build Heap)
+    auto cycleAct1TravMode = [&]() {
+        if (currentScreen != SCREEN_LEVEL_PLAY || currentLevelIdx < 0) return;
+        if (levelData[currentLevelIdx].id != LEVEL_1_1) return;
+        if (act1SeqIdx > 0 || pendingWin) {
+            toastQueue.push("Cannot switch traversal mid-sequence", TOAST_KIND_WARNING);
+            return;
+        }
+        act1TravMode = (act1TravMode + 1) % 4;
+        status = std::string(traversalModeName(act1TravMode)) + " - click all rooms in exact order!";
+        toastQueue.push(std::string("Protocol: ") + traversalModeShort(act1TravMode), TOAST_KIND_SUCCESS);
+    };
+
+    auto submitAct1HeightOrDiameter = [&]() {
+        if (currentScreen != SCREEN_LEVEL_PLAY || currentLevelIdx < 0) return;
+        const LevelData& d = levelData[currentLevelIdx];
+        if (d.id != LEVEL_1_3) return;
+        layoutDirty = true;
+
+        int postCnt = 0;
+        int* postSeq = act1Tree.postorderRecursive(postCnt);
+        if (act1PostIdx < postCnt && postSeq) {
+            int targetKey = postSeq[act1PostIdx];
+            const TreeNode* node = findTreeNodeConst(act1Tree.getRoot(), targetKey);
+            int trueH = treeHeightNodes(node);
+            if (act1StepperVal == trueH) {
+                act1ConfirmedHeight[act1PostIdx] = trueH;
+                if (node) addMarkedId(node->id);
+                act1PostIdx++;
+                scoring.addStep(1);
+                syncScoringHud();
+                if (scoring.isAlarmFull()) {
+                    triggerAlarmFullFail();
+                } else if (act1PostIdx < postCnt) {
+                    act1Hl1 = postSeq[act1PostIdx];
+                    act1StepperVal = 1;
+                    toastQueue.push("Height(" + std::to_string(targetKey) + ") = " + std::to_string(trueH) + " verified!",
+                                    TOAST_KIND_SUCCESS);
+                    status = "Room " + std::to_string(targetKey) + " height = " + std::to_string(trueH) +
+                             ". Now enter height of room " + std::to_string(act1Hl1) + " [" +
+                             std::to_string(act1PostIdx + 1) + "/" + std::to_string(postCnt) + "]!";
+                } else {
+                    act1Hl1 = act1Tree.getRoot() ? act1Tree.getRoot()->value : -9999;
+                    act1StepperVal = 1;
+                    toastQueue.push("All room heights verified! Now enter Diameter.", TOAST_KIND_SUCCESS);
+                    status = "All room heights verified! Final step: enter the tree's Diameter (longest path in nodes) and press Submit!";
+                }
+            } else {
+                raisePenalty(PENALTY_WRONG_TRAVERSAL,
+                             "Wrong height " + std::to_string(act1StepperVal) + " for room " +
+                             std::to_string(targetKey) + "! Leaf = 1, parent = 1 + max(left, right).");
+            }
+        } else {
+            int trueDiam = act1Tree.diameter();
+            if (act1StepperVal == trueDiam) {
+                scoring.addStep(1);
+                syncScoringHud();
+                if (scoring.isAlarmFull()) triggerAlarmFullFail();
+                else finishLevelWin(scoring.stars(),
+                                    "Postorder heights & tree diameter (" + std::to_string(trueDiam) + " nodes) verified!");
+            } else {
+                raisePenalty(PENALTY_WRONG_TRAVERSAL,
+                             "Wrong diameter " + std::to_string(act1StepperVal) +
+                             "! Longest path (in nodes) through the root is leftHeight + rightHeight + 1.");
+            }
+        }
+        delete[] postSeq;
+    };
+
+    auto handleAct1BlueprintDrop = [&](const DropResult& res) {
+        if (currentScreen != SCREEN_LEVEL_PLAY || currentLevelIdx < 0) return;
+        const LevelData& d = levelData[currentLevelIdx];
+        if (d.id != LEVEL_1_2 || act1Reconstructed) return;
+        if (res.outcome != DROP_SNAPPED) return;
+
+        scoring.addStep(1);
+        syncScoringHud();
+
+        int nSlots = dragDrop.slotCount();
+        int filledCount = 0;
+        for (int i = 0; i < nSlots; ++i) {
+            if (dragDrop.tokenInSlot(i) >= 0) ++filledCount;
+        }
+        if (filledCount < nSlots) {
+            status = "Placed token " + std::to_string(res.tokenValue) + " (" + std::to_string(filledCount) +
+                     "/" + std::to_string(nSlots) + " slots filled). Keep filling all blueprint slots!";
+            if (scoring.isAlarmFull()) triggerAlarmFullFail();
+            return;
+        }
+
+        BinaryTree playerTree;
+        buildTreeFromSlots(btLayout, dragDrop, playerTree);
+        if (playerTree.isSameTree(act1RefTree)) {
+            LayoutResult before;
+            LayoutEngine::layoutBinaryTree(act1Tree, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
+            EventBatch batch;
+            act1Tree = BinaryTree();
+            act1Tree.buildFromPreorderInorder(d.preorder, d.inorder, d.preorderCount, batch);
+            act1Reconstructed = true;
+            dragDrop.clear();
+            layoutBtForScreen(false);
+            animCtrl.loadOperation(batch, before, btLayout, true, autoPlayEvents);
+            if (scoring.isAlarmFull()) triggerAlarmFullFail();
+            else finishLevelWin(scoring.stars(), "Blueprint decoded! Reconstructed tree matches Preorder + Inorder.");
+        } else {
+            for (int i = 0; i < nSlots && i < btLayout.nodeCount; ++i) {
+                int tid = dragDrop.tokenInSlot(i);
+                const DragToken* tok = dragDrop.token(tid);
+                if (tok && tok->value != btLayout.nodes[i].key) {
+                    dragDrop.returnTokenHome(tid);
+                }
+            }
+            raisePenalty(PENALTY_WRONG_TRAVERSAL,
+                         "Blueprint mismatch! Misplaced tokens returned to tray - check how Inorder splits left and right subtrees.");
+        }
+    };
+
+    // Minimal non-choice structural triggers (e.g., 1.5 Auto Mirror, 4.5 Build Heap)
     auto triggerStructuralAction = [&](int code) {
         if (currentScreen != SCREEN_LEVEL_PLAY || currentLevelIdx < 0) return;
         layoutDirty = true;
@@ -1028,44 +1320,23 @@ int main(int argc, char** argv) {
         bool useRealHeapSnap = (lid == LEVEL_4_3 || lid == LEVEL_4_4 || (lid == LEVEL_4_5 && act4Built));
         pushUndoSnapshot(useRealHeapSnap);
 
-        if (lid == LEVEL_1_2 && code == 1 && !act1Mirrored) {
+        if (lid == LEVEL_1_5 && code == 1 && !act1Mirrored && !pendingWin) {
             LayoutResult before;
             LayoutEngine::layoutBinaryTree(act1Tree, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
+            if (act1SwappedCount > 0) {
+                buildBinaryTreeFromData(act1Tree, d);
+            }
             EventBatch batch;
             act1Tree.mirror(batch);
             layoutBtForScreen(false);
             animCtrl.loadOperation(batch, before, btLayout, true, autoPlayEvents);
             act1Mirrored = true;
-            scoring.addStep(1);
+            int rem = maxInt(1, 3 - act1SwappedCount);
+            scoring.addStep(rem);
             syncScoringHud();
-            int rKey = act1Tree.getRoot() ? act1Tree.getRoot()->value : 0;
-            status = "Tree mirrored! Now click root node (" + std::to_string(rKey) + ") to confirm laser alignment!";
-            toastQueue.push("Branches mirrored! Click root " + std::to_string(rKey) + " to confirm", TOAST_KIND_SUCCESS);
-            if (scoring.isAlarmFull()) triggerAlarmFullFail();
-        } else if (lid == LEVEL_1_2 && code == 2) {
-            int expMirroredLeft = (d.nodeCount > 0) ? d.nodes[0].right : -1;
-            if (act1Mirrored && act1Tree.getRoot() &&
-                (expMirroredLeft == -1 || (act1Tree.getRoot()->left && act1Tree.getRoot()->left->value == expMirroredLeft))) {
-                scoring.addStep(1);
-                syncScoringHud();
-                if (scoring.isAlarmFull()) triggerAlarmFullFail();
-                else finishLevelWin(scoring.stars(), "Laser grid bypassed! Mirrored branches aligned.");
-            } else {
-                raisePenalty(PENALTY_WRONG_TRAVERSAL, "Mirror the tree before confirming alignment!");
-            }
-        } else if (lid == LEVEL_1_3 && code == 1 && !act1Reconstructed) {
-            LayoutResult before;
-            LayoutEngine::layoutBinaryTree(act1Tree, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
-            EventBatch batch;
-            act1Tree.buildFromPreorderInorder(d.preorder, d.inorder, d.preorderCount, batch);
-            layoutBtForScreen(false);
-            animCtrl.loadOperation(batch, before, btLayout, true, autoPlayEvents);
-            act1Reconstructed = true;
-            scoring.addStep(1);
-            syncScoringHud();
-            int rKey = (d.preorderCount > 0) ? d.preorder[0] : 0;
-            status = "Tree reconstructed in O(n)! Click the reconstructed root node (" + std::to_string(rKey) + ") to validate!";
-            toastQueue.push("Blueprint reconstructed! Click root " + std::to_string(rKey) + " to validate", TOAST_KIND_SUCCESS);
+            pendingWin = true;
+            status = "Auto Mirror triggered! Playing vault inversion events...";
+            toastQueue.push("Auto Mirror running!", TOAST_KIND_SUCCESS);
             if (scoring.isAlarmFull()) triggerAlarmFullFail();
         } else if (lid == LEVEL_4_5 && code == 1 && !act4Built) {
             LayoutResult before;
@@ -1096,128 +1367,184 @@ int main(int argc, char** argv) {
 
         if (lid == LEVEL_1_1) {
             int cnt = 0;
-            int* inorderExp = act1Tree.inorderRecursive(cnt);
-            if (inorderExp && act1SeqIdx < cnt) {
-                if (clickedKey == inorderExp[act1SeqIdx]) {
+            int* expSeq = getAct1Traversal(act1Tree, act1TravMode, cnt);
+            if (expSeq && act1SeqIdx < cnt) {
+                if (clickedKey == expSeq[act1SeqIdx]) {
                     addMarkedId(clickedId);
                     act1SeqIdx++;
                     scoring.addStep(1);
                     syncScoringHud();
-                    toastQueue.push("Inorder [" + std::to_string(act1SeqIdx) + "/" + std::to_string(cnt) +
+                    toastQueue.push(std::string(traversalModeShort(act1TravMode)) + " [" +
+                                    std::to_string(act1SeqIdx) + "/" + std::to_string(cnt) +
                                     "]: Visited " + std::to_string(clickedKey), TOAST_KIND_SUCCESS);
                     if (act1SeqIdx == cnt) {
                         LayoutResult before;
                         LayoutEngine::layoutBinaryTree(act1Tree, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
                         EventBatch batch;
                         int animCnt = 0;
-                        int* res = act1Tree.inorderIterative(animCnt, batch);
+                        int* res = getAct1Traversal(act1Tree, act1TravMode, animCnt, &batch);
                         delete[] res;
                         layoutBtForScreen(false);
                         animCtrl.loadOperation(batch, before, btLayout, true, autoPlayEvents);
                         pendingWin = true;
-                        status = "All " + std::to_string(cnt) + " nodes visited in Inorder! Playing traversal events...";
+                        status = "All " + std::to_string(cnt) + " rooms visited in " +
+                                 traversalModeShort(act1TravMode) + "! Playing traversal events...";
                     } else {
                         status = "Visited " + std::to_string(clickedKey) + " (" + std::to_string(act1SeqIdx) +
-                                 "/" + std::to_string(cnt) + "). Click next node in Inorder!";
+                                 "/" + std::to_string(cnt) + "). Click next room in " +
+                                 traversalModeShort(act1TravMode) + "!";
                     }
                     if (scoring.isAlarmFull()) triggerAlarmFullFail();
                 } else {
                     raisePenalty(PENALTY_WRONG_TRAVERSAL,
-                                 "Expected " + std::to_string(inorderExp[act1SeqIdx]) +
-                                 " next in Inorder (Left -> Root -> Right), got " + std::to_string(clickedKey) + "!");
+                                 "Expected " + std::to_string(expSeq[act1SeqIdx]) + " next in " +
+                                 traversalModeName(act1TravMode) + ", got " + std::to_string(clickedKey) + "!");
                 }
             }
-            delete[] inorderExp;
+            delete[] expSeq;
         }
         else if (lid == LEVEL_1_2) {
-            int rootKey = act1Tree.getRoot() ? act1Tree.getRoot()->value : -1;
-            if (!act1Mirrored) {
-                if (clickedKey == rootKey) triggerStructuralAction(1);
-                else raisePenalty(PENALTY_WRONG_TRAVERSAL,
-                                  "Click root " + std::to_string(rootKey) + " or [Mirror Tree] to mirror the tree first!");
-            } else {
-                if (clickedKey == rootKey) triggerStructuralAction(2);
-                else raisePenalty(PENALTY_WRONG_TRAVERSAL,
-                                  "Click the root node (" + std::to_string(rootKey) + ") to confirm mirrored alignment!");
-            }
+            // Handled via drag-and-drop onto blueprint slots
         }
         else if (lid == LEVEL_1_3) {
-            int expectedRoot = (d.preorderCount > 0) ? d.preorder[0] : -1;
-            if (!act1Reconstructed) {
-                toastQueue.push("Click [Reconstruct Pre+In [R]] first", TOAST_KIND_WARNING);
-                status = "Click [Reconstruct Pre+In [R]] to rebuild the shredded tree!";
-            } else if (clickedKey == expectedRoot) {
-                scoring.addStep(1);
-                syncScoringHud();
-                if (scoring.isAlarmFull()) triggerAlarmFullFail();
-                else finishLevelWin(scoring.stars(),
-                                    "Blueprint root " + std::to_string(expectedRoot) + " verified! Reconstruction in O(n) complete.");
-            } else {
+            if (act1Hl1 != -9999 && clickedKey != act1Hl1) {
                 raisePenalty(PENALTY_WRONG_TRAVERSAL,
-                             "Node " + std::to_string(clickedKey) + " is not the root! Click root node " + std::to_string(expectedRoot) + ".");
+                             "Postorder processes leaves/children first! Current room is " +
+                             std::to_string(act1Hl1) + ".");
+            } else {
+                status = "Room " + std::to_string(clickedKey) + " selected. Adjust stepper [-]/[+] and press Submit [Enter]!";
             }
         }
         else if (lid == LEVEL_1_4) {
-            const TreeNode* root = act1Tree.getRoot();
-            bool isLeftLeaf  = root && isDeepestLeafInSubtree(root->left, clickedKey);
-            bool isRightLeaf = root && isDeepestLeafInSubtree(root->right, clickedKey);
-            if (!isLeftLeaf && !isRightLeaf) {
-                raisePenalty(PENALTY_WRONG_TRAVERSAL, "Node " + std::to_string(clickedKey) + " is not a deepest leaf!");
-            } else if (isLeftLeaf) {
-                if (act1DiamLeft != -1) {
-                    raisePenalty(PENALTY_WRONG_TRAVERSAL,
-                                 "Already picked left leaf " + std::to_string(act1DiamLeft) + "! Pick a leaf on the right wing.");
+            if (act1LcaStage == 0) {
+                act1LcaA = clickedKey;
+                act1Hl1 = clickedKey;
+                act1LcaStage = 1;
+                scoring.addStep(1);
+                syncScoringHud();
+                toastQueue.push("Selected Room A: " + std::to_string(act1LcaA), TOAST_KIND_SUCCESS);
+                status = "Room A = " + std::to_string(act1LcaA) + " selected. Now click a second room (Room B)!";
+                if (scoring.isAlarmFull()) triggerAlarmFullFail();
+            } else if (act1LcaStage == 1) {
+                if (clickedKey == act1LcaA) {
+                    toastQueue.push("Pick a different second room!", TOAST_KIND_WARNING);
                 } else {
-                    act1DiamLeft = clickedKey;
-                    addMarkedId(clickedId);
+                    act1LcaB = clickedKey;
+                    act1Hl2 = clickedKey;
+                    buildRouteBetween(act1Tree, act1LcaA, act1LcaB, act1RoutePath, act1RouteLen);
+                    act1LcaStage = 2;
                     scoring.addStep(1);
                     syncScoringHud();
+                    toastQueue.push("Selected Room B: " + std::to_string(act1LcaB), TOAST_KIND_SUCCESS);
+                    status = "Rooms " + std::to_string(act1LcaA) + " and " + std::to_string(act1LcaB) +
+                             " selected! Step 2/3: Click their Lowest Common Ancestor (LCA)!";
                     if (scoring.isAlarmFull()) triggerAlarmFullFail();
-                    else if (act1DiamRight != -1) {
-                        finishLevelWin(scoring.stars(),
-                                       "Diameter = " + std::to_string(act1Tree.diameter()) + " nodes traced between " +
-                                       std::to_string(act1DiamLeft) + " and " + std::to_string(act1DiamRight) + "!");
-                    } else {
-                        status = "Picked left leaf " + std::to_string(clickedKey) + ". Now click a deepest leaf on the right wing!";
-                        toastQueue.push("Left endpoint " + std::to_string(clickedKey) + " selected", TOAST_KIND_SUCCESS);
+                }
+            } else if (act1LcaStage == 2) {
+                int expectedLca = act1Tree.lca(act1LcaA, act1LcaB);
+                if (clickedKey == expectedLca) {
+                    act1LcaStage = 3;
+                    act1RouteIdx = 0;
+                    clearMarked();
+                    scoring.addStep(1);
+                    syncScoringHud();
+                    toastQueue.push("LCA(" + std::to_string(act1LcaA) + ", " + std::to_string(act1LcaB) +
+                                    ") = " + std::to_string(expectedLca) + "!", TOAST_KIND_SUCCESS);
+                    status = "LCA = " + std::to_string(expectedLca) + " verified! Step 3/3: Trace the path from " +
+                             std::to_string(act1LcaA) + " to " + std::to_string(act1LcaB) +
+                             " by clicking each room along it in order!";
+                    if (scoring.isAlarmFull()) triggerAlarmFullFail();
+                } else {
+                    raisePenalty(PENALTY_WRONG_TRAVERSAL,
+                                 "Room " + std::to_string(clickedKey) + " is not the LCA of " +
+                                 std::to_string(act1LcaA) + " and " + std::to_string(act1LcaB) + "!");
+                }
+            } else if (act1LcaStage == 3 && act1RouteIdx < act1RouteLen) {
+                if (act1RouteIdx == 0 && act1RouteLen > 1 && clickedKey == act1RoutePath[act1RouteLen - 1]) {
+                    for (int l = 0, r = act1RouteLen - 1; l < r; ++l, --r) {
+                        swapInt(act1RoutePath[l], act1RoutePath[r]);
                     }
                 }
-            } else {
-                if (act1DiamRight != -1) {
-                    raisePenalty(PENALTY_WRONG_TRAVERSAL,
-                                 "Already picked right leaf " + std::to_string(act1DiamRight) + "! Pick a leaf on the left wing.");
-                } else {
-                    act1DiamRight = clickedKey;
+                if (clickedKey == act1RoutePath[act1RouteIdx]) {
                     addMarkedId(clickedId);
+                    act1RouteIdx++;
                     scoring.addStep(1);
                     syncScoringHud();
-                    if (scoring.isAlarmFull()) triggerAlarmFullFail();
-                    else if (act1DiamLeft != -1) {
+                    if (scoring.isAlarmFull()) {
+                        triggerAlarmFullFail();
+                    } else if (act1RouteIdx == act1RouteLen) {
                         finishLevelWin(scoring.stars(),
-                                       "Diameter = " + std::to_string(act1Tree.diameter()) + " nodes traced between " +
-                                       std::to_string(act1DiamLeft) + " and " + std::to_string(act1DiamRight) + "!");
+                                       "Route traced between " + std::to_string(act1LcaA) + " and " +
+                                       std::to_string(act1LcaB) + " through LCA " +
+                                       std::to_string(act1Tree.lca(act1LcaA, act1LcaB)) + "!");
                     } else {
-                        status = "Picked right leaf " + std::to_string(clickedKey) + ". Now click a deepest leaf on the left wing!";
-                        toastQueue.push("Right endpoint " + std::to_string(clickedKey) + " selected", TOAST_KIND_SUCCESS);
+                        toastQueue.push("Path [" + std::to_string(act1RouteIdx) + "/" +
+                                        std::to_string(act1RouteLen) + "]: " + std::to_string(clickedKey),
+                                        TOAST_KIND_SUCCESS);
+                        status = "Path step " + std::to_string(act1RouteIdx) + "/" + std::to_string(act1RouteLen) +
+                                 ": clicked " + std::to_string(clickedKey) + ". Click next room along the route!";
                     }
+                } else {
+                    raisePenalty(PENALTY_WRONG_TRAVERSAL,
+                                 "Wrong path room " + std::to_string(clickedKey) + "! Expected " +
+                                 std::to_string(act1RoutePath[act1RouteIdx]) + " next along the route.");
                 }
             }
         }
         else if (lid == LEVEL_1_5) {
-            int a = (d.targetKeyCount > 0) ? d.targetKeys[0] : -1;
-            int b = (d.targetKeyCount > 1) ? d.targetKeys[1] : -1;
-            int expectedLca = act1Tree.lca(a, b);
-            if (clickedKey == expectedLca) {
-                scoring.addStep(1);
-                syncScoringHud();
-                if (scoring.isAlarmFull()) triggerAlarmFullFail();
-                else finishLevelWin(scoring.stars(),
-                                    "Act 1 Boss defeated! LCA(" + std::to_string(a) + ", " + std::to_string(b) +
-                                    ") = " + std::to_string(expectedLca) + " unlocked Wing 2!");
-            } else {
-                raisePenalty(PENALTY_WRONG_TRAVERSAL,
-                             "Node " + std::to_string(clickedKey) + " is not the LCA of " +
-                             std::to_string(a) + " and " + std::to_string(b) + "!");
+            if (!act1Mirrored && !pendingWin) {
+                TreeNode* u = findTreeNodeMutable(act1Tree.getRoot(), clickedKey);
+                if (!u) return;
+                if (!u->left && !u->right) {
+                    if (containsInt(markedIds, markedCount, clickedId)) {
+                        toastQueue.push("Leaf " + std::to_string(clickedKey) + " already checked", TOAST_KIND_WARNING);
+                    } else {
+                        addMarkedId(clickedId);
+                        scoring.addStep(1);
+                        syncScoringHud();
+                        toastQueue.push("Leaf " + std::to_string(clickedKey) + " checked (no children to swap)",
+                                        TOAST_KIND_SUCCESS);
+                        status = "Leaf " + std::to_string(clickedKey) + " checked. Click internal nodes bottom-up to swap children!";
+                        if (scoring.isAlarmFull()) triggerAlarmFullFail();
+                    }
+                } else if (containsInt(act1SwappedKeys, act1SwappedCount, clickedKey)) {
+                    toastQueue.push("Room " + std::to_string(clickedKey) + " already swapped!", TOAST_KIND_WARNING);
+                } else if (!allInternalDescendantsSwapped(u, act1SwappedKeys, act1SwappedCount)) {
+                    raisePenalty(PENALTY_WRONG_TRAVERSAL,
+                                 "Bottom-up order required! Swap lower subtrees before clicking " +
+                                 std::to_string(clickedKey) + "!");
+                } else {
+                    pushUndoSnapshot(false);
+                    LayoutResult before;
+                    LayoutEngine::layoutBinaryTree(act1Tree, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
+                    TreeNode* tmp = u->left;
+                    u->left = u->right;
+                    u->right = tmp;
+                    if (act1SwappedCount < 32) act1SwappedKeys[act1SwappedCount++] = clickedKey;
+                    addMarkedId(clickedId);
+                    EventBatch batch;
+                    batch.append(Event(EVENT_OPERATION_STARTED, "mirror node"));
+                    Event ev(EVENT_VISIT, "swap children");
+                    ev.nodeId = u->id;
+                    ev.newValue = u->value;
+                    batch.append(ev);
+                    batch.append(Event(EVENT_OPERATION_COMPLETED, "node inverted"));
+                    layoutBtForScreen(false);
+                    animCtrl.loadOperation(batch, before, btLayout, true, autoPlayEvents);
+                    scoring.addStep(1);
+                    syncScoringHud();
+                    if (allInternalNodesSwapped(act1Tree.getRoot(), act1SwappedKeys, act1SwappedCount)) {
+                        act1Mirrored = true;
+                        pendingWin = true;
+                        toastQueue.push("All subtrees inverted bottom-up!", TOAST_KIND_SUCCESS);
+                        status = "All subtrees inverted bottom-up! Vault mirror complete...";
+                    } else {
+                        toastQueue.push("Swapped children of " + std::to_string(clickedKey) + "!", TOAST_KIND_SUCCESS);
+                        status = "Inverted subtree at " + std::to_string(clickedKey) +
+                                 "! Continue swapping upward toward the root (or press Auto Mirror).";
+                    }
+                    if (scoring.isAlarmFull()) triggerAlarmFullFail();
+                }
             }
         }
         else if (lid == LEVEL_2_1) {
@@ -2270,13 +2597,15 @@ int main(int argc, char** argv) {
             bool showBf = false, showId = false;
 
             if (lid >= LEVEL_1_1 && lid <= LEVEL_1_5) {
-                if (!animCtrl.hasEvents() && needLayout) {
+                if (lid == LEVEL_1_2 && !act1Reconstructed) {
+                    layoutDirty = false;
+                } else if (!animCtrl.hasEvents() && needLayout) {
                     layoutBtForScreen(false);
                     layoutDirty = false;
                 }
                 const LayoutResult& drawL = animCtrl.hasEvents() ? animCtrl.getRenderLayout() : btLayout;
                 activeDrawLayout = &drawL;
-                if (inCanvasHover) {
+                if (inCanvasHover && !(lid == LEVEL_1_2 && !act1Reconstructed)) {
                     int hovIdx = drawL.hitTestNode(canvasHoverWorld.x, canvasHoverWorld.y);
                     if (hovIdx >= 0) hl.hoveredNodeId = drawL.nodes[hovIdx].id;
                 }
@@ -2288,6 +2617,7 @@ int main(int argc, char** argv) {
                     if (hlIdx1 >= 0) { hl.primaryNodeId = drawL.nodes[hlIdx1].id; hl.primaryStyle = HL_VISIT; }
                     if (hlIdx2 >= 0) hl.secondaryNodeId = drawL.nodes[hlIdx2].id;
                 }
+                if (lid == LEVEL_1_3) hl.showBadges = false;
                 showId = true;
             }
             else if (lid >= LEVEL_2_1 && lid <= LEVEL_2_5) {
@@ -2369,17 +2699,54 @@ int main(int argc, char** argv) {
                 if (showBgGrid) guiRenderer.drawCanvasGrid(window, levelCam.view);
                 if (lid >= LEVEL_4_1 && lid <= LEVEL_4_5) {
                     guiRenderer.drawHeapLayout(window, font, *activeDrawLayout, hl, CANVAS_X + 14.f, CANVAS_Y + CANVAS_H - 80.f);
+                } else if (lid == LEVEL_1_2 && !act1Reconstructed) {
+                    for (int ei = 0; ei < activeDrawLayout->edgeCount; ++ei) {
+                        const EdgeLayout& e = activeDrawLayout->edges[ei];
+                        sf::Vertex line[] = {
+                            sf::Vertex({e.x1, e.y1}, sf::Color(85, 130, 190, 185)),
+                            sf::Vertex({e.x2, e.y2}, sf::Color(85, 130, 190, 185))
+                        };
+                        window.draw(line, 2, sf::PrimitiveType::Lines);
+                    }
+                    DragDropView::draw(window, font, dragDrop, &uiCache);
                 } else {
                     guiRenderer.drawTreeLayout(window, font, *activeDrawLayout, hl, showBf, showId);
+                    if (lid == LEVEL_1_3 && act1PostIdx > 0) {
+                        int postCnt = 0;
+                        int* postSeq = act1Tree.postorderRecursive(postCnt);
+                        if (postSeq) {
+                            for (int pi = 0; pi < act1PostIdx && pi < postCnt; ++pi) {
+                                int nIdx = activeDrawLayout->findNodeIndexByKey(postSeq[pi]);
+                                if (nIdx >= 0) {
+                                    const NodeLayout& nd = activeDrawLayout->nodes[nIdx];
+                                    float bx = nd.x + nd.radius - 6.f;
+                                    float by = nd.y - nd.radius - 10.f;
+                                    sf::RectangleShape& pill = uiCache.rect;
+                                    pill.setSize({32.f, 18.f});
+                                    pill.setOrigin({0.f, 0.f});
+                                    pill.setPosition({bx, by});
+                                    pill.setFillColor(sf::Color(20, 75, 50, 235));
+                                    pill.setOutlineThickness(1.2f);
+                                    pill.setOutlineColor(Ui::green());
+                                    window.draw(pill);
+                                    Ui::textCenter(window, font, "h=" + std::to_string(act1ConfirmedHeight[pi]),
+                                                   11, Ui::green(), bx + 16.f, by + 2.f, true, &uiCache);
+                                }
+                            }
+                            delete[] postSeq;
+                        }
+                    }
                 }
-                if (dragDrop.tokenCount() > 0 || dragDrop.slotCount() > 0) {
+                if ((lid != LEVEL_1_2 || act1Reconstructed) && (dragDrop.tokenCount() > 0 || dragDrop.slotCount() > 0)) {
                     DragDropView::draw(window, font, dragDrop, &uiCache);
                 }
                 window.setView(window.getDefaultView());
 
                 Ui::text(window, font, levelCam.zoomText(), 11, Ui::textMuted(),
                          CANVAS_X + 12.f, CANVAS_Y + 6.f, false, &uiCache);
-                drawCamTooltip(levelCam, *activeDrawLayout, hl.hoveredNodeId);
+                if (lid != LEVEL_1_3 && !(lid == LEVEL_1_2 && !act1Reconstructed)) {
+                    drawCamTooltip(levelCam, *activeDrawLayout, hl.hoveredNodeId);
+                }
             }
 
             // Event Log + Playback Controls Panel (right column)
@@ -2393,33 +2760,65 @@ int main(int argc, char** argv) {
             // Bottom Guidance & Minimal Structural Controls Panel
             Ui::panel(window, 30.f, 660.f, 1540.f, 210.f, sf::Color(60, 85, 125), 235, &uiCache);
 
-            if (cachedPromptLid != lid || cachedPromptSeq != act1SeqIdx || cachedPromptAvl != avlQueuePos) {
+            if (cachedPromptLid != lid || cachedPromptSeq != act1SeqIdx || cachedPromptAvl != avlQueuePos ||
+                cachedPromptMode != act1TravMode || cachedPromptPost != act1PostIdx || cachedPromptLca != act1LcaStage) {
                 cachedPromptLid = lid;
                 cachedPromptSeq = act1SeqIdx;
                 cachedPromptAvl = avlQueuePos;
+                cachedPromptMode = act1TravMode;
+                cachedPromptPost = act1PostIdx;
+                cachedPromptLca = act1LcaStage;
                 cachedPromptHead = "NODE INTERACTION GUIDE";
                 const LevelData& curD = levelData[currentLevelIdx];
                 if (lid == LEVEL_3_4 && avlQueuePos < curD.insertCount) {
                     cachedPromptHead = "INCOMING KEY [" + std::to_string(curD.inserts[avlQueuePos].key) +
                                        "] - Click the predicted pivot/attachment node on the AVL tree:";
                 } else if (lid == LEVEL_1_1) {
-                    cachedPromptHead = "INORDER TRAVERSAL [" + std::to_string(act1SeqIdx) + "/" +
-                                       std::to_string(act1Tree.getSize()) + "] - Click nodes in Left -> Root -> Right order:";
+                    cachedPromptHead = std::string(traversalModeName(act1TravMode)) + " [" +
+                                       std::to_string(act1SeqIdx) + "/" + std::to_string(act1Tree.getSize()) +
+                                       "] - Click rooms in exact order:";
+                } else if (lid == LEVEL_1_2) {
+                    std::string preS = "PRE: ", inS = "IN: ";
+                    for (int i = 0; i < curD.preorderCount; ++i) preS += std::to_string(curD.preorder[i]) + (i + 1 < curD.preorderCount ? " " : "");
+                    for (int i = 0; i < curD.inorderCount; ++i)  inS += std::to_string(curD.inorder[i])  + (i + 1 < curD.inorderCount ? " " : "");
+                    cachedPromptHead = preS + "   |   " + inS;
+                } else if (lid == LEVEL_1_3) {
+                    if (act1PostIdx < act1Tree.getSize()) {
+                        cachedPromptHead = "POSTORDER HEIGHTS [" + std::to_string(act1PostIdx) + "/" +
+                                           std::to_string(act1Tree.getSize()) + "] - Enter height of room " +
+                                           std::to_string(act1Hl1) + " (leaf = 1):";
+                    } else {
+                        cachedPromptHead = "FINAL CHECK - Enter the tree's Diameter (longest path in nodes):";
+                    }
+                } else if (lid == LEVEL_1_4) {
+                    if (act1LcaStage == 0) cachedPromptHead = "STEP 1/3 - Click Room A (any start room on the tree):";
+                    else if (act1LcaStage == 1) cachedPromptHead = "STEP 1/3 - Room A=" + std::to_string(act1LcaA) + " picked; click Room B:";
+                    else if (act1LcaStage == 2) cachedPromptHead = "STEP 2/3 - Click the Lowest Common Ancestor (LCA) of " + std::to_string(act1LcaA) + " & " + std::to_string(act1LcaB) + ":";
+                    else cachedPromptHead = "STEP 3/3 - Trace the route between " + std::to_string(act1LcaA) + " & " + std::to_string(act1LcaB) + " in order:";
+                } else if (lid == LEVEL_1_5) {
+                    cachedPromptHead = "MIRROR THE VAULT - Click internal rooms bottom-up to swap children, or press Auto:";
                 }
             }
             Ui::textFit(window, font, cachedPromptHead, TXT_H2, Ui::gold(), 54.f, 678.f, 1080.f, true, &uiCache);
-            Ui::textWrap(window, font, status, TXT_BODY, Ui::textBody(), 54.f, 718.f, 1080.f, false, &uiCache);
+            Ui::textWrap(window, font, status, TXT_BODY, Ui::textBody(), 54.f, 718.f, 1050.f, false, &uiCache);
             if (hintSys.wasUsed()) {
                 Ui::textWrap(window, font, "HINT (-1 star cap): " + hintSys.shownText(),
-                             TXT_HINT, Ui::cyan(), 54.f, 774.f, 1080.f, false, &uiCache);
+                             TXT_HINT, Ui::cyan(), 54.f, 774.f, 1050.f, false, &uiCache);
             }
 
-            // Only levels whose mechanic literally starts with an empty/non-clickable state get a single action button
-            if (lid == LEVEL_1_2) {
-                Ui::button(window, font, act1Mirrored ? "Confirm Alignment [Enter]" : "Mirror Tree [M]",
-                           1220.f, 705.f, 310.f, 52.f, act1Mirrored ? BTN_PRIMARY : BTN_SECONDARY, in, 15, &uiCache);
-            } else if (lid == LEVEL_1_3 && !act1Reconstructed) {
-                Ui::button(window, font, "Reconstruct Pre+In [R]",
+            if (lid == LEVEL_1_1 && act1SeqIdx == 0 && !pendingWin) {
+                Ui::button(window, font, "Cycle Mode [C]",
+                           1220.f, 705.f, 310.f, 52.f, BTN_SECONDARY, in, 15, &uiCache);
+            } else if (lid == LEVEL_1_3) {
+                bool askingDiam = (act1PostIdx >= act1Tree.getSize());
+                std::string valLabel = (askingDiam ? "Diam: " : "Height: ") + std::to_string(act1StepperVal);
+                Ui::button(window, font, "-", 1130.f, 705.f, 60.f, 52.f, BTN_SECONDARY, in, 18, &uiCache);
+                Ui::panel(window, 1200.f, 705.f, 150.f, 52.f, Ui::gold(), 240, &uiCache);
+                Ui::textCenter(window, font, valLabel, 17, Ui::gold(), 1275.f, 719.f, true, &uiCache);
+                Ui::button(window, font, "+", 1360.f, 705.f, 60.f, 52.f, BTN_SECONDARY, in, 18, &uiCache);
+                Ui::button(window, font, "Submit", 1430.f, 705.f, 120.f, 52.f, BTN_PRIMARY, in, 15, &uiCache);
+            } else if (lid == LEVEL_1_5 && !act1Mirrored && !pendingWin) {
+                Ui::button(window, font, "Auto Mirror [A]",
                            1220.f, 705.f, 310.f, 52.f, BTN_SECONDARY, in, 15, &uiCache);
             } else if (lid == LEVEL_4_5 && !act4Built) {
                 Ui::button(window, font, "Build Max Heap [B]",
@@ -2890,6 +3289,177 @@ int main(int argc, char** argv) {
         }
         saveShot("09_canvas_pan_zoom", idle);
 
+        // Act 1 Levels (1.1 through 1.5) visual verification
+        toastQueue.clear();
+        startLevel(0); showingBriefing = false; layoutBtForScreen(false); layoutDirty = false;
+        saveShot("10_act1_1_traversals", idle);
+
+        startLevel(1); showingBriefing = false;
+        saveShot("11_act1_2_blueprint_dragdrop", idle);
+
+        startLevel(2); showingBriefing = false; layoutBtForScreen(false); layoutDirty = false;
+        act1StepperVal = 1; submitAct1HeightOrDiameter();
+        act1StepperVal = 1; submitAct1HeightOrDiameter();
+        saveShot("12_act1_3_heights_diameter", idle);
+
+        startLevel(3); showingBriefing = false; layoutBtForScreen(false); layoutDirty = false;
+        if (btLayout.findNodeIndexByKey(20) >= 0) handleLevelNodeClick(btLayout.nodes[btLayout.findNodeIndexByKey(20)].id, 20);
+        if (btLayout.findNodeIndexByKey(40) >= 0) handleLevelNodeClick(btLayout.nodes[btLayout.findNodeIndexByKey(40)].id, 40);
+        saveShot("13_act1_4_lca_path", idle);
+
+        startLevel(4); showingBriefing = false; layoutBtForScreen(false); layoutDirty = false;
+        if (btLayout.findNodeIndexByKey(30) >= 0) handleLevelNodeClick(btLayout.nodes[btLayout.findNodeIndexByKey(30)].id, 30);
+        saveShot("14_act1_5_mirror_vault", idle);
+
+        deleteManualTree(manualTree);
+        return 0;
+    }
+
+    // End-to-end automated sanity check for all 5 Act 1 levels (--verify-act1)
+    if (verifyAct1) {
+        scoreLog.load(""); // do not modify workspace scores.txt
+        auto failCheck = [&](const char* msg) -> int {
+            std::cerr << "FAIL: " << msg << "\n";
+            deleteManualTree(manualTree);
+            return 1;
+        };
+
+        // 1.1: All 4 traversal modes + wrong-click +1 alarm penalty
+        for (int m = 0; m < 4; ++m) {
+            startLevel(0);
+            showingBriefing = false;
+            act1TravMode = m;
+            layoutBtForScreen(false);
+            int cnt = 0;
+            int* seq = getAct1Traversal(act1Tree, m, cnt);
+            if (!seq || cnt != 7) return failCheck("1.1 sequence length != 7");
+            if (m == 0) {
+                int wrongKey = seq[1];
+                int wIdx = btLayout.findNodeIndexByKey(wrongKey);
+                handleLevelNodeClick(btLayout.nodes[wIdx].id, wrongKey);
+                if (scoring.alarm() != 1) return failCheck("1.1 wrong traversal click must add +1 alarm");
+            }
+            for (int i = 0; i < cnt; ++i) {
+                int nIdx = btLayout.findNodeIndexByKey(seq[i]);
+                handleLevelNodeClick(btLayout.nodes[nIdx].id, seq[i]);
+            }
+            delete[] seq;
+            completePendingWin();
+            if (currentScreen != SCREEN_RESULT) return failCheck("1.1 did not reach result");
+            if (m > 0 && scoring.stars() != 3) return failCheck("1.1 clean traversal should earn 3 stars");
+            if (m == 0 && scoring.stars() != 2) return failCheck("1.1 single-penalty run should earn 2 stars");
+        }
+        std::cout << "PASS 1.1: All 4 traversal modes & +1 penalty verified\n";
+
+        // 1.2: Drag-and-drop reconstruction (wrong placement penalty + clean solve)
+        startLevel(1);
+        showingBriefing = false;
+        for (int s = 0; s < dragDrop.slotCount(); ++s) {
+            int tokIdx = (s + 1) % dragDrop.tokenCount();
+            const DragToken* tk = dragDrop.token(tokIdx);
+            const DropSlot* sl = dragDrop.slot(s);
+            dragDrop.press(tk->x, tk->y);
+            dragDrop.move(sl->x, sl->y);
+            DropResult r = dragDrop.release(sl->x, sl->y);
+            handleAct1BlueprintDrop(r);
+        }
+        if (scoring.penaltyEvents() != 1 || scoring.alarm() != 8) return failCheck("1.2 wrong placement penalty mismatch");
+
+        startLevel(1);
+        showingBriefing = false;
+        for (int s = 0; s < btLayout.nodeCount; ++s) {
+            int wantedKey = btLayout.nodes[s].key;
+            int tokIdx = -1;
+            for (int t = 0; t < dragDrop.tokenCount(); ++t) {
+                if (dragDrop.token(t)->value == wantedKey) { tokIdx = t; break; }
+            }
+            if (tokIdx < 0) return failCheck("1.2 missing token for key");
+            const DragToken* tk = dragDrop.token(tokIdx);
+            const DropSlot* sl = dragDrop.slot(s);
+            dragDrop.press(tk->x, tk->y);
+            dragDrop.move(sl->x, sl->y);
+            DropResult r = dragDrop.release(sl->x, sl->y);
+            handleAct1BlueprintDrop(r);
+        }
+        if (currentScreen != SCREEN_RESULT || !act1Reconstructed || scoring.stars() != 3) {
+            return failCheck("1.2 clean drag-drop reconstruction failed");
+        }
+        std::cout << "PASS 1.2: Drag-drop Pre+In reconstruction verified (3 stars)\n";
+
+        // 1.3: Postorder heights + diameter stepper
+        startLevel(2);
+        showingBriefing = false;
+        layoutBtForScreen(false);
+        act1StepperVal = 4; // wrong height for leaf
+        submitAct1HeightOrDiameter();
+        if (scoring.alarm() != 1) return failCheck("1.3 wrong height must add +1 alarm");
+
+        startLevel(2);
+        showingBriefing = false;
+        layoutBtForScreen(false);
+        {
+            int postCnt = 0;
+            int* postSeq = act1Tree.postorderRecursive(postCnt);
+            for (int i = 0; i < postCnt; ++i) {
+                act1StepperVal = treeHeightNodes(findTreeNodeConst(act1Tree.getRoot(), postSeq[i]));
+                submitAct1HeightOrDiameter();
+            }
+            delete[] postSeq;
+            act1StepperVal = act1Tree.diameter();
+            submitAct1HeightOrDiameter();
+        }
+        if (currentScreen != SCREEN_RESULT || scoring.stars() != 3) return failCheck("1.3 clean postorder height+diameter failed");
+        std::cout << "PASS 1.3: Postorder heights + diameter verified (3 stars)\n";
+
+        // 1.4: Pick 2 rooms -> click LCA -> trace path (no Boss label)
+        if (levels[3].title.find("Boss") != std::string::npos) return failCheck("1.4 must not have Boss label");
+        startLevel(3);
+        showingBriefing = false;
+        layoutBtForScreen(false);
+        {
+            int seq[] = { 20, 80, 50, 20, 30, 50, 70, 80 };
+            for (int k : seq) {
+                int idx = btLayout.findNodeIndexByKey(k);
+                handleLevelNodeClick(btLayout.nodes[idx].id, k);
+            }
+        }
+        if (currentScreen != SCREEN_RESULT || scoring.stars() != 3) return failCheck("1.4 route trace failed");
+        std::cout << "PASS 1.4: 2-room pick + LCA + path trace verified (3 stars)\n";
+
+        // 1.5: Bottom-up swap + penalty on top-down click + Auto Mirror alternative
+        startLevel(4);
+        showingBriefing = false;
+        layoutBtForScreen(false);
+        handleLevelNodeClick(btLayout.nodes[btLayout.findNodeIndexByKey(50)].id, 50); // top-down rejected
+        if (scoring.alarm() != 1) return failCheck("1.5 top-down click must trigger +1 alarm");
+
+        startLevel(4);
+        showingBriefing = false;
+        layoutBtForScreen(false);
+        {
+            int swaps[] = { 30, 70, 50 };
+            for (int k : swaps) {
+                int idx = btLayout.findNodeIndexByKey(k);
+                handleLevelNodeClick(btLayout.nodes[idx].id, k);
+            }
+        }
+        completePendingWin();
+        if (currentScreen != SCREEN_RESULT || scoring.stars() != 3 ||
+            !act1Tree.getRoot() || act1Tree.getRoot()->left->value != 70) {
+            return failCheck("1.5 bottom-up mirror failed");
+        }
+
+        startLevel(4);
+        showingBriefing = false;
+        layoutBtForScreen(false);
+        triggerStructuralAction(1);
+        completePendingWin();
+        if (currentScreen != SCREEN_RESULT || scoring.stars() != 3 ||
+            !act1Tree.getRoot() || act1Tree.getRoot()->left->value != 70) {
+            return failCheck("1.5 Auto Mirror option failed");
+        }
+        std::cout << "PASS 1.5: Bottom-up click-swap and Auto Mirror both verified (3 stars)\n";
+
         deleteManualTree(manualTree);
         return 0;
     }
@@ -3046,7 +3616,11 @@ int main(int argc, char** argv) {
             if (const auto* mr = event->getIf<sf::Event::MouseButtonReleased>()) {
                 if (mr->button == sf::Mouse::Button::Left && dragDrop.isDragging()) {
                     sf::Vector2f wRel = window.mapPixelToCoords(mr->position, levelCam.view);
-                    dragDrop.release(wRel.x, wRel.y);
+                    DropResult dropRes = dragDrop.release(wRel.x, wRel.y);
+                    if (currentScreen == SCREEN_LEVEL_PLAY && currentLevelIdx >= 0 &&
+                        levels[currentLevelIdx].id == LEVEL_1_2) {
+                        handleAct1BlueprintDrop(dropRes);
+                    }
                 }
                 draggingSpeedSlider = false;
                 draggingScrubber = false;
@@ -3103,10 +3677,26 @@ int main(int argc, char** argv) {
                     if (kp->code == sf::Keyboard::Key::Z)     performUndo();
                     if (kp->code == sf::Keyboard::Key::Right) { animCtrl.setPlaying(false); stepAnimForward(); }
                     if (kp->code == sf::Keyboard::Key::Space) animCtrl.togglePlayPause();
-                    if (lid == LEVEL_1_2) {
-                        if (kp->code == sf::Keyboard::Key::M)     triggerStructuralAction(1);
-                        if (kp->code == sf::Keyboard::Key::Enter) triggerStructuralAction(2);
-                    } else if (lid == LEVEL_1_3 && kp->code == sf::Keyboard::Key::R) {
+                    if (lid == LEVEL_1_1 && kp->code == sf::Keyboard::Key::C) {
+                        cycleAct1TravMode();
+                    } else if (lid == LEVEL_1_3) {
+                        if (kp->code == sf::Keyboard::Key::Up || kp->code == sf::Keyboard::Key::Equal ||
+                            kp->code == sf::Keyboard::Key::Add) {
+                            act1StepperVal = minInt(20, act1StepperVal + 1);
+                        } else if (kp->code == sf::Keyboard::Key::Down || kp->code == sf::Keyboard::Key::Hyphen ||
+                                   kp->code == sf::Keyboard::Key::Subtract) {
+                            act1StepperVal = maxInt(1, act1StepperVal - 1);
+                        } else if (kp->code == sf::Keyboard::Key::Enter) {
+                            submitAct1HeightOrDiameter();
+                        } else {
+                            int numCode = static_cast<int>(kp->code);
+                            int n1 = static_cast<int>(sf::Keyboard::Key::Num1);
+                            int n9 = static_cast<int>(sf::Keyboard::Key::Num9);
+                            if (numCode >= n1 && numCode <= n9) {
+                                act1StepperVal = (numCode - n1) + 1;
+                            }
+                        }
+                    } else if (lid == LEVEL_1_5 && (kp->code == sf::Keyboard::Key::A || kp->code == sf::Keyboard::Key::M)) {
                         triggerStructuralAction(1);
                     } else if (lid == LEVEL_4_5 && kp->code == sf::Keyboard::Key::B) {
                         triggerStructuralAction(1);
@@ -3282,13 +3872,31 @@ int main(int argc, char** argv) {
 
                     int lid = levels[currentLevelIdx].id;
 
-                    // Minimal structural triggers (only for 1.2, 1.3, 4.5)
-                    if (lid == LEVEL_1_2 && Ui::inside(mx, my, 1220.f, 705.f, 310.f, 52.f)) {
-                        triggerStructuralAction(act1Mirrored ? 2 : 1);
-                    } else if (lid == LEVEL_1_3 && !act1Reconstructed && Ui::inside(mx, my, 1220.f, 705.f, 310.f, 52.f)) {
+                    // Bottom-panel controls for specific levels
+                    if (lid == LEVEL_1_1 && act1SeqIdx == 0 && !pendingWin &&
+                        Ui::inside(mx, my, 1220.f, 705.f, 310.f, 52.f)) {
+                        cycleAct1TravMode();
+                        continue;
+                    } else if (lid == LEVEL_1_3) {
+                        if (Ui::inside(mx, my, 1130.f, 705.f, 60.f, 52.f)) {
+                            act1StepperVal = maxInt(1, act1StepperVal - 1);
+                            continue;
+                        }
+                        if (Ui::inside(mx, my, 1360.f, 705.f, 60.f, 52.f)) {
+                            act1StepperVal = minInt(20, act1StepperVal + 1);
+                            continue;
+                        }
+                        if (Ui::inside(mx, my, 1430.f, 705.f, 120.f, 52.f)) {
+                            submitAct1HeightOrDiameter();
+                            continue;
+                        }
+                    } else if (lid == LEVEL_1_5 && !act1Mirrored && !pendingWin &&
+                               Ui::inside(mx, my, 1220.f, 705.f, 310.f, 52.f)) {
                         triggerStructuralAction(1);
+                        continue;
                     } else if (lid == LEVEL_4_5 && !act4Built && Ui::inside(mx, my, 1220.f, 705.f, 310.f, 52.f)) {
                         triggerStructuralAction(1);
+                        continue;
                     }
 
                     // Canvas node/cell hit-testing across all 4 structures
@@ -3310,7 +3918,7 @@ int main(int argc, char** argv) {
                         if (dragDrop.press(wClick.x, wClick.y)) {
                             continue;
                         }
-                        int hitIdx = activeL->hitTestNode(wClick.x, wClick.y);
+                        int hitIdx = (lid == LEVEL_1_2 && !act1Reconstructed) ? -1 : activeL->hitTestNode(wClick.x, wClick.y);
                         if (hitIdx >= 0) {
                             handleLevelNodeClick(activeL->nodes[hitIdx].id, activeL->nodes[hitIdx].key);
                         } else if (lid >= LEVEL_4_1 && lid <= LEVEL_4_5) {

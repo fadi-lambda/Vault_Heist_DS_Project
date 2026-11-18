@@ -199,14 +199,18 @@ int countBottomUpSiftDowns(const int* arr, int n) {
 int computeOptimalSteps(const LevelData& d) {
     switch (d.id) {
         case 11: return d.nodeCount;                       // visit every node once
-        case 12: return d.nodeCount > 0 ? 2 : 0;           // mirror + confirm root
-        case 13: return (d.preorderCount > 0 && d.inorderCount > 0) ? 2 : 0; // reconstruct + click root
-        case 14: {                                         // one deepest leaf per root wing
+        case 12: return d.preorderCount;                   // place one token per slot
+        case 13: return d.nodeCount > 0 ? (d.nodeCount + 1) : 0; // postorder heights + diameter
+        case 14: {                                         // 2 picks + LCA + path (up to tree diameter)
             if (d.nodeCount <= 0) return 0;
-            int wings = (d.nodes[0].left != -1 ? 1 : 0) + (d.nodes[0].right != -1 ? 1 : 0);
-            return wings > 0 ? wings : 1;
+            int diam = 0;
+            for (int i = 0; i < d.nodeCount; ++i) {
+                int cand = heightOfKey(d, d.nodes[i].left) + heightOfKey(d, d.nodes[i].right) + 1;
+                if (cand > diam) diam = cand;
+            }
+            return 3 + diam;
         }
-        case 15: return d.targetKeyCount >= 2 ? 1 : d.targetKeyCount; // single LCA click for the pair
+        case 15: return d.nodeCount;                       // bottom-up swaps (up to N) or Auto Mirror
         case 21: return d.targetKeyCount + 1;              // duplicate test + attachment parent + new leaf
         case 22: return d.deleteSequenceCount;             // one click per deletion
         case 23: return (d.initialKeyCount >= 2 ? 2 : d.initialKeyCount) + d.targetKeyCount; // min + max + targets

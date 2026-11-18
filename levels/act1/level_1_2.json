@@ -1,22 +1,15 @@
 {
   "level_id": 12,
   "act": 1,
-  "title": "1.2 Security Laser Mirror",
-  "concept": "Mirroring (inverting) a binary tree",
-  "objective": "Mirror the binary tree branches, then click the root node (50) to confirm laser alignment!",
-  "controls": "Click [Mirror Tree] or root node -> Click root (50) to confirm",
-  "start_status": "Step 1: Click [Mirror Tree [M]] or the root node to mirror branches.",
-  "nodes": [
-    { "key": 50, "left": 30, "right": 70 },
-    { "key": 30, "left": 20, "right": 40 },
-    { "key": 70, "left": 60, "right": 80 },
-    { "key": 20, "left": null, "right": null },
-    { "key": 40, "left": null, "right": null },
-    { "key": 60, "left": null, "right": null },
-    { "key": 80, "left": null, "right": null }
-  ],
+  "title": "1.2 Decode the Blueprint",
+  "concept": "Binary tree reconstruction from Preorder + Inorder sequences",
+  "objective": "Drag each room token into its blueprint slot using Pre {10,5,2,7,15,12,20} & In {2,5,7,10,12,15,20}!",
+  "controls": "Drag room tokens into empty tree slots  |  Full placement auto-validates when all 7 slots are filled",
+  "start_status": "Drag all 7 room tokens from the top tray into the blueprint tree slots to reconstruct the vault!",
+  "preorder": [10, 5, 2, 7, 15, 12, 20],
+  "inorder": [2, 5, 7, 10, 12, 15, 20],
   "hints": [
-    "Mirroring swaps every node's left and right child. Use the Mirror button or click the root.",
-    "The root keeps its place after mirroring - click it to confirm the alignment."
+    "The first Preorder value is always the root, and its position in Inorder splits left-subtree keys from right-subtree keys.",
+    "Apply that split recursively: for each subtree, the earliest Preorder value belonging to that side is that subtree's root."
   ]
 }

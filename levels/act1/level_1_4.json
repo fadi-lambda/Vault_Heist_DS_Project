@@ -1,11 +1,11 @@
 {
   "level_id": 14,
   "act": 1,
-  "title": "1.4 Structural Analysis",
-  "concept": "Tree diameter through deepest leaves on opposite wings",
-  "objective": "Click two deepest leaves on opposite wings to trace the longest transmission path (Diameter = 5)!",
-  "controls": "Click one deepest leaf on left wing + one on right wing",
-  "start_status": "Click two deepest leaves on OPPOSITE subtrees to trace the tree diameter!",
+  "title": "1.4 Find Where Two Routes Meet",
+  "concept": "Lowest Common Ancestor (LCA) and room-to-room path tracing",
+  "objective": "Select any two rooms, click their Lowest Common Ancestor (LCA), then trace the path between them in order!",
+  "controls": "Click Room A -> Click Room B -> Click their LCA -> Click every room along the path from A to B",
+  "start_status": "Step 1/3: Click any two distinct rooms on the tree to select your start and end points!",
   "nodes": [
     { "key": 50, "left": 30, "right": 70 },
     { "key": 30, "left": 20, "right": 40 },
@@ -16,7 +16,8 @@
     { "key": 80, "left": null, "right": null }
   ],
   "hints": [
-    "The diameter here runs leaf-to-leaf through the root: pick a deepest leaf in each wing.",
-    "You have one wing's leaf. Pick a deepest leaf on the opposite wing."
+    "Pick any two distinct rooms on the tree by clicking them one after another.",
+    "The LCA is the lowest room that has both selected rooms in its subtree - where their paths from the root first split.",
+    "Trace the simple route step by step: climb from the first room up to the LCA, then descend from the LCA to the second room."
   ]
 }
