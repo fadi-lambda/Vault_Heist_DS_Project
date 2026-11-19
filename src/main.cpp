@@ -21,10 +21,12 @@
 #include "game/LevelLoader.h"
 #include "game/Scoring.h"
 #include "game/HintSystem.h"
+#include "game/EndlessMode.h"
 #include <optional>
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <cstdio>
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
@@ -43,16 +45,18 @@ static inline float clampFloat(float v, float lo, float hi) {
 using namespace VaultHeist;
 
 // Screen State Constants (no enum allowed)
-static const int SCREEN_SPLASH        = 0;
-static const int SCREEN_MAIN_MENU     = 1;
-static const int SCREEN_CAMPAIGN_MAP  = 2;
-static const int SCREEN_LEVEL_PLAY    = 3;
-static const int SCREEN_RESULT        = 4;
-static const int SCREEN_SANDBOX       = 5;
-static const int SCREEN_ACT1_DEMO     = 6;
-static const int SCREEN_ACT2_DEMO     = 7;
-static const int SCREEN_LEADERBOARD   = 8;
-static const int SCREEN_SETTINGS      = 9;
+static const int SCREEN_SPLASH              = 0;
+static const int SCREEN_MAIN_MENU           = 1;
+static const int SCREEN_CAMPAIGN_MAP        = 2;
+static const int SCREEN_LEVEL_PLAY          = 3;
+static const int SCREEN_RESULT              = 4;
+static const int SCREEN_SANDBOX             = 5;
+static const int SCREEN_ACT1_DEMO           = 6;
+static const int SCREEN_ACT2_DEMO           = 7;
+static const int SCREEN_LEADERBOARD         = 8;
+static const int SCREEN_SETTINGS            = 9;
+static const int SCREEN_ENDLESS             = 10;
+static const int SCREEN_ENDLESS_LEADERBOARD = 11;
 
 // Traversal Mode Constants for Level 1.1 (no enum allowed)
 static const int TRAV_PREORDER    = 0;
@@ -649,6 +653,21 @@ static void drawTreeWatermark(sf::RenderWindow& window, float rootX, float rootY
     drawWMNode(rx, ry);
 }
 
+static std::string currentDateTag() {
+    std::time_t now = std::time(nullptr);
+    std::tm tmBuf{};
+#if defined(_WIN32)
+    localtime_s(&tmBuf, &now);
+#else
+    localtime_r(&now, &tmBuf);
+#endif
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "Operator (%04d-%02d-%02d %02d:%02d)",
+                  tmBuf.tm_year + 1900, tmBuf.tm_mon + 1, tmBuf.tm_mday,
+                  tmBuf.tm_hour, tmBuf.tm_min);
+    return std::string(buf);
+}
+
 // =============================================================================
 // MAIN FUNCTION
 // =============================================================================
@@ -661,6 +680,7 @@ int main(int argc, char** argv) {
     bool verifyAct2 = false;
     bool verifyAct3 = false;
     bool verifyAct4 = false;
+    bool verifyEndless = false;
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--verify-screenshots") == 0 && i + 1 < argc) {
             verifyDir = argv[++i];
@@ -674,6 +694,8 @@ int main(int argc, char** argv) {
             verifyAct3 = true;
         } else if (std::strcmp(argv[i], "--verify-act4") == 0) {
             verifyAct4 = true;
+        } else if (std::strcmp(argv[i], "--verify-endless") == 0) {
+            verifyEndless = true;
         }
     }
 
@@ -689,9 +711,12 @@ int main(int argc, char** argv) {
                       font.openFromFile("C:/Windows/Fonts/arial.ttf");
     if (!fontLoaded) std::cerr << "Warning: Arial Font could not be loaded!\n";
 
-    // Persistent score log for Leaderboard (Item 3)
+    // Persistent score logs (Campaign scores.txt & Endless endless_leaderboard.txt)
     ScoreLog scoreLog;
     scoreLog.load("scores.txt");
+    EndlessLeaderboard endlessLb;
+    endlessLb.load("endless_leaderboard.txt");
+    const std::string endlessSavePath = "endless_save.txt";
 
     // 20 Campaign Levels across 4 Wings (5 levels per Wing) — loaded from levels/actN/level_N_M.json
     const int TOTAL_LEVELS = 20;
@@ -884,11 +909,25 @@ int main(int argc, char** argv) {
     const float CANVAS_X = 30.f,   CANVAS_Y = 86.f, CANVAS_W = 1140.f, CANVAS_H = 560.f;
     const float LOG_X    = 1185.f, LOG_Y    = 86.f, LOG_W    = 385.f,  LOG_H    = 560.f;
 
-    CanvasCamera levelCam, demoCam, sbAvlCam, sbHeapCam;
+    CanvasCamera levelCam, demoCam, sbAvlCam, sbHeapCam, endlessCam;
     levelCam.init(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, static_cast<float>(W), static_cast<float>(H));
     demoCam.init(30.f, 110.f, 1140.f, 470.f, static_cast<float>(W), static_cast<float>(H));
     sbAvlCam.init(30.f, 95.f, 560.f, 540.f, static_cast<float>(W), static_cast<float>(H));
     sbHeapCam.init(605.f, 95.f, 565.f, 540.f, static_cast<float>(W), static_cast<float>(H));
+    endlessCam.init(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, static_cast<float>(W), static_cast<float>(H));
+
+    // Endless Mode state (Step F)
+    EndlessSession endlessSession;
+    bool endlessPaused = false;
+    bool endlessShowLastResult = false;
+    EndlessLeaderboardEntry endlessLastEntry;
+    std::string endlessLastReason = "";
+    unsigned int endlessLastSeed = 1337u;
+    int cachedEndlessOps = -1, cachedEndlessNodes = -1, cachedEndlessRateTenths = -1;
+    std::string cachedEndlessSub = "";
+    int cachedEndlessOpType = -1, cachedEndlessOpKey = -999999;
+    bool cachedEndlessPaused = false;
+    std::string cachedEndlessPrompt = "";
 
     auto layoutBstForScreen = [&](bool isDemo) {
         if (isDemo) LayoutEngine::layoutBST(act2Bst, 30.f, 110.f, 1140.f, 470.f, bstLayout);
@@ -3051,6 +3090,110 @@ int main(int argc, char** argv) {
         }
     };
 
+    // Endless Mode actions (Step F)
+    auto startEndlessMode = [&](unsigned int seed) {
+        currentScreen = SCREEN_ENDLESS;
+        endlessCam.reset();
+        endlessPaused = false;
+        endlessShowLastResult = false;
+        endlessLastReason = "";
+        if (seed == 0u) seed = static_cast<unsigned int>(std::time(nullptr)) ^ 0xA5A55A5Au;
+        if (seed == 0u) seed = 1u;
+        endlessLastSeed = seed;
+        endlessSession.startNew(seed, avl);
+        animCtrl.clearAll();
+        undoStack.clear();
+        selectedNodeId = -1;
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        layoutDirty = false;
+        cachedEndlessOps = -1;
+        cachedEndlessOpType = -1;
+        const EndlessOp& op = endlessSession.getPendingOp();
+        status = "Seed #" + std::to_string(endlessSession.getInitialSeed()) +
+                 " started! Click [Execute] to apply " +
+                 std::string(op.type == ENDLESS_OP_INSERT ? "INSERT " : "DELETE ") +
+                 std::to_string(op.key) + " before the deadline expires!";
+        toastQueue.push("Endless Mode active! Execute ops before deadline shrinks", TOAST_KIND_SUCCESS);
+    };
+    auto finishEndlessGameOver = [&]() {
+        endlessSession.stop();
+        endlessPaused = false;
+        endlessShowLastResult = true;
+        EndlessLeaderboardEntry rec;
+        rec.nameDate = currentDateTag();
+        rec.survivalMs = endlessSession.getSurvivalMs();
+        rec.opsCompleted = endlessSession.getOpsCompleted();
+        rec.seed = endlessSession.getInitialSeed();
+        endlessLastEntry = rec;
+        endlessLastReason = endlessSession.getGameOverReason();
+        endlessLb.recordRun(rec);
+        currentScreen = SCREEN_ENDLESS_LEADERBOARD;
+        status = endlessLastReason + " Survived " + EndlessLeaderboard::formatTimeMs(rec.survivalMs) +
+                 " (" + std::to_string(rec.opsCompleted) + " ops).";
+        toastQueue.push("Game Over! Survived " + EndlessLeaderboard::formatTimeMs(rec.survivalMs),
+                        TOAST_KIND_WARNING);
+    };
+    auto triggerEndlessExecute = [&]() {
+        if (currentScreen != SCREEN_ENDLESS || !endlessSession.isActive() || endlessPaused) return;
+        const EndlessOp applied = endlessSession.getPendingOp();
+        LayoutResult before;
+        LayoutEngine::layoutAVL(avl, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
+        EventBatch batch;
+        bool ok = endlessSession.executePending(avl, batch);
+        int badKey = -1;
+        bool szOk = validateAvlSubtreeSizes(avl.getRoot(), badKey);
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        layoutDirty = false;
+        animCtrl.loadOperation(batch, before, avlLayout, true, autoPlayEvents);
+        if (!ok || !szOk) {
+            toastQueue.push("AVL invariant check failed!", TOAST_KIND_PENALTY);
+            finishEndlessGameOver();
+            return;
+        }
+        const EndlessOp& next = endlessSession.getPendingOp();
+        std::string doneWord = (applied.type == ENDLESS_OP_INSERT) ? "INSERT " : "DELETE ";
+        std::string nextWord = (next.type == ENDLESS_OP_INSERT) ? "INSERT " : "DELETE ";
+        status = "Executed " + doneWord + std::to_string(applied.key) +
+                 " (AVL valid, H=" + std::to_string(avl.getHeight()) +
+                 ")! Next: " + nextWord + std::to_string(next.key);
+        toastQueue.push(doneWord + std::to_string(applied.key) + " -> AVL valid!", TOAST_KIND_SUCCESS);
+    };
+    auto saveEndlessRun = [&](const std::string& pathOverride = "") {
+        std::string target = pathOverride.empty() ? endlessSavePath : pathOverride;
+        if (endlessSession.saveToFile(target, avl)) {
+            status = "Saved Endless run (Seed=" + std::to_string(endlessSession.getInitialSeed()) +
+                     ", Time=" + EndlessLeaderboard::formatTimeMs(endlessSession.getSurvivalMs()) +
+                     ", Preorder+null AVL persisted).";
+            toastQueue.push("Endless session saved!", TOAST_KIND_SUCCESS);
+        } else {
+            toastQueue.push("Failed to save Endless session", TOAST_KIND_PENALTY);
+        }
+    };
+    auto loadEndlessRun = [&](const std::string& pathOverride = "") -> bool {
+        std::string target = pathOverride.empty() ? endlessSavePath : pathOverride;
+        if (!endlessSession.loadFromFile(target, avl)) {
+            toastQueue.push("No valid saved Endless run found", TOAST_KIND_WARNING);
+            return false;
+        }
+        currentScreen = SCREEN_ENDLESS;
+        endlessCam.reset();
+        endlessPaused = false;
+        endlessShowLastResult = false;
+        endlessLastSeed = endlessSession.getInitialSeed();
+        animCtrl.clearAll();
+        layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+        layoutDirty = false;
+        cachedEndlessOps = -1;
+        cachedEndlessOpType = -1;
+        const EndlessOp& op = endlessSession.getPendingOp();
+        status = "Resumed Endless Save (Seed=" + std::to_string(endlessSession.getInitialSeed()) +
+                 ", Survived=" + EndlessLeaderboard::formatTimeMs(endlessSession.getSurvivalMs()) +
+                 ")! Next: " + std::string(op.type == ENDLESS_OP_INSERT ? "INSERT " : "DELETE ") +
+                 std::to_string(op.key);
+        toastQueue.push("Resumed saved Endless run!", TOAST_KIND_SUCCESS);
+        return true;
+    };
+
     // =========================================================================
     // SHARED FRAME RENDERER (used by both main loop and --verify-screenshots)
     // =========================================================================
@@ -3160,15 +3303,16 @@ int main(int argc, char** argv) {
             uLine.setFillColor(Ui::cyan());
             window.draw(uLine);
 
-            float btnW = 440.f, btnH = 54.f, btnX = W * 0.5f - btnW * 0.5f, startY = 270.f, gap = 68.f;
+            float btnW = 440.f, btnH = 50.f, btnX = W * 0.5f - btnW * 0.5f, startY = 248.f, gap = 60.f;
             Ui::button(window, font, "CAMPAIGN // HEIST WINGS", btnX, startY + 0 * gap, btnW, btnH, BTN_PRIMARY, in, 17, &uiCache);
-            Ui::button(window, font, "SANDBOX SIMULATOR",        btnX, startY + 1 * gap, btnW, btnH, BTN_SECONDARY, in, 17, &uiCache);
-            Ui::button(window, font, "OPERATOR LEADERBOARD",     btnX, startY + 2 * gap, btnW, btnH, BTN_SECONDARY, in, 17, &uiCache);
-            Ui::button(window, font, "SYSTEM SETTINGS",          btnX, startY + 3 * gap, btnW, btnH, BTN_GHOST, in, 17, &uiCache);
-            Ui::button(window, font, "QUIT TERMINAL",            btnX, startY + 4 * gap, btnW, btnH, BTN_DANGER, in, 17, &uiCache);
+            Ui::button(window, font, "ENDLESS SURVIVAL MODE",   btnX, startY + 1 * gap, btnW, btnH, BTN_PRIMARY, in, 17, &uiCache);
+            Ui::button(window, font, "SANDBOX SIMULATOR",       btnX, startY + 2 * gap, btnW, btnH, BTN_SECONDARY, in, 17, &uiCache);
+            Ui::button(window, font, "OPERATOR LEADERBOARD",    btnX, startY + 3 * gap, btnW, btnH, BTN_SECONDARY, in, 17, &uiCache);
+            Ui::button(window, font, "SYSTEM SETTINGS",         btnX, startY + 4 * gap, btnW, btnH, BTN_GHOST, in, 17, &uiCache);
+            Ui::button(window, font, "QUIT TERMINAL",           btnX, startY + 5 * gap, btnW, btnH, BTN_DANGER, in, 17, &uiCache);
 
             Ui::textCenter(window, font, status, TXT_BODY, Ui::amber(), W * 0.5f, 650.f, false, &uiCache);
-            Ui::textCenter(window, font, "[Click buttons or press 1-5]  |  [Esc] Quit", TXT_HINT, Ui::textMuted(), W * 0.5f, 700.f, false, &uiCache);
+            Ui::textCenter(window, font, "[Click buttons or press 1-6 / E for Endless]  |  [Esc] Quit", TXT_HINT, Ui::textMuted(), W * 0.5f, 700.f, false, &uiCache);
         }
 
         // 2. CAMPAIGN MAP
@@ -3989,7 +4133,8 @@ int main(int argc, char** argv) {
                 }
             }
 
-            Ui::button(window, font, "Return to Main Menu [Esc]", W * 0.5f - 150.f, 770.f, 300.f, 48.f, BTN_PRIMARY, in, 15, &uiCache);
+            Ui::button(window, font, "Endless Leaderboard [E]",  W * 0.5f - 310.f, 770.f, 290.f, 48.f, BTN_SECONDARY, in, 15, &uiCache);
+            Ui::button(window, font, "Return to Main Menu [Esc]", W * 0.5f + 20.f,  770.f, 290.f, 48.f, BTN_PRIMARY,   in, 15, &uiCache);
         }
 
         // 9. REAL WORKING SETTINGS (Item 4)
@@ -4022,6 +4167,179 @@ int main(int argc, char** argv) {
                        bx, sy0 + 405.f, bw, bh, BTN_SECONDARY, in, 15, &uiCache);
 
             Ui::button(window, font, "Return to Main Menu [Esc]", W * 0.5f - 150.f, 740.f, 300.f, 48.f, BTN_PRIMARY, in, 15, &uiCache);
+        }
+
+        // 10. ENDLESS SURVIVAL MODE (Step F)
+        if (currentScreen == SCREEN_ENDLESS) {
+            int opsNow = endlessSession.getOpsCompleted();
+            int nodesNow = avl.getSize();
+            float winSec = endlessSession.getOpWindowSec();
+            float remSec = endlessSession.getOpTimeRemaining();
+            float opsMin = EndlessSession::computeOpsPerMin(winSec);
+            int rateTenths = static_cast<int>(opsMin * 10.0f + 0.5f);
+
+            if (cachedEndlessOps != opsNow || cachedEndlessNodes != nodesNow || cachedEndlessRateTenths != rateTenths) {
+                cachedEndlessOps = opsNow;
+                cachedEndlessNodes = nodesNow;
+                cachedEndlessRateTenths = rateTenths;
+                cachedEndlessSub = "Seed: " + std::to_string(endlessSession.getInitialSeed()) +
+                                   "  |  Ops: " + std::to_string(opsNow) +
+                                   "  |  Nodes: " + std::to_string(nodesNow) + " (H=" + std::to_string(avl.getHeight()) +
+                                   ")  |  Rate: " + std::to_string(rateTenths / 10) + "." +
+                                   std::to_string(rateTenths % 10) + " ops/min";
+            }
+
+            Ui::textFit(window, font, "ENDLESS SURVIVAL // LIVE AVL STREAM", 24, Ui::gold(),
+                        30.f, 12.f, 620.f, true, &uiCache);
+            Ui::textFit(window, font, cachedEndlessSub, 14, Ui::textBody(),
+                        30.f, 46.f, 620.f, false, &uiCache);
+
+            Ui::button(window, font, endlessPaused ? "Resume [P]" : "Pause [P]",
+                       670.f, 18.f, 125.f, 34.f, endlessPaused ? BTN_PRIMARY : BTN_SECONDARY, in, 13, &uiCache);
+            Ui::button(window, font, "Restart [R]", 805.f, 18.f, 125.f, 34.f, BTN_GHOST, in, 13, &uiCache);
+            Ui::button(window, font, "Menu [Esc]",  940.f, 18.f, 125.f, 34.f, BTN_GHOST, in, 13, &uiCache);
+
+            float meterX = 1090.f, meterW = 480.f;
+            float ratio = clampFloat((winSec > 0.f) ? (remSec / winSec) : 0.f, 0.f, 1.f);
+            sf::RectangleShape& mRect = uiCache.rect;
+            mRect.setSize({meterW, 20.f});
+            mRect.setOrigin({0.f, 0.f});
+            mRect.setPosition({meterX, 16.f});
+            mRect.setFillColor(sf::Color(35, 42, 58));
+            mRect.setOutlineThickness(1.5f);
+            mRect.setOutlineColor(sf::Color(100, 115, 140));
+            window.draw(mRect);
+
+            mRect.setSize({meterW * ratio, 20.f});
+            mRect.setPosition({meterX, 16.f});
+            mRect.setOutlineThickness(0.f);
+            mRect.setFillColor(ratio < 0.25f ? Ui::red() : (ratio < 0.55f ? Ui::amber() : Ui::green()));
+            window.draw(mRect);
+
+            int remMs = static_cast<int>(remSec * 1000.0f + 0.5f);
+            int winMs = static_cast<int>(winSec * 1000.0f + 0.5f);
+            std::string hudTimerStr = "Survival: " + EndlessLeaderboard::formatTimeMs(endlessSession.getSurvivalMs()) +
+                                      "   |   Deadline: " + EndlessLeaderboard::formatTimeMs(remMs) +
+                                      " / " + EndlessLeaderboard::formatTimeMs(winMs);
+            Ui::textFit(window, font, hudTimerStr, 14, sf::Color::White, meterX, 44.f, meterW, true, &uiCache);
+
+            // Canvas + AVL render
+            Ui::panel(window, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, Ui::cyan(), 248, &uiCache);
+            if (!animCtrl.hasEvents() && needLayout) {
+                layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
+                layoutDirty = false;
+            }
+            const LayoutResult& drawL = animCtrl.hasEvents() ? animCtrl.getRenderLayout() : avlLayout;
+            RenderHighlightState hl;
+            hl.selectedNodeId = selectedNodeId;
+            hl.showBadges = true;
+            sf::Vector2f wPos(0.f, 0.f);
+            if (mapHoverToCam(endlessCam, in.mx, in.my, wPos)) {
+                int hovIdx = drawL.hitTestNode(wPos.x, wPos.y);
+                if (hovIdx >= 0) hl.hoveredNodeId = drawL.nodes[hovIdx].id;
+            }
+            if (animCtrl.hasEvents()) animCtrl.fillHighlightState(hl);
+
+            window.setView(endlessCam.view);
+            if (showBgGrid) guiRenderer.drawCanvasGrid(window, endlessCam.view);
+            guiRenderer.drawTreeLayout(window, font, drawL, hl, true, false);
+            window.setView(window.getDefaultView());
+            Ui::text(window, font, endlessCam.zoomText(), 11, Ui::textMuted(),
+                     CANVAS_X + 12.f, CANVAS_Y + 6.f, false, &uiCache);
+            drawCamTooltip(endlessCam, drawL, hl.hoveredNodeId);
+
+            guiRenderer.drawEventLogPanel(window, font, LOG_X, LOG_Y, LOG_W, LOG_H,
+                                          animCtrl.getBatch(), animCtrl.getCursor(),
+                                          animCtrl.getLog().getBatchCount());
+            guiRenderer.drawPlaybackControls(window, font, LOG_X, LOG_Y, LOG_W, LOG_H,
+                                             animCtrl.isPlaying(), animCtrl.getSpeed(),
+                                             animCtrl.getCursor(), animCtrl.getEventCount(), in);
+
+            // Bottom Pending Operation & Persistence Panel
+            Ui::panel(window, 30.f, 660.f, 1540.f, 210.f, sf::Color(60, 85, 125), 235, &uiCache);
+            const EndlessOp& op = endlessSession.getPendingOp();
+            if (cachedEndlessOpType != op.type || cachedEndlessOpKey != op.key || cachedEndlessPaused != endlessPaused) {
+                cachedEndlessOpType = op.type;
+                cachedEndlessOpKey = op.key;
+                cachedEndlessPaused = endlessPaused;
+                if (endlessPaused) {
+                    cachedEndlessPrompt = "PAUSED - Press [P] to resume live AVL stream timer";
+                } else {
+                    cachedEndlessPrompt = std::string("INCOMING OP: ") +
+                                          (op.type == ENDLESS_OP_INSERT ? "INSERT " : "DELETE ") +
+                                          std::to_string(op.key) +
+                                          "  - Click [Execute] to apply real AVL operation & check invariants!";
+                }
+            }
+            Ui::textFit(window, font, cachedEndlessPrompt, TXT_H2, Ui::gold(), 54.f, 678.f, 1040.f, true, &uiCache);
+            Ui::textWrap(window, font, status, TXT_BODY, Ui::textBody(), 54.f, 720.f, 1040.f, false, &uiCache);
+            Ui::textFit(window, font, "[Enter / X] Execute Pending Op  |  [P] Pause  |  [F5] Save Run  |  [F9] Load Run  |  [L] Leaderboard  |  [Esc] Main Menu",
+                        TXT_HINT, Ui::textMuted(), 54.f, 832.f, 1480.f, false, &uiCache);
+
+            std::string execBtnLbl = std::string("EXECUTE: ") +
+                                     (op.type == ENDLESS_OP_INSERT ? "INSERT " : "DELETE ") +
+                                     std::to_string(op.key) + " [Enter]";
+            int execStyle = endlessPaused ? BTN_DISABLED : (ratio < 0.25f ? BTN_DANGER : BTN_PRIMARY);
+            Ui::button(window, font, execBtnLbl, 1120.f, 678.f, 428.f, 54.f, execStyle, in, 15, &uiCache);
+            Ui::button(window, font, "Save Run [F5]", 1120.f, 748.f, 136.f, 46.f, BTN_SECONDARY, in, 13, &uiCache);
+            Ui::button(window, font, "Load Run [F9]", 1266.f, 748.f, 136.f, 46.f, BTN_SECONDARY, in, 13, &uiCache);
+            Ui::button(window, font, "Scores [L]",    1412.f, 748.f, 136.f, 46.f, BTN_GHOST,     in, 13, &uiCache);
+        }
+
+        // 11. ENDLESS MODE LEADERBOARD (endless_leaderboard.txt)
+        if (currentScreen == SCREEN_ENDLESS_LEADERBOARD) {
+            Ui::screenHeader(window, font, "ENDLESS SURVIVAL LEADERBOARD",
+                             "Survival times ranked descending from endless_leaderboard.txt", &uiCache);
+
+            float mw = 920.f;
+            float mx0 = W * 0.5f - mw * 0.5f;
+            if (endlessShowLastResult) {
+                Ui::panel(window, mx0, 102.f, mw, 86.f, Ui::red(), 240, &uiCache);
+                std::string runSum = "ENDLESS RUN ENDED: " + EndlessLeaderboard::formatTimeMs(endlessLastEntry.survivalMs) +
+                                     " survived  |  " + std::to_string(endlessLastEntry.opsCompleted) +
+                                     " ops  |  Seed #" + std::to_string(endlessLastEntry.seed);
+                Ui::textFit(window, font, runSum, TXT_H2, Ui::gold(), mx0 + 28.f, 114.f, mw - 56.f, true, &uiCache);
+                Ui::textFit(window, font, endlessLastReason, TXT_HINT, sf::Color(255, 190, 190),
+                            mx0 + 28.f, 152.f, mw - 56.f, false, &uiCache);
+            }
+
+            float my0 = endlessShowLastResult ? 202.f : 130.f;
+            float mh  = endlessShowLastResult ? 542.f : 600.f;
+            Ui::panel(window, mx0, my0, mw, mh, Ui::gold(), 240, &uiCache);
+
+            if (endlessLb.getCount() == 0) {
+                Ui::textCenter(window, font, "No endless survival runs recorded yet", TXT_H1, Ui::textBody(),
+                               W * 0.5f, my0 + 180.f, true, &uiCache);
+                Ui::textCenter(window, font, "Start Endless Survival Mode from the Main Menu to set a survival record!",
+                               TXT_BODY, Ui::textMuted(), W * 0.5f, my0 + 235.f, false, &uiCache);
+            } else {
+                Ui::text(window, font, "RANK",            TXT_HINT, Ui::cyan(), mx0 + 36.f,  my0 + 22.f, true, &uiCache);
+                Ui::text(window, font, "OPERATOR / DATE", TXT_HINT, Ui::cyan(), mx0 + 120.f, my0 + 22.f, true, &uiCache);
+                Ui::text(window, font, "SURVIVAL TIME",   TXT_HINT, Ui::cyan(), mx0 + 500.f, my0 + 22.f, true, &uiCache);
+                Ui::text(window, font, "OPS",             TXT_HINT, Ui::cyan(), mx0 + 670.f, my0 + 22.f, true, &uiCache);
+                Ui::text(window, font, "SEED",            TXT_HINT, Ui::cyan(), mx0 + 760.f, my0 + 22.f, true, &uiCache);
+
+                int rows = minInt(10, endlessLb.getCount());
+                for (int r = 0; r < rows; ++r) {
+                    const EndlessLeaderboardEntry& e = endlessLb.get(r);
+                    float ry = my0 + 58.f + static_cast<float>(r) * 44.f;
+                    Ui::text(window, font, "#" + std::to_string(r + 1), TXT_BODY, Ui::gold(),
+                             mx0 + 36.f, ry, true, &uiCache);
+                    Ui::textFit(window, font, e.nameDate, TXT_BODY, Ui::textBody(),
+                                mx0 + 120.f, ry, 360.f, false, &uiCache);
+                    Ui::text(window, font, EndlessLeaderboard::formatTimeMs(e.survivalMs), TXT_BODY, Ui::green(),
+                             mx0 + 515.f, ry, false, &uiCache);
+                    Ui::text(window, font, std::to_string(e.opsCompleted), TXT_BODY, Ui::textBody(),
+                             mx0 + 675.f, ry, false, &uiCache);
+                    Ui::text(window, font, std::to_string(e.seed), TXT_BODY, Ui::textMuted(),
+                             mx0 + 760.f, ry, false, &uiCache);
+                }
+            }
+
+            Ui::button(window, font, "New Endless Run [R]", 270.f,  770.f, 250.f, 48.f, BTN_PRIMARY,   in, 14, &uiCache);
+            Ui::button(window, font, "Replay Seed [S]",     540.f,  770.f, 250.f, 48.f, BTN_SECONDARY, in, 14, &uiCache);
+            Ui::button(window, font, "Campaign Scores [C]", 810.f,  770.f, 250.f, 48.f, BTN_SECONDARY, in, 14, &uiCache);
+            Ui::button(window, font, "Main Menu [Esc]",     1080.f, 770.f, 250.f, 48.f, BTN_GHOST,     in, 14, &uiCache);
         }
 
         cachedLayoutScreen = currentScreen;
@@ -4235,6 +4553,21 @@ int main(int argc, char** argv) {
             animCtrl.finishInstant();
         }
         saveShot("27_act4_5_boss_heapsort", idle);
+
+        // Endless Mode & Endless Leaderboard visual verification (in-memory only)
+        endlessLb.load("");
+        toastQueue.clear();
+        startEndlessMode(424242u);
+        for (int s = 0; s < 5; ++s) {
+            endlessSession.tick(0.75f);
+            triggerEndlessExecute();
+            animCtrl.finishInstant();
+        }
+        saveShot("28_endless_mode_play", idle);
+
+        endlessSession.tick(endlessSession.getOpTimeRemaining() + 0.1f);
+        finishEndlessGameOver();
+        saveShot("29_endless_leaderboard", idle);
 
         return 0;
     }
@@ -4846,6 +5179,107 @@ int main(int argc, char** argv) {
         return 0;
     }
 
+    // End-to-end automated sanity check for Endless Mode (--verify-endless)
+    if (verifyEndless) {
+        const char* tmpSave = "verify_endless_save_tmp.txt";
+        const char* tmpLb   = "verify_endless_lb_tmp.txt";
+        std::remove(tmpSave);
+        std::remove(tmpLb);
+        scoreLog.load("");
+        endlessLb.load(tmpLb);
+
+        auto failCheck = [&](const char* msg) -> int {
+            std::cerr << "FAIL: " << msg << "\n";
+            std::remove(tmpSave);
+            std::remove(tmpLb);
+            return 1;
+        };
+
+        startEndlessMode(424242u);
+        if (currentScreen != SCREEN_ENDLESS || !endlessSession.isActive() || !EndlessSession::validateTreeFull(avl)) {
+            return failCheck("Endless startNew failed to enter SCREEN_ENDLESS with valid AVL");
+        }
+
+        float w0 = endlessSession.getOpWindowSec();
+        int prevSurvMs = 0;
+        for (int step = 0; step < 12; ++step) {
+            const EndlessOp op = endlessSession.getPendingOp();
+            if (op.type == ENDLESS_OP_DELETE && !avl.search(op.key)) {
+                return failCheck("Endless DELETE op targeted absent key");
+            }
+            if (op.type == ENDLESS_OP_INSERT && avl.search(op.key)) {
+                return failCheck("Endless INSERT op targeted duplicate key");
+            }
+            if (endlessSession.tick(0.55f)) {
+                return failCheck("Endless expired unexpectedly inside active window");
+            }
+            if (endlessSession.getSurvivalMs() <= prevSurvMs) {
+                return failCheck("Endless survival time failed to increment");
+            }
+            prevSurvMs = endlessSession.getSurvivalMs();
+            triggerEndlessExecute();
+            animCtrl.finishInstant();
+            if (!EndlessSession::validateTreeFull(avl)) {
+                return failCheck("AVLTree validator failed after Endless operation");
+            }
+        }
+        if (endlessSession.getOpsCompleted() != 12 || endlessSession.getOpWindowSec() >= w0) {
+            return failCheck("Endless difficulty scaling (shrinking window) or op count mismatch");
+        }
+
+        int savedSize = avl.getSize();
+        int savedRoot = avl.getRoot() ? avl.getRoot()->key : -1;
+        int savedSurvMs = endlessSession.getSurvivalMs();
+        EndlessOp savedNextOp = endlessSession.getPendingOp();
+        saveEndlessRun(tmpSave);
+
+        avl.clear();
+        if (!loadEndlessRun(tmpSave)) return failCheck("Endless loadFromFile failed");
+        if (!EndlessSession::validateTreeFull(avl) || avl.getSize() != savedSize ||
+            !avl.getRoot() || avl.getRoot()->key != savedRoot ||
+            endlessSession.getInitialSeed() != 424242u ||
+            endlessSession.getOpsCompleted() != 12 ||
+            endlessSession.getSurvivalMs() != savedSurvMs ||
+            endlessSession.getPendingOp().type != savedNextOp.type ||
+            endlessSession.getPendingOp().key != savedNextOp.key) {
+            return failCheck("Endless save/load did not faithfully restore AVL tree, seed, or state");
+        }
+
+        for (int step = 0; step < 3; ++step) {
+            endlessSession.tick(0.30f);
+            triggerEndlessExecute();
+            animCtrl.finishInstant();
+            if (!EndlessSession::validateTreeFull(avl)) return failCheck("Resumed Endless run broke AVL invariants");
+        }
+
+        if (!endlessSession.tick(endlessSession.getOpTimeRemaining() + 0.1f)) {
+            return failCheck("Endless deadline expiry failed to trigger game-over");
+        }
+        finishEndlessGameOver();
+        if (currentScreen != SCREEN_ENDLESS_LEADERBOARD || !endlessSession.isGameOver()) {
+            return failCheck("Game over did not transition to SCREEN_ENDLESS_LEADERBOARD");
+        }
+
+        EndlessLeaderboardEntry highRun;
+        highRun.nameDate = "VerifyTop";
+        highRun.survivalMs = 99000;
+        highRun.opsCompleted = 40;
+        highRun.seed = 777u;
+        endlessLb.recordRun(highRun);
+
+        EndlessLeaderboard checkLb;
+        checkLb.load(tmpLb);
+        if (checkLb.getCount() != 2 || checkLb.get(0).survivalMs != 99000 ||
+            checkLb.get(1).seed != 424242u) {
+            return failCheck("Endless leaderboard write/read/descending sort failed");
+        }
+
+        std::remove(tmpSave);
+        std::remove(tmpLb);
+        std::cout << "PASS Endless: Seeded stream, AVL validator, difficulty ramp, preorder+# save/load & leaderboard verified\n";
+        return 0;
+    }
+
     // Optional uncapped FPS profiler (--profile-fps)
     if (profileFps) {
         window.setFramerateLimit(0);
@@ -4958,6 +5392,11 @@ int main(int argc, char** argv) {
             animCtrl.isAtEnd() && !animCtrl.isPlaying()) {
             completePendingWin();
         }
+        if (currentScreen == SCREEN_ENDLESS && endlessSession.isActive() && !endlessPaused) {
+            if (endlessSession.tick(dt)) {
+                finishEndlessGameOver();
+            }
+        }
 
         if (currentScreen == SCREEN_SPLASH) {
             splashTimer += dt;
@@ -4996,6 +5435,7 @@ int main(int argc, char** argv) {
             }
             updateCamPan(levelCam);
         }
+        else if (currentScreen == SCREEN_ENDLESS) updateCamPan(endlessCam);
         else if (currentScreen == SCREEN_SANDBOX) { updateCamPan(sbAvlCam); updateCamPan(sbHeapCam); }
         else if (currentScreen == SCREEN_ACT1_DEMO || currentScreen == SCREEN_ACT2_DEMO) updateCamPan(demoCam);
 
@@ -5013,6 +5453,7 @@ int main(int argc, char** argv) {
                 draggingSpeedSlider = false;
                 draggingScrubber = false;
                 levelCam.panning = false;
+                endlessCam.panning = false;
                 demoCam.panning = false;
                 sbAvlCam.panning = false;
                 sbHeapCam.panning = false;
@@ -5022,6 +5463,8 @@ int main(int argc, char** argv) {
                 if (mw->wheel == sf::Mouse::Wheel::Vertical) {
                     if (currentScreen == SCREEN_LEVEL_PLAY && !showingBriefing) {
                         levelCam.handleZoom(window, mw->position, mw->delta);
+                    } else if (currentScreen == SCREEN_ENDLESS) {
+                        endlessCam.handleZoom(window, mw->position, mw->delta);
                     } else if (currentScreen == SCREEN_SANDBOX) {
                         if (!sbAvlCam.handleZoom(window, mw->position, mw->delta)) {
                             sbHeapCam.handleZoom(window, mw->position, mw->delta);
@@ -5042,9 +5485,15 @@ int main(int argc, char** argv) {
                         dragDrop.cancel();
                         currentScreen = SCREEN_CAMPAIGN_MAP;
                         status = "Returned to Campaign Map";
+                    } else if (currentScreen == SCREEN_ENDLESS) {
+                        endlessSession.stop();
+                        endlessPaused = false;
+                        currentScreen = SCREEN_MAIN_MENU;
+                        status = "Main Menu";
                     } else if (currentScreen == SCREEN_CAMPAIGN_MAP || currentScreen == SCREEN_SANDBOX ||
                                currentScreen == SCREEN_ACT1_DEMO || currentScreen == SCREEN_ACT2_DEMO ||
-                               currentScreen == SCREEN_LEADERBOARD || currentScreen == SCREEN_SETTINGS) {
+                               currentScreen == SCREEN_LEADERBOARD || currentScreen == SCREEN_SETTINGS ||
+                               currentScreen == SCREEN_ENDLESS_LEADERBOARD) {
                         currentScreen = SCREEN_MAIN_MENU;
                         status = "Main Menu";
                     } else {
@@ -5138,10 +5587,43 @@ int main(int argc, char** argv) {
                     }
                 } else if (currentScreen == SCREEN_MAIN_MENU) {
                     if (kp->code == sf::Keyboard::Key::Num1) { currentScreen = SCREEN_CAMPAIGN_MAP; status = "Heist Wings Overview"; }
-                    if (kp->code == sf::Keyboard::Key::Num2) enterSandbox();
-                    if (kp->code == sf::Keyboard::Key::Num3) currentScreen = SCREEN_LEADERBOARD;
-                    if (kp->code == sf::Keyboard::Key::Num4) currentScreen = SCREEN_SETTINGS;
-                    if (kp->code == sf::Keyboard::Key::Num5) window.close();
+                    if (kp->code == sf::Keyboard::Key::Num2 || kp->code == sf::Keyboard::Key::E) startEndlessMode(0u);
+                    if (kp->code == sf::Keyboard::Key::Num3) enterSandbox();
+                    if (kp->code == sf::Keyboard::Key::Num4) currentScreen = SCREEN_LEADERBOARD;
+                    if (kp->code == sf::Keyboard::Key::Num5) currentScreen = SCREEN_SETTINGS;
+                    if (kp->code == sf::Keyboard::Key::Num6) window.close();
+                } else if (currentScreen == SCREEN_LEADERBOARD) {
+                    if (kp->code == sf::Keyboard::Key::E) {
+                        endlessShowLastResult = false;
+                        currentScreen = SCREEN_ENDLESS_LEADERBOARD;
+                    }
+                } else if (currentScreen == SCREEN_ENDLESS) {
+                    if (kp->code == sf::Keyboard::Key::Enter || kp->code == sf::Keyboard::Key::X) {
+                        triggerEndlessExecute();
+                    } else if (kp->code == sf::Keyboard::Key::P) {
+                        endlessPaused = !endlessPaused;
+                        toastQueue.push(endlessPaused ? "Endless paused" : "Endless resumed!", TOAST_KIND_WARNING);
+                    } else if (kp->code == sf::Keyboard::Key::F5) {
+                        saveEndlessRun();
+                    } else if (kp->code == sf::Keyboard::Key::F9) {
+                        loadEndlessRun();
+                    } else if (kp->code == sf::Keyboard::Key::L) {
+                        endlessSession.stop();
+                        endlessPaused = false;
+                        endlessShowLastResult = false;
+                        currentScreen = SCREEN_ENDLESS_LEADERBOARD;
+                    } else if (kp->code == sf::Keyboard::Key::R) {
+                        startEndlessMode(0u);
+                    } else if (kp->code == sf::Keyboard::Key::Right) {
+                        animCtrl.setPlaying(false);
+                        stepAnimForward();
+                    } else if (kp->code == sf::Keyboard::Key::Space) {
+                        animCtrl.togglePlayPause();
+                    }
+                } else if (currentScreen == SCREEN_ENDLESS_LEADERBOARD) {
+                    if (kp->code == sf::Keyboard::Key::R) startEndlessMode(0u);
+                    else if (kp->code == sf::Keyboard::Key::S) startEndlessMode(endlessLastSeed);
+                    else if (kp->code == sf::Keyboard::Key::C) currentScreen = SCREEN_LEADERBOARD;
                 } else if (currentScreen == SCREEN_SANDBOX) {
                     if (kp->code == sf::Keyboard::Key::Right) { animCtrl.setPlaying(false); stepAnimForward(); }
                     if (kp->code == sf::Keyboard::Key::Space) animCtrl.togglePlayPause();
@@ -5196,6 +5678,7 @@ int main(int argc, char** argv) {
                         return true;
                     };
                     if (currentScreen == SCREEN_LEVEL_PLAY && !showingBriefing) handlePanPress(levelCam);
+                    else if (currentScreen == SCREEN_ENDLESS) handlePanPress(endlessCam);
                     else if (currentScreen == SCREEN_SANDBOX) {
                         if (!handlePanPress(sbAvlCam)) handlePanPress(sbHeapCam);
                     } else if (currentScreen == SCREEN_ACT1_DEMO || currentScreen == SCREEN_ACT2_DEMO) {
@@ -5210,17 +5693,19 @@ int main(int argc, char** argv) {
                 }
                 else if (currentScreen == SCREEN_MAIN_MENU) {
                     if (Ui::inside(mx, my, W - 180.f, 24.f, 140.f, 36.f)) soundEnabled = !soundEnabled;
-                    float btnW = 440.f, btnH = 54.f, btnX = W * 0.5f - btnW * 0.5f, startY = 270.f, gap = 68.f;
+                    float btnW = 440.f, btnH = 50.f, btnX = W * 0.5f - btnW * 0.5f, startY = 248.f, gap = 60.f;
                     if (Ui::inside(mx, my, btnX, startY + 0 * gap, btnW, btnH)) {
                         currentScreen = SCREEN_CAMPAIGN_MAP;
                         status = "Heist Wings Overview";
                     } else if (Ui::inside(mx, my, btnX, startY + 1 * gap, btnW, btnH)) {
-                        enterSandbox();
+                        startEndlessMode(0u);
                     } else if (Ui::inside(mx, my, btnX, startY + 2 * gap, btnW, btnH)) {
-                        currentScreen = SCREEN_LEADERBOARD;
+                        enterSandbox();
                     } else if (Ui::inside(mx, my, btnX, startY + 3 * gap, btnW, btnH)) {
-                        currentScreen = SCREEN_SETTINGS;
+                        currentScreen = SCREEN_LEADERBOARD;
                     } else if (Ui::inside(mx, my, btnX, startY + 4 * gap, btnW, btnH)) {
+                        currentScreen = SCREEN_SETTINGS;
+                    } else if (Ui::inside(mx, my, btnX, startY + 5 * gap, btnW, btnH)) {
                         window.close();
                     }
                 }
@@ -5245,9 +5730,53 @@ int main(int argc, char** argv) {
                     }
                 }
                 else if (currentScreen == SCREEN_LEADERBOARD) {
-                    if (Ui::inside(mx, my, W * 0.5f - 150.f, 770.f, 300.f, 48.f)) {
+                    if (Ui::inside(mx, my, W * 0.5f - 310.f, 770.f, 290.f, 48.f)) {
+                        endlessShowLastResult = false;
+                        currentScreen = SCREEN_ENDLESS_LEADERBOARD;
+                    } else if (Ui::inside(mx, my, W * 0.5f + 20.f, 770.f, 290.f, 48.f)) {
                         currentScreen = SCREEN_MAIN_MENU;
                     }
+                }
+                else if (currentScreen == SCREEN_ENDLESS) {
+                    if (Ui::inside(mx, my, 670.f, 18.f, 125.f, 34.f)) {
+                        endlessPaused = !endlessPaused;
+                        toastQueue.push(endlessPaused ? "Endless paused" : "Endless resumed!", TOAST_KIND_WARNING);
+                        continue;
+                    }
+                    if (Ui::inside(mx, my, 805.f, 18.f, 125.f, 34.f)) { startEndlessMode(0u); continue; }
+                    if (Ui::inside(mx, my, 940.f, 18.f, 125.f, 34.f)) {
+                        endlessSession.stop();
+                        endlessPaused = false;
+                        currentScreen = SCREEN_MAIN_MENU;
+                        status = "Main Menu";
+                        continue;
+                    }
+                    if (handlePlaybackControlsClick(mx, my, LOG_X, LOG_Y, LOG_W, LOG_H)) continue;
+                    if (Ui::inside(mx, my, 1120.f, 678.f, 428.f, 54.f)) { triggerEndlessExecute(); continue; }
+                    if (Ui::inside(mx, my, 1120.f, 748.f, 136.f, 46.f)) { saveEndlessRun(); continue; }
+                    if (Ui::inside(mx, my, 1266.f, 748.f, 136.f, 46.f)) { loadEndlessRun(); continue; }
+                    if (Ui::inside(mx, my, 1412.f, 748.f, 136.f, 46.f)) {
+                        endlessSession.stop();
+                        endlessPaused = false;
+                        endlessShowLastResult = false;
+                        currentScreen = SCREEN_ENDLESS_LEADERBOARD;
+                        continue;
+                    }
+                    if (endlessCam.containsPixel(mx, my)) {
+                        if (endlessCam.checkDoubleClick(mc->position)) {
+                            endlessCam.reset();
+                            toastQueue.push("Canvas camera reset", TOAST_KIND_SUCCESS);
+                        } else {
+                            endlessCam.panning = true;
+                            endlessCam.lastPanPixel = mc->position;
+                        }
+                    }
+                }
+                else if (currentScreen == SCREEN_ENDLESS_LEADERBOARD) {
+                    if (Ui::inside(mx, my, 270.f, 770.f, 250.f, 48.f)) startEndlessMode(0u);
+                    else if (Ui::inside(mx, my, 540.f, 770.f, 250.f, 48.f)) startEndlessMode(endlessLastSeed);
+                    else if (Ui::inside(mx, my, 810.f, 770.f, 250.f, 48.f)) currentScreen = SCREEN_LEADERBOARD;
+                    else if (Ui::inside(mx, my, 1080.f, 770.f, 250.f, 48.f)) currentScreen = SCREEN_MAIN_MENU;
                 }
                 else if (currentScreen == SCREEN_SETTINGS) {
                     float sy0 = 140.f, bw = 560.f, bh = 52.f, bx = W * 0.5f - bw * 0.5f;

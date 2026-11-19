@@ -26,6 +26,7 @@ add_executable(Vault_Heist
     src/game/LevelLoader.cpp
     src/game/Scoring.cpp
     src/game/HintSystem.cpp
+    src/game/EndlessMode.cpp
     src/gui/LayoutEngine.cpp
     src/gui/Renderer.cpp
     src/gui/AnimationController.cpp

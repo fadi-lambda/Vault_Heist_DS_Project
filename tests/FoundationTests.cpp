@@ -4,10 +4,12 @@
 #include "game/LevelLoader.h"
 #include "game/Scoring.h"
 #include "game/HintSystem.h"
+#include "game/EndlessMode.h"
 #include "gui/DragDrop.h"
 #include "structures/BST.h"
 #include "structures/AVLTree.h"
 #include "structures/MaxHeap.h"
+#include <cstdio>
 
 using namespace VaultHeist;
 
@@ -473,4 +475,104 @@ TEST(Act4HeapTests, ExpectedSortedResultAndAscendingHeapSortValidation) {
         }
         EXPECT_FALSE(descMatchedAll); // descending extraction order must never match ascending JSON
     }
+}
+
+// =============================================================================
+// 7. Endless Mode (Operation Stream, Validator, Save/Load, Leaderboard)
+// =============================================================================
+
+TEST(EndlessModeTests, StreamGeneratorValidatorSaveLoadAndLeaderboard) {
+    AVLTree tree;
+    EndlessSession session;
+    session.startNew(1337u, tree);
+
+    EXPECT_TRUE(session.isActive());
+    EXPECT_FALSE(session.isGameOver());
+    EXPECT_EQ(session.getInitialSeed(), 1337u);
+    EXPECT_EQ(tree.getSize(), 7);
+    EXPECT_TRUE(EndlessSession::validateTreeFull(tree));
+
+    float initialWindow = session.getOpWindowSec();
+
+    // Run 40 mixed insert/delete operations and verify invariants before & after every op
+    for (int step = 0; step < 40; ++step) {
+        const EndlessOp& op = session.getPendingOp();
+        if (op.type == ENDLESS_OP_DELETE) {
+            EXPECT_TRUE(tree.search(op.key));
+        } else {
+            EXPECT_EQ(op.type, ENDLESS_OP_INSERT);
+            EXPECT_FALSE(tree.search(op.key));
+        }
+
+        EXPECT_FALSE(session.tick(0.45f));
+        EventBatch batch;
+        ASSERT_TRUE(session.executePending(tree, batch));
+        EXPECT_TRUE(EndlessSession::validateTreeFull(tree));
+        EXPECT_GT(batch.getCount(), 0);
+    }
+
+    EXPECT_EQ(session.getOpsCompleted(), 40);
+    EXPECT_GT(session.getSurvivalMs(), 17000);
+    EXPECT_LT(session.getOpWindowSec(), initialWindow);
+
+    // Save/load round-trip (preorder + null markers + seed + rng + elapsed time)
+    const char* savePath = "test_endless_save_tmp.txt";
+    ASSERT_TRUE(session.saveToFile(savePath, tree));
+
+    int expectedSize = tree.getSize();
+    int expectedRoot = tree.getRoot() ? tree.getRoot()->key : -1;
+    unsigned int expectedRng = session.getRngState();
+    int expectedSurvMs = session.getSurvivalMs();
+    EndlessOp expectedPending = session.getPendingOp();
+
+    AVLTree reloadedTree;
+    EndlessSession reloadedSession;
+    ASSERT_TRUE(reloadedSession.loadFromFile(savePath, reloadedTree));
+    EXPECT_TRUE(EndlessSession::validateTreeFull(reloadedTree));
+    EXPECT_EQ(reloadedTree.getSize(), expectedSize);
+    ASSERT_NE(reloadedTree.getRoot(), nullptr);
+    EXPECT_EQ(reloadedTree.getRoot()->key, expectedRoot);
+    EXPECT_EQ(reloadedSession.getInitialSeed(), 1337u);
+    EXPECT_EQ(reloadedSession.getRngState(), expectedRng);
+    EXPECT_EQ(reloadedSession.getSurvivalMs(), expectedSurvMs);
+    EXPECT_EQ(reloadedSession.getPendingOp().type, expectedPending.type);
+    EXPECT_EQ(reloadedSession.getPendingOp().key, expectedPending.key);
+
+    // Continued execution after resume matches uninterrupted run deterministically
+    EventBatch bOrig, bReloaded;
+    ASSERT_TRUE(session.executePending(tree, bOrig));
+    ASSERT_TRUE(reloadedSession.executePending(reloadedTree, bReloaded));
+    EXPECT_EQ(tree.getSize(), reloadedTree.getSize());
+    EXPECT_EQ(session.getPendingOp().type, reloadedSession.getPendingOp().type);
+    EXPECT_EQ(session.getPendingOp().key, reloadedSession.getPendingOp().key);
+
+    // Deadline expiry triggers Game Over cleanly
+    EXPECT_TRUE(reloadedSession.tick(reloadedSession.getOpTimeRemaining() + 0.1f));
+    EXPECT_TRUE(reloadedSession.isGameOver());
+    EXPECT_FALSE(reloadedSession.isActive());
+
+    // Endless leaderboard write/read + descending sort round-trip
+    const char* lbPath = "test_endless_lb_tmp.txt";
+    std::remove(lbPath);
+    EndlessLeaderboard lb;
+    lb.load(lbPath);
+
+    EndlessLeaderboardEntry e1, e2, e3;
+    e1.nameDate = "RunA"; e1.survivalMs = 12400; e1.opsCompleted = 8;  e1.seed = 111u;
+    e2.nameDate = "RunB"; e2.survivalMs = 45900; e2.opsCompleted = 22; e2.seed = 222u;
+    e3.nameDate = "RunC"; e3.survivalMs = 27100; e3.opsCompleted = 14; e3.seed = 333u;
+    ASSERT_TRUE(lb.recordRun(e1));
+    ASSERT_TRUE(lb.recordRun(e2));
+    ASSERT_TRUE(lb.recordRun(e3));
+
+    EndlessLeaderboard lbReloaded;
+    lbReloaded.load(lbPath);
+    ASSERT_EQ(lbReloaded.getCount(), 3);
+    EXPECT_EQ(lbReloaded.get(0).survivalMs, 45900);
+    EXPECT_EQ(lbReloaded.get(0).nameDate, "RunB");
+    EXPECT_EQ(lbReloaded.get(1).survivalMs, 27100);
+    EXPECT_EQ(lbReloaded.get(2).survivalMs, 12400);
+
+    std::remove(savePath);
+    std::remove(lbPath);
 }
