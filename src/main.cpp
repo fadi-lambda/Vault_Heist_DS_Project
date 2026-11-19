@@ -22,6 +22,7 @@
 #include "game/Scoring.h"
 #include "game/HintSystem.h"
 #include "game/EndlessMode.h"
+#include "benchmark/Benchmark.h"
 #include <optional>
 #include <iostream>
 #include <string>
@@ -672,6 +673,16 @@ static std::string currentDateTag() {
 // MAIN FUNCTION
 // =============================================================================
 int main(int argc, char** argv) {
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--benchmark") == 0) {
+            std::string reportPath = "benchmark_report.txt";
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                reportPath = argv[i + 1];
+            }
+            return Benchmark::runAll(reportPath) ? 0 : 1;
+        }
+    }
+
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     std::string verifyDir;

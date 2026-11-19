@@ -28,14 +28,26 @@ class AVLTree {
 private:
     AVLNode* root;
 
+    // Benchmark-only instrumentation counters (reset before each measured run)
+    static long long s_comparisons;
+    static long long s_rotations;
+
     // Helper utilities for height, size, and balance factor
     int getNodeHeight(AVLNode* node) const { return node ? node->height : 0; }
     int getNodeSize(AVLNode* node) const { return node ? node->size : 0; }
     int getBalanceFactor(AVLNode* node) const;
 
+    // Internal pointer-based event helpers (nullptr skips event recording)
+    void updateHeightAndSizeImpl(AVLNode* node, EventBatch* events);
+    AVLNode* rotateRightImpl(AVLNode* y, EventBatch* events, int rotationCase);
+    AVLNode* rotateLeftImpl(AVLNode* x, EventBatch* events, int rotationCase);
+    AVLNode* rebalanceImpl(AVLNode* node, EventBatch* events);
+
     // Recursive helpers
-    AVLNode* insertHelper(AVLNode* node, AVLNode* parent, int key, bool& inserted, EventBatch& events);
-    AVLNode* deleteHelper(AVLNode* node, int key, bool& deleted, EventBatch& events);
+    AVLNode* insertHelper(AVLNode* node, AVLNode* parent, int key, bool& inserted, EventBatch* events);
+    AVLNode* deleteHelper(AVLNode* node, int key, bool& deleted, EventBatch* events);
+    bool insertImpl(int key, EventBatch* events);
+    bool deleteImpl(int key, EventBatch* events);
     AVLNode* findMinNode(AVLNode* node) const;
     AVLNode* findMaxNode(AVLNode* node) const;
     AVLNode* searchHelper(AVLNode* node, int key) const;
@@ -53,6 +65,11 @@ private:
 public:
     AVLTree();
     ~AVLTree();
+
+    // Benchmark-only Counter API
+    static void resetCounters();
+    static long long getComparisons();
+    static long long getRotations();
 
     // Direct manual rotation & subtree metadata entry points (Act 3 interactive puzzles)
     void updateHeightAndSize(AVLNode* node, EventBatch& events);

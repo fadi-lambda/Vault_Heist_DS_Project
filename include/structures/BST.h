@@ -20,12 +20,15 @@ private:
     int nextId;    // monotonic node-id counter (class-scoped, not global)
     int nodeCount;
 
-    // --- Recursive helpers ---
-    TreeNode* insertHelper(TreeNode* node, TreeNode* parent, int key, bool& inserted,
-                           EventBatch& events);
-    TreeNode* deleteHelper(TreeNode* node, int key, bool& deleted, EventBatch& events);
+    // Benchmark-only instrumentation counters (reset before each measured run)
+    static long long s_comparisons;
+
+    // --- Helpers ---
+    bool insertImpl(int key, EventBatch* events);
+    bool deleteImpl(int key, EventBatch* events);
+    TreeNode* deleteHelper(TreeNode* node, int key, bool& deleted, EventBatch* events);
     TreeNode* searchHelper(TreeNode* node, int key) const;
-    TreeNode* searchHelper(TreeNode* node, int key, EventBatch& events) const;
+    TreeNode* searchHelper(TreeNode* node, int key, EventBatch* events) const;
 
     TreeNode* findMinNode(TreeNode* node) const;
     TreeNode* findMaxNode(TreeNode* node) const;
@@ -54,6 +57,10 @@ private:
 public:
     BST();
     ~BST();
+
+    // --- Benchmark-only Counter API ---
+    static void resetCounters();
+    static long long getComparisons();
 
     // --- Core Operations (§5.3) ---
     // Event overloads (PLAN.md §6.4):

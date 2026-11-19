@@ -6,6 +6,7 @@ add_executable(Vault_Heist_Tests
     BSTTests.cpp
     EventLogTests.cpp
     FoundationTests.cpp
+    BenchmarkTests.cpp
     ${PROJECT_SOURCE_DIR}/src/events/EventLog.cpp
     ${PROJECT_SOURCE_DIR}/src/game/Json.cpp
     ${PROJECT_SOURCE_DIR}/src/game/LevelLoader.cpp

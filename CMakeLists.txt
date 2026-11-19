@@ -21,6 +21,7 @@ find_package(GTest CONFIG REQUIRED)
 # Main application
 add_executable(Vault_Heist
     src/main.cpp
+    src/benchmark/Benchmark.cpp
     src/events/EventLog.cpp
     src/game/Json.cpp
     src/game/LevelLoader.cpp

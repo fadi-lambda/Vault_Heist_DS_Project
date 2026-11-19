@@ -1,0 +1,105 @@
+====================================================================================
+     VAULT HEIST: THE LIVING VAULT - BENCHMARK REPORT (PROJECT.PDF SECTION 10)      
+====================================================================================
+RNG Algorithm   : XorShift32
+RNG Seed        : 20261119
+Build Mode      : Debug (unoptimized; operation counts are exact, timings scale with Debug overhead)
+Timing Note     : Wall-clock timing at small n (e.g. n = 100) can be noisy due to
+                  OS scheduling and clock resolution; fast small-n runs are averaged
+                  over repeated trials, and exact operation counters are always shown.
+====================================================================================
+
+### 1. Height Comparison (BST vs AVL)
+|     N | Input  | BST Height | AVL Height | Ceil(log2(N+1)) | BST Valid | AVL Valid |
+|-------|--------|------------|------------|-----------------|-----------|-----------|
+|   100 | Sorted |        100 |          7 |               7 |       YES |       YES |
+|   100 | Random |         14 |          8 |               7 |       YES |       YES |
+|  1000 | Sorted |       1000 |         10 |              10 |       YES |       YES |
+|  1000 | Random |         21 |         12 |              10 |       YES |       YES |
+| 10000 | Sorted |      10000 |         14 |              14 |       YES |       YES |
+| 10000 | Random |         33 |         16 |              14 |       YES |       YES |
+
+### 2. Search Cost (10,000 Random Searches in [1, 1.5*N] on Same Trees)
+|     N | Structure | Input  | Total Time (ms) | Avg Time/Search (us) | Avg Comps/Search |
+|-------|-----------|--------|-----------------|----------------------|------------------|
+|   100 |       BST | Sorted |           6.464 |               0.6464 |            66.87 |
+|   100 |       AVL | Sorted |           1.240 |               0.1240 |             6.19 |
+|   100 |       BST | Random |           1.095 |               0.1095 |             6.57 |
+|   100 |       AVL | Random |           1.177 |               0.1177 |             6.61 |
+|  1000 |       BST | Sorted |          87.208 |               8.7208 |           669.73 |
+|  1000 |       AVL | Sorted |           2.461 |               0.2461 |             9.31 |
+|  1000 |       BST | Random |           2.110 |               0.2110 |            10.30 |
+|  1000 |       AVL | Random |           2.472 |               0.2472 |             9.43 |
+| 10000 |       BST | Sorted |        1244.592 |             124.4592 |          6652.85 |
+| 10000 |       AVL | Sorted |           4.022 |               0.4022 |            12.90 |
+| 10000 |       BST | Random |           4.078 |               0.4078 |            14.55 |
+| 10000 |       AVL | Random |           4.368 |               0.4368 |            13.07 |
+
+### 3. AVL Rotation Count (Insert & Delete, Single Rotations Counted)
+|     N | Input  | Insert Rots | Avg Rot/Insert | Delete Rots | Avg Rot/Delete | Max Rot (1 Del) |
+|-------|--------|-------------|----------------|-------------|----------------|-----------------|
+|   100 | Sorted |          93 |         0.9300 |          44 |         0.4400 |               1 |
+|   100 | Random |          73 |         0.7300 |          42 |         0.4200 |               3 |
+|  1000 | Sorted |         990 |         0.9900 |         491 |         0.4910 |               1 |
+|  1000 | Random |         683 |         0.6830 |         377 |         0.3770 |               4 |
+| 10000 | Sorted |        9986 |         0.9986 |        4988 |         0.4988 |               1 |
+| 10000 | Random |        7052 |         0.7052 |        3644 |         0.3644 |               6 |
+
+### 4. Order Statistics (1,000 kth Queries: AVL O(log n) vs BST O(n) Inorder Scan)
+|     N | Structure & Method             | Complexity | Total Time (ms) | Avg Comps/Query | Match |
+|-------|--------------------------------|------------|-----------------|-----------------|-------|
+|   100 | AVL kth (subtree size)         | O(log n)   |           0.253 |            5.87 |   YES |
+|   100 | BST kthSmallest (inorder scan) | O(n)       |           2.860 |           49.94 |   YES |
+|  1000 | AVL kth (subtree size)         | O(log n)   |           0.309 |            9.19 |   YES |
+|  1000 | BST kthSmallest (inorder scan) | O(n)       |          11.273 |          489.32 |   YES |
+| 10000 | AVL kth (subtree size)         | O(log n)   |           0.611 |           12.52 |   YES |
+| 10000 | BST kthSmallest (inorder scan) | O(n)       |         332.117 |         4991.47 |   YES |
+
+### 5. Max Heap Construction (Bottom-Up O(n) buildMaxHeap)
+|     N | Input Order     | Avg Time (us) | Comparisons | Comps / N |   Swaps | Valid |
+|-------|-----------------|---------------|-------------|-----------|---------|-------|
+|   100 |          Random |          3.40 |         184 |     1.840 |      75 |   YES |
+|   100 |    Sorted (Asc) |          4.06 |         190 |     1.900 |      96 |   YES |
+|   100 |   Sorted (Desc) |          1.59 |          99 |     0.990 |       0 |   YES |
+|  1000 |          Random |         46.36 |        1873 |     1.873 |     733 |   YES |
+|  1000 |    Sorted (Asc) |         40.84 |        1982 |     1.982 |     992 |   YES |
+|  1000 |   Sorted (Desc) |         15.20 |         999 |     0.999 |       0 |   YES |
+| 10000 |          Random |        562.10 |       18862 |     1.886 |    7519 |   YES |
+| 10000 |    Sorted (Asc) |        401.32 |       19982 |     1.998 |    9992 |   YES |
+| 10000 |   Sorted (Desc) |        152.46 |        9999 |     1.000 |       0 |   YES |
+Note: Comps / N remains bounded <= 2.00 across all N, confirming O(n) Floyd heap construction rather than O(n log n).
+
+### 6. Heap Sort Analysis (All Distributions)
+|     N | Distribution    | Avg Time (ms) | Comparisons |   Swaps | Sorted |
+|-------|-----------------|---------------|-------------|---------|--------|
+|   100 |          Random |        0.0112 |        1033 |     588 |    YES |
+|   100 |          Sorted |        0.0119 |        1081 |     640 |    YES |
+|   100 |  Reverse-Sorted |        0.0099 |         944 |     516 |    YES |
+|   100 | Duplicate-Heavy |        0.0097 |         969 |     520 |    YES |
+|  1000 |          Random |        0.2891 |       16877 |    9099 |    YES |
+|  1000 |          Sorted |        0.2655 |       17583 |    9708 |    YES |
+|  1000 |  Reverse-Sorted |        0.2476 |       15965 |    8316 |    YES |
+|  1000 | Duplicate-Heavy |        0.2182 |       14431 |    7415 |    YES |
+| 10000 |          Random |        4.0002 |      235230 |  124156 |    YES |
+| 10000 |          Sorted |        3.1597 |      244460 |  131956 |    YES |
+| 10000 |  Reverse-Sorted |        3.1968 |      226682 |  116696 |    YES |
+| 10000 | Duplicate-Heavy |        2.9797 |      195814 |   99580 |    YES |
+
+### 7. Sorting Comparison: Heap Sort (O(1) aux space) vs Merge Sort (O(n) aux space)
+|     N | Distribution    | Heap Time (ms) | Heap Comps | Heap Swaps | Merge Time (ms) | Merge Comps | Merge Moves | OK  |
+|-------|-----------------|----------------|------------|------------|-----------------|-------------|-------------|-----|
+|   100 |          Random |         0.0112 |       1033 |        588 |          0.0129 |         542 |        1344 | YES |
+|   100 |          Sorted |         0.0119 |       1081 |        640 |          0.0114 |         356 |        1344 | YES |
+|   100 |  Reverse-Sorted |         0.0099 |        944 |        516 |          0.0112 |         316 |        1344 | YES |
+|   100 | Duplicate-Heavy |         0.0097 |        969 |        520 |          0.0121 |         521 |        1344 | YES |
+|  1000 |          Random |         0.2891 |      16877 |       9099 |          0.2596 |        8722 |       19952 | YES |
+|  1000 |          Sorted |         0.2655 |      17583 |       9708 |          0.1504 |        5044 |       19952 | YES |
+|  1000 |  Reverse-Sorted |         0.2476 |      15965 |       8316 |          0.1511 |        4932 |       19952 | YES |
+|  1000 | Duplicate-Heavy |         0.2182 |      14431 |       7415 |          0.2050 |        8116 |       19952 | YES |
+| 10000 |          Random |         4.0002 |     235230 |     124156 |          3.4338 |      120395 |      267232 | YES |
+| 10000 |          Sorted |         3.1597 |     244460 |     131956 |          1.9480 |       69008 |      267232 | YES |
+| 10000 |  Reverse-Sorted |         3.1968 |     226682 |     116696 |          1.9645 |       64608 |      267232 | YES |
+| 10000 | Duplicate-Heavy |         2.9797 |     195814 |      99580 |          2.8613 |      112304 |      267232 | YES |
+Space Complexity Note: Heap Sort operates strictly in-place with O(1) auxiliary space,
+whereas Merge Sort requires an O(n) auxiliary merge buffer (and O(log n) recursion stack).
+====================================================================================
