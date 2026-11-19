@@ -4523,6 +4523,36 @@ int main(int argc, char** argv) {
         handleAct3DoubleCase(1); // Identify LR case -> highlights heavy child pivot step
         saveShot("22_act3_3_double_rotations", idle);
 
+        // Report: force the pure RR (3.2 puzzle 2) and RL (3.3 puzzle 2) cases so all four rotation types are captured
+        startLevel(11); showingBriefing = false; layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
+        if (levelData[11].puzzleCount > 1) {
+            const LevelPuzzleSpec& sp0 = levelData[11].puzzles[0];
+            int si0 = avlLayout.findNodeIndexByKey(sp0.rootKey);
+            if (si0 >= 0) handleLevelNodeClick(avlLayout.nodes[si0].id, sp0.rootKey);
+            handleAct3SingleRotation(sp0.caseName == "LL" ? 1 : 2);
+            animCtrl.finishInstant();
+            if (act3NextPuzzlePending) loadNextAct3Puzzle();
+            const LevelPuzzleSpec& sp1 = levelData[11].puzzles[1];
+            int si1 = avlLayout.findNodeIndexByKey(sp1.rootKey);
+            if (si1 >= 0) handleLevelNodeClick(avlLayout.nodes[si1].id, sp1.rootKey);
+        }
+        saveShot("22b_act3_2_rr_rotation", idle);
+
+        startLevel(12); showingBriefing = false; layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
+        if (levelData[12].puzzleCount > 1) {
+            const LevelPuzzleSpec& dp0 = levelData[12].puzzles[0];
+            handleAct3DoubleCase(dp0.caseName == "LR" ? 1 : 2);
+            int dc = avlLayout.findNodeIndexByKey(dp0.childKey);
+            if (dc >= 0) handleLevelNodeClick(avlLayout.nodes[dc].id, dp0.childKey);
+            animCtrl.finishInstant();
+            int dr = avlLayout.findNodeIndexByKey(dp0.rootKey);
+            if (dr >= 0) handleLevelNodeClick(avlLayout.nodes[dr].id, dp0.rootKey);
+            animCtrl.finishInstant();
+            if (act3NextPuzzlePending) loadNextAct3Puzzle();
+            handleAct3DoubleCase(levelData[12].puzzles[1].caseName == "LR" ? 1 : 2);
+        }
+        saveShot("22c_act3_3_rl_rotation", idle);
+
         startLevel(13); showingBriefing = false; layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
         if (levelData[13].insertCount >= 2) {
             handleAct3Prediction(levelData[13].inserts[0].expectedRotation.c_str()); animCtrl.finishInstant();
@@ -4559,11 +4589,18 @@ int main(int argc, char** argv) {
         startLevel(19); showingBriefing = false; layoutHeapForScreen(false, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
         triggerStructuralAction(1);
         animCtrl.finishInstant();
+        saveShot("26b_act4_5_build_max_heap", idle); // Report: bottom-up buildMaxHeap result before any extraction
         for (int e = 0; e < 4; ++e) {
             handleLevelNodeClick(0, act4Heap.getMax());
             animCtrl.finishInstant();
         }
         saveShot("27_act4_5_boss_heapsort", idle);
+        // Report: finish every extraction so the array view shows the fully ascending sorted result
+        for (int guard = 0; guard < 16 && act4Heap.getSize() > 0 && currentScreen == SCREEN_LEVEL_PLAY; ++guard) {
+            handleLevelNodeClick(0, act4Heap.getMax());
+            animCtrl.finishInstant();
+        }
+        saveShot("27b_act4_5_sorted_result", idle);
 
         // Endless Mode & Endless Leaderboard visual verification (in-memory only)
         endlessLb.load("");
