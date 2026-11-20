@@ -901,6 +901,7 @@ int main(int argc, char** argv) {
     UndoStack undoStack;
     ToastQueue toastQueue;
     UiCache uiCache;
+    UiCache menuUiCache;
     int cachedLayoutScreen = -1;
     int cachedLayoutLid = -1;
 
@@ -3303,7 +3304,8 @@ int main(int argc, char** argv) {
         window.clear(Ui::bgNavy());
         if (showBgGrid && currentScreen != SCREEN_MAIN_MENU &&
             currentScreen != SCREEN_SPLASH && currentScreen != SCREEN_CAMPAIGN_MAP &&
-            currentScreen != SCREEN_SETTINGS && currentScreen != SCREEN_LEADERBOARD) {
+            currentScreen != SCREEN_SETTINGS && currentScreen != SCREEN_LEADERBOARD &&
+            currentScreen != SCREEN_ENDLESS_LEADERBOARD) {
             Ui::grid(window, static_cast<float>(W), static_cast<float>(H), &uiCache);
         }
 
@@ -3804,8 +3806,8 @@ int main(int argc, char** argv) {
             }
 
             // Top HUD bar (x=30..1570)
-            Ui::textFit(window, menuFont, levels[currentLevelIdx].title, 24, sf::Color(0, 255, 65), 30.f, 12.f, 675.f, true, &uiCache);
-            Ui::textFit(window, menuFont, cachedHudObj, 14, sf::Color(215, 240, 220), 30.f, 46.f, 675.f, false, &uiCache);
+            Ui::textFit(window, menuFont, levels[currentLevelIdx].title, 24, sf::Color(0, 255, 65), 30.f, 12.f, 675.f, true, &menuUiCache);
+            Ui::textFit(window, menuFont, cachedHudObj, 14, sf::Color(215, 240, 220), 30.f, 46.f, 675.f, false, &menuUiCache);
 
             Ui::button(window, font, hintSys.isAvailable() ? "Hint [H]" : "Hint Used", 722.f, 18.f, 115.f, 34.f,
                        hintSys.isAvailable() ? BTN_PRIMARY : BTN_DISABLED, in, 13, &uiCache);
@@ -3830,7 +3832,7 @@ int main(int argc, char** argv) {
             meterRect.setFillColor(ratio > 0.8f ? Ui::red() : sf::Color(0, 255, 65));
             window.draw(meterRect);
 
-            Ui::textFit(window, menuFont, cachedHudAlarmScore, 14, sf::Color(0, 255, 65), meterX, 44.f, meterW, true, &uiCache);
+            Ui::textFit(window, menuFont, cachedHudAlarmScore, 14, sf::Color(0, 255, 65), meterX, 44.f, meterW, true, &menuUiCache);
 
             // Structure Canvas Frame (opaque interior so only canvas world grid shows)
             Ui::panel(window, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, sf::Color(55, 85, 130), 248, &uiCache);
@@ -4167,7 +4169,7 @@ int main(int argc, char** argv) {
             }
             float headMaxW = (lid == LEVEL_3_4) ? 960.f : 1080.f;
             float bodyMaxW = (lid == LEVEL_3_4) ? 960.f : 1050.f;
-            Ui::textFit(window, menuFont, cachedPromptHead, TXT_H2, sf::Color(0, 255, 65), 54.f, 678.f, headMaxW, true, &uiCache);
+            Ui::textFit(window, menuFont, cachedPromptHead, TXT_H2, sf::Color(0, 255, 65), 54.f, 678.f, headMaxW, true, &menuUiCache);
             Ui::textWrap(window, font, status, TXT_BODY, sf::Color(225, 245, 230), 54.f, 718.f, bodyMaxW, false, &uiCache);
             if (hintSys.wasUsed()) {
                 Ui::textWrap(window, font, "HINT (-1 star cap): " + hintSys.shownText(),
@@ -4889,51 +4891,66 @@ int main(int argc, char** argv) {
 
         // 11. ENDLESS MODE LEADERBOARD (endless_leaderboard.txt)
         if (currentScreen == SCREEN_ENDLESS_LEADERBOARD) {
-            Ui::screenHeader(window, font, "ENDLESS SURVIVAL LEADERBOARD",
-                             "Survival times ranked descending from endless_leaderboard.txt", &uiCache);
+            if (vaultBgSprite.has_value()) {
+                window.draw(*vaultBgSprite);
+            }
+            const sf::Color elbBright(0, 255, 65);
+            const sf::Color elbSubtle(120, 195, 120);
+
+            Ui::text(window, menuFont, "ENDLESS SURVIVAL LEADERBOARD", 34, elbBright, 50.f, 20.f, true, &menuUiCache);
+            Ui::text(window, menuFont, "Survival times ranked descending from endless_leaderboard.txt", 14, elbSubtle, 50.f, 64.f, false, &menuUiCache);
+            sf::RectangleShape hdrLine({1150.f, 1.f});
+            hdrLine.setPosition({50.f, 92.f});
+            hdrLine.setFillColor(sf::Color(0, 255, 65, 140));
+            window.draw(hdrLine);
 
             float mw = 920.f;
-            float mx0 = W * 0.5f - mw * 0.5f;
+            float mx0 = static_cast<float>(W) * 0.5f - mw * 0.5f;
             if (endlessShowLastResult) {
-                Ui::panel(window, mx0, 102.f, mw, 86.f, Ui::red(), 240, &uiCache);
+                Ui::panel(window, mx0, 104.f, mw, 86.f, Ui::red(), 235, &uiCache);
                 std::string runSum = "ENDLESS RUN ENDED: " + EndlessLeaderboard::formatTimeMs(endlessLastEntry.survivalMs) +
                                      " survived  |  " + std::to_string(endlessLastEntry.opsCompleted) +
                                      " ops  |  Seed #" + std::to_string(endlessLastEntry.seed);
-                Ui::textFit(window, font, runSum, TXT_H2, Ui::gold(), mx0 + 28.f, 114.f, mw - 56.f, true, &uiCache);
-                Ui::textFit(window, font, endlessLastReason, TXT_HINT, sf::Color(255, 190, 190),
-                            mx0 + 28.f, 152.f, mw - 56.f, false, &uiCache);
+                Ui::textFit(window, menuFont, runSum, TXT_H2, sf::Color(255, 110, 110), mx0 + 28.f, 116.f, mw - 56.f, true, &menuUiCache);
+                Ui::textFit(window, menuFont, endlessLastReason, TXT_HINT, sf::Color(255, 200, 200),
+                            mx0 + 28.f, 154.f, mw - 56.f, false, &menuUiCache);
             }
 
-            float my0 = endlessShowLastResult ? 202.f : 130.f;
-            float mh  = endlessShowLastResult ? 542.f : 600.f;
-            Ui::panel(window, mx0, my0, mw, mh, Ui::gold(), 240, &uiCache);
+            float my0 = endlessShowLastResult ? 204.f : 130.f;
+            float mh  = endlessShowLastResult ? 540.f : 600.f;
+            Ui::panel(window, mx0, my0, mw, mh, elbBright, 232, &uiCache);
 
             if (endlessLb.getCount() == 0) {
-                Ui::textCenter(window, font, "No endless survival runs recorded yet", TXT_H1, Ui::textBody(),
-                               W * 0.5f, my0 + 180.f, true, &uiCache);
-                Ui::textCenter(window, font, "Start Endless Survival Mode from the Main Menu to set a survival record!",
-                               TXT_BODY, Ui::textMuted(), W * 0.5f, my0 + 235.f, false, &uiCache);
+                Ui::textCenter(window, menuFont, "No endless survival runs recorded yet", 24, elbBright,
+                               static_cast<float>(W) * 0.5f, my0 + 180.f, true, &menuUiCache);
+                Ui::textCenter(window, menuFont, "Start Endless Survival Mode from the Main Menu to set a survival record!",
+                               15, elbSubtle, static_cast<float>(W) * 0.5f, my0 + 235.f, false, &menuUiCache);
             } else {
-                Ui::text(window, font, "RANK",            TXT_HINT, Ui::cyan(), mx0 + 36.f,  my0 + 22.f, true, &uiCache);
-                Ui::text(window, font, "OPERATOR / DATE", TXT_HINT, Ui::cyan(), mx0 + 120.f, my0 + 22.f, true, &uiCache);
-                Ui::text(window, font, "SURVIVAL TIME",   TXT_HINT, Ui::cyan(), mx0 + 500.f, my0 + 22.f, true, &uiCache);
-                Ui::text(window, font, "OPS",             TXT_HINT, Ui::cyan(), mx0 + 670.f, my0 + 22.f, true, &uiCache);
-                Ui::text(window, font, "SEED",            TXT_HINT, Ui::cyan(), mx0 + 760.f, my0 + 22.f, true, &uiCache);
+                Ui::text(window, menuFont, "RANK",            14, elbBright, mx0 + 36.f,  my0 + 22.f, true, &menuUiCache);
+                Ui::text(window, menuFont, "OPERATOR / DATE", 14, elbBright, mx0 + 120.f, my0 + 22.f, true, &menuUiCache);
+                Ui::text(window, menuFont, "SURVIVAL TIME",   14, elbBright, mx0 + 500.f, my0 + 22.f, true, &menuUiCache);
+                Ui::text(window, menuFont, "OPS",             14, elbBright, mx0 + 670.f, my0 + 22.f, true, &menuUiCache);
+                Ui::text(window, menuFont, "SEED",            14, elbBright, mx0 + 760.f, my0 + 22.f, true, &menuUiCache);
+
+                sf::RectangleShape thLine({mw - 48.f, 1.f});
+                thLine.setPosition({mx0 + 24.f, my0 + 48.f});
+                thLine.setFillColor(sf::Color(0, 255, 65, 90));
+                window.draw(thLine);
 
                 int rows = minInt(10, endlessLb.getCount());
                 for (int r = 0; r < rows; ++r) {
                     const EndlessLeaderboardEntry& e = endlessLb.get(r);
                     float ry = my0 + 58.f + static_cast<float>(r) * 44.f;
-                    Ui::text(window, font, "#" + std::to_string(r + 1), TXT_BODY, Ui::gold(),
-                             mx0 + 36.f, ry, true, &uiCache);
-                    Ui::textFit(window, font, e.nameDate, TXT_BODY, Ui::textBody(),
-                                mx0 + 120.f, ry, 360.f, false, &uiCache);
-                    Ui::text(window, font, EndlessLeaderboard::formatTimeMs(e.survivalMs), TXT_BODY, Ui::green(),
-                             mx0 + 515.f, ry, false, &uiCache);
-                    Ui::text(window, font, std::to_string(e.opsCompleted), TXT_BODY, Ui::textBody(),
-                             mx0 + 675.f, ry, false, &uiCache);
-                    Ui::text(window, font, std::to_string(e.seed), TXT_BODY, Ui::textMuted(),
-                             mx0 + 760.f, ry, false, &uiCache);
+                    Ui::text(window, menuFont, "#" + std::to_string(r + 1), 15, elbBright,
+                             mx0 + 36.f, ry, true, &menuUiCache);
+                    Ui::textFit(window, menuFont, e.nameDate, 15, sf::Color(220, 240, 225),
+                                mx0 + 120.f, ry, 360.f, false, &menuUiCache);
+                    Ui::text(window, menuFont, EndlessLeaderboard::formatTimeMs(e.survivalMs), 15, elbBright,
+                             mx0 + 515.f, ry, false, &menuUiCache);
+                    Ui::text(window, menuFont, std::to_string(e.opsCompleted), 15, sf::Color(220, 240, 225),
+                             mx0 + 675.f, ry, false, &menuUiCache);
+                    Ui::text(window, menuFont, std::to_string(e.seed), 15, elbSubtle,
+                             mx0 + 760.f, ry, false, &menuUiCache);
                 }
             }
 

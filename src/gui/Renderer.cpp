@@ -573,13 +573,15 @@ void Renderer::drawNodeTooltip(sf::RenderWindow& window, const sf::Font& font,
 
     m_shapeVertices.clear();
     m_shapeVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
-    appendOutlinedRect(m_shapeVertices, tx, ty, tw, th, 1.4f, sf::Color(12, 18, 32, 240), sf::Color(245, 185, 40));
+    appendOutlinedRect(m_shapeVertices, tx - 2.f, ty - 2.f, tw + 4.f, th + 4.f, 2.5f,
+                       sf::Color(0, 0, 0, 0), sf::Color(0, 255, 65, 55));
+    appendOutlinedRect(m_shapeVertices, tx, ty, tw, th, 1.5f, sf::Color(5, 13, 8, 230), sf::Color(0, 255, 65));
     window.draw(m_shapeVertices);
 
     Ui::drawPooledText(window, &m_ui, font, m_cachedTipLine1, 11, false, TEXT_ALIGN_TOP_LEFT,
-                       sf::Color(255, 225, 110), tx + 8.f, ty + 5.f);
+                       sf::Color(0, 255, 65), tx + 8.f, ty + 5.f);
     Ui::drawPooledText(window, &m_ui, font, m_cachedTipLine2, 10, false, TEXT_ALIGN_TOP_LEFT,
-                       sf::Color(195, 220, 250), tx + 8.f, ty + 23.f);
+                       sf::Color::White, tx + 8.f, ty + 23.f);
 }
 
 } // namespace VaultHeist
