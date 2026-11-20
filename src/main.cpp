@@ -945,7 +945,7 @@ int main(int argc, char** argv) {
                 toastQueue.push("[DEMO] Levels locked", TOAST_KIND_WARNING);
             }
         } else {
-            toastQueue.push("Wrong password", TOAST_KIND_WARNING);
+            toastQueue.push("Wrong password", TOAST_KIND_INFO);
         }
         demoPromptOpen = false;
         demoPasswordLen = 0;
@@ -1120,13 +1120,13 @@ int main(int argc, char** argv) {
     auto useHint = [&]() {
         if (currentScreen != SCREEN_LEVEL_PLAY || currentLevelIdx < 0 || showingBriefing) return;
         if (!hintSys.isAvailable()) {
-            toastQueue.push("Hint already used on this level!", TOAST_KIND_WARNING);
+            toastQueue.push("Hint already used on this level!", TOAST_KIND_INFO);
             return;
         }
         int stage = currentHintStage();
         if (hintSys.use(scoring, levelData[currentLevelIdx], stage)) {
             status = "HINT (-1 star cap): " + hintSys.shownText();
-            toastQueue.push("Hint used (max 2 stars this level)", TOAST_KIND_WARNING);
+            toastQueue.push("Hint used (max 2 stars this level)", TOAST_KIND_INFO);
         }
     };
 
