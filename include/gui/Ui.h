@@ -113,7 +113,7 @@ inline sf::Color bgNavy()    { return sf::Color(10, 16, 28); }
 inline sf::Color panelFill() { return sf::Color(16, 24, 42); }
 inline sf::Color textBody()  { return sf::Color(214, 226, 244); }
 inline sf::Color textMuted() { return sf::Color(128, 148, 178); }
-inline sf::Color green()     { return sf::Color(70, 220, 130); }
+inline sf::Color green()     { return sf::Color(0, 255, 65); }
 inline sf::Color red()       { return sf::Color(240, 90, 90); }
 inline sf::Color amber()     { return sf::Color(250, 200, 70); }
 

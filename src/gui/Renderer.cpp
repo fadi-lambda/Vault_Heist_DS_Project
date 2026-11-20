@@ -518,14 +518,14 @@ void Renderer::drawPlaybackControls(sf::RenderWindow& window, const sf::Font& fo
 
     m_shapeVertices.clear();
     m_shapeVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
-    appendQuad(m_shapeVertices, scrubX, scrubY, scrubW, 5.f, sf::Color(40, 55, 80));
-    if (scrubNorm > 0.f) appendQuad(m_shapeVertices, scrubX, scrubY, scrubW * scrubNorm, 5.f, sf::Color(168, 85, 247));
-    appendDisc(m_shapeVertices, scrubX + scrubW * scrubNorm, scrubY + 2.5f, 6.f, sf::Color(245, 185, 40), cosT, sinT);
+    appendQuad(m_shapeVertices, scrubX, scrubY, scrubW, 5.f, sf::Color(20, 40, 28));
+    if (scrubNorm > 0.f) appendQuad(m_shapeVertices, scrubX, scrubY, scrubW * scrubNorm, 5.f, sf::Color(0, 255, 65));
+    appendDisc(m_shapeVertices, scrubX + scrubW * scrubNorm, scrubY + 2.5f, 6.f, sf::Color(0, 255, 65), cosT, sinT);
     appendRing(m_shapeVertices, scrubX + scrubW * scrubNorm, scrubY + 2.5f, 6.f, 7.4f, sf::Color::White, cosT, sinT);
 
-    appendQuad(m_shapeVertices, trackX, trackY, trackW, 5.f, sf::Color(40, 55, 80));
-    if (norm > 0.f) appendQuad(m_shapeVertices, trackX, trackY, trackW * norm, 5.f, sf::Color(56, 189, 248));
-    appendDisc(m_shapeVertices, trackX + trackW * norm, trackY + 2.5f, 7.f, sf::Color(245, 185, 40), cosT, sinT);
+    appendQuad(m_shapeVertices, trackX, trackY, trackW, 5.f, sf::Color(20, 40, 28));
+    if (norm > 0.f) appendQuad(m_shapeVertices, trackX, trackY, trackW * norm, 5.f, sf::Color(0, 255, 65));
+    appendDisc(m_shapeVertices, trackX + trackW * norm, trackY + 2.5f, 7.f, sf::Color(0, 255, 65), cosT, sinT);
     appendRing(m_shapeVertices, trackX + trackW * norm, trackY + 2.5f, 7.f, 8.5f, sf::Color::White, cosT, sinT);
 
     window.draw(m_shapeVertices);

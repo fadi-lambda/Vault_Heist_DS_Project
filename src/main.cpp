@@ -3996,14 +3996,6 @@ int main(int argc, char** argv) {
 
                 Ui::text(window, font, levelCam.zoomText(), 11, Ui::textMuted(),
                          CANVAS_X + 12.f, CANVAS_Y + 6.f, false, &uiCache);
-                if (lid == LEVEL_1_1) {
-                    const char* ruleStr = "Rule: visit ROOT first, then LEFT subtree, then RIGHT subtree";
-                    if (act1TravMode == TRAV_INORDER)          ruleStr = "Rule: visit LEFT subtree first, then ROOT, then RIGHT subtree";
-                    else if (act1TravMode == TRAV_POSTORDER)   ruleStr = "Rule: visit LEFT subtree first, then RIGHT subtree, then ROOT";
-                    else if (act1TravMode == TRAV_LEVEL_ORDER) ruleStr = "Rule: visit rooms level by level, left to right";
-                    Ui::textCenter(window, menuFont, ruleStr, 16, sf::Color(0, 255, 65),
-                                   CANVAS_X + CANVAS_W * 0.5f, CANVAS_Y + 26.f, true, &menuUiCache);
-                }
                 if (lid != LEVEL_1_3 && !(lid == LEVEL_1_2 && !act1Reconstructed)) {
                     drawCamTooltip(levelCam, *activeDrawLayout, hl.hoveredNodeId);
                 }
