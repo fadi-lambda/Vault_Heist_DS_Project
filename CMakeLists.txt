@@ -55,6 +55,15 @@ target_link_libraries(Vault_Heist
     PRIVATE SFML::Graphics
 )
 
+if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
+    add_custom_command(TARGET Vault_Heist POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/assets"
+            "${CMAKE_BINARY_DIR}/assets"
+        COMMENT "Copying assets/ to ${CMAKE_BINARY_DIR}/assets/"
+    )
+endif()
+
 # Benchmarks (Section 10)
 add_executable(Vault_Heist_Benchmarks
     benchmarks/BenchmarkSuite.cpp

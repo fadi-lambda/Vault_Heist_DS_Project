@@ -719,6 +719,8 @@ int main(int argc, char** argv) {
     sf::Font font;
     bool fontLoaded = font.openFromFile("assets/fonts/arial.ttf") ||
                       font.openFromFile("../../assets/fonts/arial.ttf") ||
+                      font.openFromFile("out/build/x64-debug/assets/fonts/arial.ttf") ||
+                      font.openFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/fonts/arial.ttf") ||
                       font.openFromFile("C:/Windows/Fonts/arial.ttf");
     if (!fontLoaded) std::cerr << "Warning: Arial Font could not be loaded!\n";
 
@@ -726,12 +728,16 @@ int main(int argc, char** argv) {
     bool menuMonoLoaded = menuMonoFont.openFromFile("C:/Windows/Fonts/consola.ttf") ||
                           menuMonoFont.openFromFile("C:/Windows/Fonts/cour.ttf") ||
                           menuMonoFont.openFromFile("assets/fonts/consola.ttf") ||
-                          menuMonoFont.openFromFile("../../assets/fonts/consola.ttf");
+                          menuMonoFont.openFromFile("../../assets/fonts/consola.ttf") ||
+                          menuMonoFont.openFromFile("out/build/x64-debug/assets/fonts/consola.ttf") ||
+                          menuMonoFont.openFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/fonts/consola.ttf");
     const sf::Font& menuFont = menuMonoLoaded ? menuMonoFont : font;
 
     sf::Texture vaultBgTex;
     bool vaultBgLoaded = vaultBgTex.loadFromFile("assets/images/vault_door_bg.png") ||
-                         vaultBgTex.loadFromFile("../../assets/images/vault_door_bg.png");
+                         vaultBgTex.loadFromFile("../../assets/images/vault_door_bg.png") ||
+                         vaultBgTex.loadFromFile("out/build/x64-debug/assets/images/vault_door_bg.png") ||
+                         vaultBgTex.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/images/vault_door_bg.png");
     if (vaultBgLoaded) vaultBgTex.setSmooth(true);
     std::optional<sf::Sprite> vaultBgSprite;
     if (vaultBgLoaded) {
@@ -832,6 +838,8 @@ int main(int argc, char** argv) {
     // Game state & shared Phase 7 foundation systems
     int currentScreen = SCREEN_SPLASH;
     int menuSelectedIdx = 0;
+    int selectedActIdx = 0;
+    int selectedLevelInAct = 0;
     int currentLevelIdx = -1;
     std::string status = "Welcome to Vault Heist!";
     ScoringEngine scoring;
@@ -3293,67 +3301,50 @@ int main(int argc, char** argv) {
         };
 
         window.clear(Ui::bgNavy());
-        if (showBgGrid && currentScreen != SCREEN_MAIN_MENU) {
+        if (showBgGrid && currentScreen != SCREEN_MAIN_MENU &&
+            currentScreen != SCREEN_SPLASH && currentScreen != SCREEN_CAMPAIGN_MAP) {
             Ui::grid(window, static_cast<float>(W), static_cast<float>(H), &uiCache);
         }
 
         // 0. SPLASH SCREEN
         if (currentScreen == SCREEN_SPLASH) {
-            float cx = W * 0.5f, cy = 270.f;
-
-            sf::CircleShape outerRing(72.f);
-            outerRing.setOrigin({72.f, 72.f});
-            outerRing.setPosition({cx, cy});
-            outerRing.setFillColor(sf::Color::Transparent);
-            outerRing.setOutlineColor(Ui::cyan());
-            outerRing.setOutlineThickness(2.5f);
-            window.draw(outerRing);
-
-            sf::CircleShape innerRing(28.f);
-            innerRing.setOrigin({28.f, 28.f});
-            innerRing.setPosition({cx, cy});
-            innerRing.setFillColor(sf::Color::Transparent);
-            innerRing.setOutlineColor(Ui::cyan());
-            innerRing.setOutlineThickness(2.2f);
-            window.draw(innerRing);
-
-            for (int i = 0; i < 8; ++i) {
-                float rad = (-dialAngle * 0.8f + i * 45.f) * (3.14159265f / 180.f);
-                sf::Vertex sp[] = {
-                    sf::Vertex({cx + std::cos(rad) * 28.f, cy + std::sin(rad) * 28.f}, Ui::cyan()),
-                    sf::Vertex({cx + std::cos(rad) * 40.f, cy + std::sin(rad) * 40.f}, Ui::cyan())
-                };
-                window.draw(sp, 2, sf::PrimitiveType::Lines);
+            if (vaultBgSprite.has_value()) {
+                window.draw(*vaultBgSprite);
             }
-            for (int i = 0; i < 10; ++i) {
-                float rad = (dialAngle + i * 36.f) * (3.14159265f / 180.f);
-                sf::CircleShape dot(4.5f);
-                dot.setOrigin({4.5f, 4.5f});
-                dot.setPosition({cx + std::cos(rad) * 56.f, cy + std::sin(rad) * 56.f});
-                dot.setFillColor(Ui::gold());
-                window.draw(dot);
-            }
+            const sf::Color splashBright(0, 255, 65);
+            const sf::Color splashDim(74, 122, 74);
+            float cx = W * 0.5f;
 
-            Ui::textCenter(window, font, "VAULT HEIST", 54, Ui::gold(), cx, 380.f, true, &uiCache);
-            std::string targetSub = "The Living Vault";
-            int charsToShow = minInt(16, static_cast<int>(splashTimer * 6.5f));
-            std::string typed = targetSub.substr(0, charsToShow);
-            if (charsToShow < 16 && (static_cast<int>(splashTimer * 4.0f) % 2 == 0)) typed += "_";
-            Ui::textCenter(window, font, typed, 22, Ui::textBody(), cx, 452.f, false, &uiCache);
+            Ui::textCenter(window, menuFont, "VAULT HEIST", 56, splashBright, cx, 326.f, true, &uiCache);
+            Ui::textCenter(window, menuFont, "THE LIVING VAULT", 18, splashDim, cx, 396.f, false, &uiCache);
 
-            sf::RectangleShape pTrack({340.f, 7.f});
-            pTrack.setPosition({cx - 170.f, 515.f});
-            pTrack.setFillColor(sf::Color(22, 35, 55));
+            float barW = 400.f, barH = 10.f;
+            float barX = cx - barW * 0.5f, barY = 442.f;
+            sf::RectangleShape pTrack({barW, barH});
+            pTrack.setPosition({barX, barY});
+            pTrack.setFillColor(sf::Color(12, 26, 15));
+            pTrack.setOutlineColor(sf::Color(0, 255, 65, 100));
+            pTrack.setOutlineThickness(1.f);
             window.draw(pTrack);
 
             float prog = minFloat(1.0f, splashTimer / 3.2f);
-            sf::RectangleShape pFill({340.f * prog, 7.f});
-            pFill.setPosition({cx - 170.f, 515.f});
-            pFill.setFillColor(Ui::cyan());
-            window.draw(pFill);
+            if (prog > 0.0f) {
+                sf::RectangleShape pFill({barW * prog, barH});
+                pFill.setPosition({barX, barY});
+                pFill.setFillColor(splashBright);
+                window.draw(pFill);
+            }
 
-            Ui::textCenter(window, font, "Cracking security protocols...", TXT_HINT, Ui::textMuted(), cx, 540.f, false, &uiCache);
-            Ui::textCenter(window, font, "[Press any key or click to skip]", TXT_HINT, Ui::textMuted(), cx, 780.f, false, &uiCache);
+            const char* splashMsgs[4] = {
+                "Cracking security protocols...",
+                "Decrypting vault blueprints...",
+                "Bypassing biometric locks...",
+                "Initializing heist terminal..."
+            };
+            int msgIdx = static_cast<int>(splashTimer / 0.8f) % 4;
+            if (msgIdx < 0) msgIdx = 0;
+            Ui::textCenter(window, menuFont, splashMsgs[msgIdx], 15, sf::Color(110, 195, 110), cx, 474.f, false, &uiCache);
+            Ui::textCenter(window, menuFont, "[Press any key or click to skip]", 14, sf::Color(95, 165, 95), cx, 780.f, false, &uiCache);
         }
 
         // 1. MAIN MENU
@@ -3446,59 +3437,275 @@ int main(int argc, char** argv) {
 
         // 2. CAMPAIGN MAP
         if (currentScreen == SCREEN_CAMPAIGN_MAP) {
+            if (vaultBgSprite.has_value()) {
+                window.draw(*vaultBgSprite);
+            }
+
+            const sf::Color mapBright(0, 255, 65);
+            const sf::Color mapDim(74, 122, 74);
+            const sf::Color mapSubtle(110, 185, 110);
+
             UiInput mapIn = in;
             if (demoPromptOpen) {
                 mapIn.mx = -1.f;
                 mapIn.my = -1.f;
                 mapIn.down = false;
             }
-            Ui::screenHeader(window, font, "HEIST CAMPAIGN // 4 OPERATIONAL WINGS",
-                             "Complete levels sequentially to decrypt subsequent vault wings.", &uiCache);
 
-            Ui::button(window, font, "Act 1 Explorer",   1000.f, 26.f, 170.f, 38.f, BTN_SECONDARY, mapIn, 13, &uiCache);
-            Ui::button(window, font, "Act 2 Explorer",   1185.f, 26.f, 170.f, 38.f, BTN_SECONDARY, mapIn, 13, &uiCache);
-            Ui::button(window, font, "Back to Menu [Esc]", 1370.f, 26.f, 190.f, 38.f, BTN_GHOST, mapIn, 13, &uiCache);
-
-            const char* wingTitles[4] = {
-                "WING 1: BLUEPRINT WING (ACT 1 - BINARY TREE)",
-                "WING 2: SORTED WING (ACT 2 - BST)",
-                "WING 3: ARCHITECT'S WING (ACT 3 - AVL TREE)",
-                "WING 4: HEAP FORTRESS (ACT 4 - MAX HEAP)"
+            static const char* actNames[4] = {
+                "ACT 1 : BLUEPRINT WING",
+                "ACT 2 : SORTED WING",
+                "ACT 3 : ARCHITECT'S WING",
+                "ACT 4 : HEAP FORTRESS"
             };
-            sf::Color wingCols[4] = {
-                Ui::cyan(), sf::Color(168, 85, 247), sf::Color(80, 160, 240), Ui::gold()
+            static const char* actShort[4] = {
+                "ACT 1", "ACT 2", "ACT 3", "ACT 4"
+            };
+            static const char* lvlNames[4][5] = {
+                { "The Blueprint", "Decode the Blueprint", "The Alarm Spreads", "Two Routes Meet", "Mirror the Vault" },
+                { "Search Heist", "Stash the Loot", "Steal and Collapse", "Range Raid", "The Lazy Architect" },
+                { "Read the Badges", "Single Rotations", "Double Rotations", "Auto Mode", "Order-Statistic Heist" },
+                { "Activate the Vault", "Repair Security Locks", "Extract the Greatest", "Race the Guards", "Final Vault Boss" }
+            };
+            static const char* lvlDescs[4][5] = {
+                {
+                    "Visit all rooms in traversal order to map the vault layout.",
+                    "Reconstruct the tree from Pre-order and In-order sequences.",
+                    "Calculate room heights and tree diameter before alarms trigger.",
+                    "Find the common ancestor of two rooms and trace the path.",
+                    "Invert the vault blueprint to expose the hidden exit."
+                },
+                {
+                    "Navigate the BST to locate the target key before time runs out.",
+                    "Insert new keys into the BST without breaking sort order.",
+                    "Delete targets using correct BST deletion cases.",
+                    "Report all rooms within the target range, prune the rest.",
+                    "Insert sorted keys into a degenerating BST chain. Boss level."
+                },
+                {
+                    "Identify all unbalanced nodes with violation badges.",
+                    "Apply LL or RR rotations to restore AVL balance.",
+                    "Execute LR and RL double rotations on zig-zag imbalances.",
+                    "Predict the rotation type before each insertion.",
+                    "Steal the k-th largest treasure in O(log n). Boss level."
+                },
+                {
+                    "Build a Max Heap bottom-up from an unsorted array.",
+                    "Sift down the sabotaged root to restore heap order.",
+                    "Extract treasures one by one from the heap root.",
+                    "Extract all treasures before the alarm capacity fills.",
+                    "Build heap then heap-sort all treasures. Final boss."
+                }
             };
 
-            for (int wIdx = 0; wIdx < 4; ++wIdx) {
-                int col = wIdx % 2, row = wIdx / 2;
-                float cx = (col == 0) ? 40.f : 820.f;
-                float cy = (row == 0) ? 115.f : 500.f;
-                float cw = 740.f, ch = 360.f;
+            // Outer screen border
+            sf::RectangleShape mapBorder({static_cast<float>(W) - 32.f, static_cast<float>(H) - 32.f});
+            mapBorder.setPosition({16.f, 16.f});
+            mapBorder.setFillColor(sf::Color::Transparent);
+            mapBorder.setOutlineColor(sf::Color(0, 255, 65, 90));
+            mapBorder.setOutlineThickness(1.f);
+            window.draw(mapBorder);
 
-                Ui::panel(window, cx, cy, cw, ch, wingCols[wIdx], 230, &uiCache);
-                Ui::textFit(window, font, wingTitles[wIdx], TXT_H2, wingCols[wIdx], cx + 20.f, cy + 14.f, cw - 40.f, true, &uiCache);
+            // Top bar: "VAULT HEIST //" left, active act center, "BACK TO MENU [ESC]" right
+            Ui::text(window, menuFont, "VAULT HEIST //", 28, mapBright, 44.f, 24.f, true, &uiCache);
 
-                for (int i = 0; i < 5; ++i) {
-                    int li = wIdx * 5 + i;
-                    float bx = cx + 20.f;
-                    float by = cy + 54.f + static_cast<float>(i) * 58.f;
-                    bool unl = levels[li].unlocked;
-                    if (campCachedUnl[li] != unl || campCachedStars[li] != levels[li].stars || campCachedLabels[li].empty()) {
-                        campCachedUnl[li] = unl;
-                        campCachedStars[li] = levels[li].stars;
-                        campCachedLabels[li] = unl ? levels[li].title : (levels[li].title + "  [LOCKED]");
-                    }
-                    int st = unl ? (wIdx == 3 ? BTN_PRIMARY : BTN_SECONDARY) : BTN_DISABLED;
-                    Ui::button(window, font, campCachedLabels[li], bx, by, cw - 40.f, 48.f, st, mapIn, 15, &uiCache);
-                    if (unl && levels[li].stars > 0) {
-                        Ui::stars(window, bx + cw - 110.f, by + 24.f, levels[li].stars, 3, 7.f, &uiCache);
-                    }
+            const char* curActTitle = actNames[selectedActIdx];
+            float actTitleW = Ui::textWidth(menuFont, curActTitle, 20, true);
+            float actTitleX = static_cast<float>(W) * 0.5f - actTitleW * 0.5f;
+            Ui::text(window, menuFont, curActTitle, 20, mapBright, actTitleX, 28.f, true, &uiCache);
+
+            float topLineLW = actTitleX - 380.f;
+            if (topLineLW < 20.f) topLineLW = 20.f;
+            sf::RectangleShape topLineL({topLineLW, 1.f});
+            topLineL.setPosition({350.f, 39.f});
+            topLineL.setFillColor(sf::Color(0, 255, 65, 130));
+            window.draw(topLineL);
+
+            float topLineRW = 1320.f - (actTitleX + actTitleW + 30.f);
+            if (topLineRW < 20.f) topLineRW = 20.f;
+            sf::RectangleShape topLineR({topLineRW, 1.f});
+            topLineR.setPosition({actTitleX + actTitleW + 30.f, 39.f});
+            topLineR.setFillColor(sf::Color(0, 255, 65, 130));
+            window.draw(topLineR);
+
+            bool backHov = Ui::inside(mapIn.mx, mapIn.my, 1350.f, 20.f, 220.f, 38.f);
+            Ui::text(window, menuFont, "BACK TO MENU [ESC]", 15, backHov ? sf::Color::White : mapBright,
+                     1370.f, 30.f, backHov, &uiCache);
+
+            // Left panel (~280px wide): 4 act buttons connected by dots/lines
+            sf::RectangleShape leftDiv({1.f, 670.f});
+            leftDiv.setPosition({300.f, 110.f});
+            leftDiv.setFillColor(sf::Color(0, 255, 65, 90));
+            window.draw(leftDiv);
+
+            for (int a = 0; a < 4; ++a) {
+                float bx = 44.f;
+                float by = 190.f + static_cast<float>(a) * 124.f;
+                float bw = 220.f, bh = 66.f;
+                bool active = (a == selectedActIdx);
+                bool hov = Ui::inside(mapIn.mx, mapIn.my, bx, by, bw, bh);
+
+                sf::RectangleShape actBox({bw, bh});
+                actBox.setPosition({bx, by});
+                actBox.setFillColor(active ? sf::Color(8, 28, 12, 225) : sf::Color(6, 14, 8, 200));
+                actBox.setOutlineColor((active || hov) ? mapBright : mapDim);
+                actBox.setOutlineThickness(active ? 2.f : 1.f);
+                window.draw(actBox);
+
+                std::string actLbl = active ? (std::string("> ") + actShort[a]) : std::string(actShort[a]);
+                Ui::textCenter(window, menuFont, actLbl, 20, (active || hov) ? mapBright : mapDim,
+                               bx + bw * 0.5f, by + 20.f, active, &uiCache);
+
+                if (a < 3) {
+                    float cx = bx + bw * 0.5f;
+                    sf::RectangleShape conn({2.f, 58.f});
+                    conn.setPosition({cx - 1.f, by + bh});
+                    conn.setFillColor(sf::Color(0, 255, 65, 130));
+                    window.draw(conn);
+
+                    sf::CircleShape dot(5.f);
+                    dot.setOrigin({5.f, 5.f});
+                    dot.setPosition({cx, by + bh + 29.f});
+                    dot.setFillColor(mapBright);
+                    window.draw(dot);
                 }
             }
 
-            Ui::button(window, font,
-                       demoAllUnlocked ? "[DEMO] Lock All Levels" : "[DEMO] Unlock All Levels",
-                       40.f, 862.f, 250.f, 32.f, BTN_GHOST, mapIn, 13, &uiCache);
+            // Center area: 5 level nodes for active act as circles connected by lines
+            const float nodeX[5] = { 440.f, 610.f, 780.f, 950.f, 1120.f };
+            const float nodeY[5] = { 360.f, 460.f, 295.f, 450.f, 305.f };
+            const float nodeR = 44.f;
+
+            for (int i = 0; i < 4; ++i) {
+                int liNext = selectedActIdx * 5 + (i + 1);
+                sf::Color lineCol = levels[liNext].unlocked ? mapBright : mapDim;
+                sf::Vertex seg[] = {
+                    sf::Vertex({nodeX[i], nodeY[i]}, lineCol),
+                    sf::Vertex({nodeX[i + 1], nodeY[i + 1]}, lineCol)
+                };
+                window.draw(seg, 2, sf::PrimitiveType::Lines);
+            }
+
+            for (int i = 0; i < 5; ++i) {
+                int li = selectedActIdx * 5 + i;
+                bool unl = levels[li].unlocked;
+                bool isSel = (i == selectedLevelInAct);
+                float dx = mapIn.mx - nodeX[i];
+                float dy = mapIn.my - nodeY[i];
+                bool hov = (dx * dx + dy * dy) <= (nodeR * nodeR);
+
+                sf::CircleShape nodeCirc(nodeR);
+                nodeCirc.setOrigin({nodeR, nodeR});
+                nodeCirc.setPosition({nodeX[i], nodeY[i]});
+                nodeCirc.setFillColor(unl ? sf::Color(8, 28, 12, 235) : sf::Color(6, 14, 8, 225));
+                nodeCirc.setOutlineColor((unl || isSel || hov) ? mapBright : mapDim);
+                nodeCirc.setOutlineThickness(isSel ? 3.f : (unl ? 2.f : 1.5f));
+                window.draw(nodeCirc);
+
+                if (unl) {
+                    char numBuf[4];
+                    numBuf[0] = static_cast<char>('1' + i);
+                    numBuf[1] = '\0';
+                    Ui::textCenter(window, menuFont, numBuf, 28, mapBright,
+                                   nodeX[i], nodeY[i] - 18.f, true, &uiCache);
+                    if (levels[li].stars > 0) {
+                        Ui::stars(window, nodeX[i], nodeY[i] + nodeR + 14.f, levels[li].stars, 3, 6.f, &uiCache);
+                    }
+                } else {
+                    sf::Color lockCol = (isSel || hov) ? mapBright : mapDim;
+                    // Padlock shackle
+                    sf::RectangleShape shackle({16.f, 13.f});
+                    shackle.setOrigin({8.f, 13.f});
+                    shackle.setPosition({nodeX[i], nodeY[i] - 2.f});
+                    shackle.setFillColor(sf::Color::Transparent);
+                    shackle.setOutlineColor(lockCol);
+                    shackle.setOutlineThickness(2.5f);
+                    window.draw(shackle);
+                    // Padlock body
+                    sf::RectangleShape lockBody({24.f, 18.f});
+                    lockBody.setOrigin({12.f, 0.f});
+                    lockBody.setPosition({nodeX[i], nodeY[i] - 2.f});
+                    lockBody.setFillColor(lockCol);
+                    window.draw(lockBody);
+                    // Keyhole
+                    sf::RectangleShape keyhole({4.f, 7.f});
+                    keyhole.setOrigin({2.f, 0.f});
+                    keyhole.setPosition({nodeX[i], nodeY[i] + 4.f});
+                    keyhole.setFillColor(sf::Color(6, 14, 8));
+                    window.draw(keyhole);
+                }
+            }
+
+            // Bottom info panel (~180px tall)
+            float infoX = 340.f, infoY = 600.f, infoW = 840.f, infoH = 180.f;
+            sf::RectangleShape infoPanel({infoW, infoH});
+            infoPanel.setPosition({infoX, infoY});
+            infoPanel.setFillColor(sf::Color(6, 14, 10, 225));
+            infoPanel.setOutlineColor(sf::Color(0, 255, 65, 140));
+            infoPanel.setOutlineThickness(1.f);
+            window.draw(infoPanel);
+
+            // Top-left green bar accent on info panel
+            sf::RectangleShape infoAccent({52.f, 4.f});
+            infoAccent.setPosition({infoX, infoY});
+            infoAccent.setFillColor(mapBright);
+            window.draw(infoAccent);
+
+            std::string missionTitle = "Mission " + std::to_string(selectedActIdx + 1) + "." +
+                                       std::to_string(selectedLevelInAct + 1) + " : " +
+                                       lvlNames[selectedActIdx][selectedLevelInAct];
+            Ui::text(window, menuFont, missionTitle, 22, mapBright, infoX + 28.f, infoY + 26.f, true, &uiCache);
+            Ui::textWrap(window, menuFont, lvlDescs[selectedActIdx][selectedLevelInAct], 15, mapSubtle,
+                         infoX + 28.f, infoY + 72.f, infoW - 56.f, false, &uiCache);
+
+            int selLi = selectedActIdx * 5 + selectedLevelInAct;
+            if (levels[selLi].unlocked) {
+                Ui::text(window, menuFont, "[Click node or press Enter to launch]", 13, mapBright,
+                         infoX + 28.f, infoY + infoH - 34.f, false, &uiCache);
+            } else {
+                Ui::text(window, menuFont, "[LOCKED - Clear previous level to unlock]", 13, mapDim,
+                         infoX + 28.f, infoY + infoH - 34.f, false, &uiCache);
+            }
+
+            // Bottom status bar
+            sf::RectangleShape bottomLine({static_cast<float>(W) - 32.f, 1.f});
+            bottomLine.setPosition({16.f, static_cast<float>(H) - 64.f});
+            bottomLine.setFillColor(mapBright);
+            window.draw(bottomLine);
+
+            sf::RectangleShape blSq({10.f, 10.f});
+            blSq.setPosition({32.f, static_cast<float>(H) - 44.f});
+            blSq.setFillColor(mapBright);
+            window.draw(blSq);
+
+            Ui::text(window, menuFont, "SELECT A ACT | NAVIGATE WITH ARROWS", 14, mapSubtle,
+                     58.f, static_cast<float>(H) - 48.f, false, &uiCache);
+
+            // Demo unlock button centered in bottom status bar
+            float demoBtnX = static_cast<float>(W) * 0.5f - 135.f;
+            float demoBtnY = static_cast<float>(H) - 54.f;
+            float demoBtnW = 270.f, demoBtnH = 34.f;
+            bool demoHov = Ui::inside(mapIn.mx, mapIn.my, demoBtnX, demoBtnY, demoBtnW, demoBtnH);
+            sf::RectangleShape demoBox({demoBtnW, demoBtnH});
+            demoBox.setPosition({demoBtnX, demoBtnY});
+            demoBox.setFillColor(demoHov ? sf::Color(12, 36, 18, 230) : sf::Color(6, 16, 10, 200));
+            demoBox.setOutlineColor(demoHov ? mapBright : sf::Color(0, 255, 65, 110));
+            demoBox.setOutlineThickness(1.f);
+            window.draw(demoBox);
+            Ui::textCenter(window, menuFont,
+                           demoAllUnlocked ? "Demo - Lock All Levels" : "Demo - Unlock All Levels",
+                           14, demoHov ? sf::Color::White : mapBright,
+                           static_cast<float>(W) * 0.5f, demoBtnY + 8.f, false, &uiCache);
+
+            // Right progress counter
+            int actCleared = 0;
+            for (int i = 0; i < 5; ++i) {
+                if (levels[selectedActIdx * 5 + i].stars > 0) ++actCleared;
+            }
+            std::string progStr = "PROGRESS: " + std::to_string(actCleared) + " / 5";
+            float progW = Ui::textWidth(menuFont, progStr, 14, false);
+            Ui::text(window, menuFont, progStr, 14, mapSubtle,
+                     static_cast<float>(W) - 36.f - progW, static_cast<float>(H) - 48.f, false, &uiCache);
 
             if (demoPromptOpen) {
                 sf::RectangleShape dim({static_cast<float>(W), static_cast<float>(H)});
@@ -5861,6 +6068,20 @@ int main(int argc, char** argv) {
                     else if (kp->code == sf::Keyboard::Key::Num4) { menuSelectedIdx = 3; activateMenuIdx(3); }
                     else if (kp->code == sf::Keyboard::Key::Num5) { menuSelectedIdx = 4; activateMenuIdx(4); }
                     else if (kp->code == sf::Keyboard::Key::Num6) { menuSelectedIdx = 5; activateMenuIdx(5); }
+                } else if (currentScreen == SCREEN_CAMPAIGN_MAP) {
+                    if (kp->code == sf::Keyboard::Key::Up || kp->code == sf::Keyboard::Key::W) {
+                        selectedActIdx = (selectedActIdx + 3) % 4;
+                    } else if (kp->code == sf::Keyboard::Key::Down || kp->code == sf::Keyboard::Key::S) {
+                        selectedActIdx = (selectedActIdx + 1) % 4;
+                    } else if (kp->code == sf::Keyboard::Key::Left || kp->code == sf::Keyboard::Key::A) {
+                        selectedLevelInAct = (selectedLevelInAct + 4) % 5;
+                    } else if (kp->code == sf::Keyboard::Key::Right || kp->code == sf::Keyboard::Key::D) {
+                        selectedLevelInAct = (selectedLevelInAct + 1) % 5;
+                    } else if (kp->code == sf::Keyboard::Key::Enter || kp->code == sf::Keyboard::Key::Space) {
+                        int li = selectedActIdx * 5 + selectedLevelInAct;
+                        if (levels[li].unlocked) startLevel(li);
+                        else toastQueue.push("Locked! Clear previous level first", TOAST_KIND_WARNING);
+                    }
                 } else if (currentScreen == SCREEN_LEADERBOARD) {
                     if (kp->code == sf::Keyboard::Key::E) {
                         endlessShowLastResult = false;
@@ -5997,28 +6218,37 @@ int main(int argc, char** argv) {
                         }
                         continue;
                     }
-                    if (Ui::inside(mx, my, 40.f, 862.f, 250.f, 32.f)) {
+                    if (Ui::inside(mx, my, static_cast<float>(W) * 0.5f - 135.f, static_cast<float>(H) - 54.f, 270.f, 34.f)) {
                         demoPromptOpen = true;
                         demoPasswordLen = 0;
                         demoPasswordBuf[0] = '\0';
                         continue;
                     }
-                    if (Ui::inside(mx, my, 1000.f, 26.f, 170.f, 38.f)) { currentScreen = SCREEN_ACT1_DEMO; demoCam.reset(); animCtrl.clearCurrent(); layoutDirty = true; }
-                    if (Ui::inside(mx, my, 1185.f, 26.f, 170.f, 38.f)) { currentScreen = SCREEN_ACT2_DEMO; demoCam.reset(); animCtrl.clearCurrent(); layoutDirty = true; }
-                    if (Ui::inside(mx, my, 1370.f, 26.f, 190.f, 38.f)) { currentScreen = SCREEN_MAIN_MENU; status = "Main Menu"; }
-
-                    for (int wIdx = 0; wIdx < 4; ++wIdx) {
-                        int col = wIdx % 2, row = wIdx / 2;
-                        float cx = (col == 0) ? 40.f : 820.f;
-                        float cy = (row == 0) ? 115.f : 500.f;
-                        for (int i = 0; i < 5; ++i) {
-                            int li = wIdx * 5 + i;
-                            float bx = cx + 20.f;
-                            float by = cy + 54.f + static_cast<float>(i) * 58.f;
-                            if (Ui::inside(mx, my, bx, by, 700.f, 48.f)) {
-                                if (levels[li].unlocked) startLevel(li);
-                                else toastQueue.push("Locked! Clear previous level first", TOAST_KIND_WARNING);
-                            }
+                    if (Ui::inside(mx, my, 1350.f, 20.f, 220.f, 38.f)) {
+                        currentScreen = SCREEN_MAIN_MENU;
+                        status = "Main Menu";
+                        continue;
+                    }
+                    for (int a = 0; a < 4; ++a) {
+                        float bx = 44.f;
+                        float by = 190.f + static_cast<float>(a) * 124.f;
+                        if (Ui::inside(mx, my, bx, by, 220.f, 66.f)) {
+                            selectedActIdx = a;
+                            break;
+                        }
+                    }
+                    const float nodeX[5] = { 440.f, 610.f, 780.f, 950.f, 1120.f };
+                    const float nodeY[5] = { 360.f, 460.f, 295.f, 450.f, 305.f };
+                    const float nodeR = 44.f;
+                    for (int i = 0; i < 5; ++i) {
+                        float dx = mx - nodeX[i];
+                        float dy = my - nodeY[i];
+                        if (dx * dx + dy * dy <= nodeR * nodeR) {
+                            selectedLevelInAct = i;
+                            int li = selectedActIdx * 5 + i;
+                            if (levels[li].unlocked) startLevel(li);
+                            else toastQueue.push("Locked! Clear previous level first", TOAST_KIND_WARNING);
+                            break;
                         }
                     }
                 }
