@@ -6319,7 +6319,7 @@ int main(int argc, char** argv) {
                     } else if (kp->code == sf::Keyboard::Key::Enter || kp->code == sf::Keyboard::Key::Space) {
                         int li = selectedActIdx * 5 + selectedLevelInAct;
                         if (levels[li].unlocked) startLevel(li);
-                        else toastQueue.push("Locked! Clear previous level first", TOAST_KIND_WARNING);
+                        else toastQueue.push("Locked! Clear previous level first", TOAST_KIND_INFO);
                     }
                 } else if (currentScreen == SCREEN_LEADERBOARD) {
                     if (kp->code == sf::Keyboard::Key::E) {
@@ -6486,7 +6486,7 @@ int main(int argc, char** argv) {
                             selectedLevelInAct = i;
                             int li = selectedActIdx * 5 + i;
                             if (levels[li].unlocked) startLevel(li);
-                            else toastQueue.push("Locked! Clear previous level first", TOAST_KIND_WARNING);
+                            else toastQueue.push("Locked! Clear previous level first", TOAST_KIND_INFO);
                             break;
                         }
                     }

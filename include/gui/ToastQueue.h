@@ -15,6 +15,7 @@ static const int TOAST_FADE_OUT = 2;
 static const int TOAST_KIND_SUCCESS = 0;  // green
 static const int TOAST_KIND_PENALTY = 1;  // red
 static const int TOAST_KIND_WARNING = 2;  // yellow
+static const int TOAST_KIND_INFO    = 3;  // dim green (informational)
 
 static const int MAX_TOASTS = 4;
 
