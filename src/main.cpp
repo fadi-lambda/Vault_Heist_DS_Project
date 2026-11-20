@@ -722,6 +722,29 @@ int main(int argc, char** argv) {
                       font.openFromFile("C:/Windows/Fonts/arial.ttf");
     if (!fontLoaded) std::cerr << "Warning: Arial Font could not be loaded!\n";
 
+    sf::Font menuMonoFont;
+    bool menuMonoLoaded = menuMonoFont.openFromFile("C:/Windows/Fonts/consola.ttf") ||
+                          menuMonoFont.openFromFile("C:/Windows/Fonts/cour.ttf") ||
+                          menuMonoFont.openFromFile("assets/fonts/consola.ttf") ||
+                          menuMonoFont.openFromFile("../../assets/fonts/consola.ttf");
+    const sf::Font& menuFont = menuMonoLoaded ? menuMonoFont : font;
+
+    sf::Texture vaultBgTex;
+    bool vaultBgLoaded = vaultBgTex.loadFromFile("assets/images/vault_door_bg.png") ||
+                         vaultBgTex.loadFromFile("../../assets/images/vault_door_bg.png");
+    if (vaultBgLoaded) vaultBgTex.setSmooth(true);
+    std::optional<sf::Sprite> vaultBgSprite;
+    if (vaultBgLoaded) {
+        vaultBgSprite.emplace(vaultBgTex);
+        sf::Vector2u texSz = vaultBgTex.getSize();
+        if (texSz.x > 0 && texSz.y > 0) {
+            vaultBgSprite->setScale({
+                static_cast<float>(W) / static_cast<float>(texSz.x),
+                static_cast<float>(H) / static_cast<float>(texSz.y)
+            });
+        }
+    }
+
     // Persistent score logs (Campaign scores.txt & Endless endless_leaderboard.txt)
     ScoreLog scoreLog;
     scoreLog.load("scores.txt");
@@ -808,6 +831,7 @@ int main(int argc, char** argv) {
 
     // Game state & shared Phase 7 foundation systems
     int currentScreen = SCREEN_SPLASH;
+    int menuSelectedIdx = 0;
     int currentLevelIdx = -1;
     std::string status = "Welcome to Vault Heist!";
     ScoringEngine scoring;
@@ -3233,7 +3257,9 @@ int main(int argc, char** argv) {
         };
 
         window.clear(Ui::bgNavy());
-        if (showBgGrid) Ui::grid(window, static_cast<float>(W), static_cast<float>(H), &uiCache);
+        if (showBgGrid && currentScreen != SCREEN_MAIN_MENU) {
+            Ui::grid(window, static_cast<float>(W), static_cast<float>(H), &uiCache);
+        }
 
         // 0. SPLASH SCREEN
         if (currentScreen == SCREEN_SPLASH) {
@@ -3296,34 +3322,90 @@ int main(int argc, char** argv) {
 
         // 1. MAIN MENU
         if (currentScreen == SCREEN_MAIN_MENU) {
-            drawTreeWatermark(window, 240.f, 450.f);
-            drawTreeWatermark(window, 1360.f, 450.f);
+            if (vaultBgSprite.has_value()) {
+                window.draw(*vaultBgSprite);
+            }
 
-            Ui::textCenter(window, font, "SECURE OPERATIONAL INTERFACE // V 3.0", TXT_HINT, Ui::cyan(), W * 0.5f, 32.f, true, &uiCache);
-            Ui::button(window, font, soundEnabled ? "SOUND: ON" : "SOUND: MUTED",
-                       W - 180.f, 24.f, 140.f, 36.f, BTN_GHOST, in, 13, &uiCache);
+            const sf::Color menuBright(0, 255, 65);
+            const sf::Color menuDim(74, 122, 74);
 
-            Ui::textCenter(window, font, "VAULT HEIST", 58, Ui::gold(), W * 0.5f, 110.f, true, &uiCache);
-            Ui::textCenter(window, font, "THE LIVING VAULT", 22, Ui::textBody(), W * 0.5f, 184.f, true, &uiCache);
+            // Thin green border rectangle around entire screen
+            sf::RectangleShape screenBorder({static_cast<float>(W) - 32.f, static_cast<float>(H) - 32.f});
+            screenBorder.setPosition({16.f, 16.f});
+            screenBorder.setFillColor(sf::Color::Transparent);
+            screenBorder.setOutlineColor(sf::Color(0, 255, 65, 110));
+            screenBorder.setOutlineThickness(1.f);
+            window.draw(screenBorder);
 
-            sf::RectangleShape& uLine = uiCache.rect;
-            uLine.setSize({280.f, 3.f});
-            uLine.setOrigin({0.f, 0.f});
-            uLine.setPosition({W * 0.5f - 140.f, 222.f});
-            uLine.setOutlineThickness(0.f);
-            uLine.setFillColor(Ui::cyan());
-            window.draw(uLine);
+            // Top-left title: "VAULT" (#00FF41) + "HEIST" (#FFFFFF)
+            float titleX = 100.f;
+            float titleY = 96.f;
+            float vaultAdv = Ui::textWidth(menuFont, "VAULT ", 64, true);
+            Ui::text(window, menuFont, "VAULT", 64, menuBright, titleX, titleY, true, &uiCache);
+            Ui::text(window, menuFont, "HEIST", 64, sf::Color::White, titleX + vaultAdv, titleY, true, &uiCache);
 
-            float btnW = 440.f, btnH = 50.f, btnX = W * 0.5f - btnW * 0.5f, startY = 248.f, gap = 60.f;
-            Ui::button(window, font, "CAMPAIGN // HEIST WINGS", btnX, startY + 0 * gap, btnW, btnH, BTN_PRIMARY, in, 17, &uiCache);
-            Ui::button(window, font, "ENDLESS SURVIVAL MODE",   btnX, startY + 1 * gap, btnW, btnH, BTN_PRIMARY, in, 17, &uiCache);
-            Ui::button(window, font, "SANDBOX SIMULATOR",       btnX, startY + 2 * gap, btnW, btnH, BTN_SECONDARY, in, 17, &uiCache);
-            Ui::button(window, font, "OPERATOR LEADERBOARD",    btnX, startY + 3 * gap, btnW, btnH, BTN_SECONDARY, in, 17, &uiCache);
-            Ui::button(window, font, "SYSTEM SETTINGS",         btnX, startY + 4 * gap, btnW, btnH, BTN_GHOST, in, 17, &uiCache);
-            Ui::button(window, font, "QUIT TERMINAL",           btnX, startY + 5 * gap, btnW, btnH, BTN_DANGER, in, 17, &uiCache);
+            // Subtle accent line under title
+            sf::RectangleShape titleLine({540.f, 1.5f});
+            titleLine.setPosition({titleX, titleY + 86.f});
+            titleLine.setFillColor(sf::Color(0, 255, 65, 160));
+            window.draw(titleLine);
 
-            Ui::textCenter(window, font, status, TXT_BODY, Ui::amber(), W * 0.5f, 650.f, false, &uiCache);
-            Ui::textCenter(window, font, "[Click buttons or press 1-6 / E for Endless]  |  [Esc] Quit", TXT_HINT, Ui::textMuted(), W * 0.5f, 700.f, false, &uiCache);
+            // Subtitle below title
+            Ui::text(window, menuFont, "BREAK IN . TAKE CONTROL . GET OUT", 15, menuDim, titleX, titleY + 100.f, false, &uiCache);
+
+            // Top-right corner: "SECURE SYSTEM ▪"
+            float ssW = Ui::textWidth(menuFont, "SECURE SYSTEM", 14, false);
+            Ui::text(window, menuFont, "SECURE SYSTEM", 14, sf::Color(0, 255, 65, 200),
+                     static_cast<float>(W) - 62.f - ssW, 34.f, false, &uiCache);
+            sf::RectangleShape topSq({10.f, 10.f});
+            topSq.setPosition({static_cast<float>(W) - 46.f, 37.f});
+            topSq.setFillColor(menuBright);
+            window.draw(topSq);
+
+            // Left-aligned menu list (x ~ 120px, starting y ~ 300px, spacing 70px)
+            const char* menuItems[6] = {
+                "1.  CAMPAIGN",
+                "2.  ENDLESS",
+                "3.  SANDBOX",
+                "4.  LEADERBOARD",
+                "5.  SETTINGS",
+                "6.  QUIT"
+            };
+            for (int i = 0; i < 6; ++i) {
+                float itemY = 300.f + static_cast<float>(i) * 70.f;
+                bool sel = (i == menuSelectedIdx);
+                if (sel) {
+                    Ui::text(window, menuFont, ">", 24, menuBright, 96.f, itemY, true, &uiCache);
+                    Ui::text(window, menuFont, menuItems[i], 24, menuBright, 128.f, itemY, true, &uiCache);
+                    sf::RectangleShape itemUnderline({360.f, 2.f});
+                    itemUnderline.setPosition({128.f, itemY + 36.f});
+                    itemUnderline.setFillColor(menuBright);
+                    window.draw(itemUnderline);
+                } else {
+                    Ui::text(window, menuFont, menuItems[i], 24, menuDim, 128.f, itemY, false, &uiCache);
+                }
+            }
+
+            // Bottom full-width thin green line (height 1px, #00FF41)
+            sf::RectangleShape bottomLine({static_cast<float>(W) - 32.f, 1.f});
+            bottomLine.setPosition({16.f, static_cast<float>(H) - 64.f});
+            bottomLine.setFillColor(menuBright);
+            window.draw(bottomLine);
+
+            // Bottom-left and bottom-right small green squares
+            sf::RectangleShape blSq({10.f, 10.f});
+            blSq.setPosition({32.f, static_cast<float>(H) - 44.f});
+            blSq.setFillColor(menuBright);
+            window.draw(blSq);
+
+            sf::RectangleShape brSq({10.f, 10.f});
+            brSq.setPosition({static_cast<float>(W) - 42.f, static_cast<float>(H) - 44.f});
+            brSq.setFillColor(menuBright);
+            window.draw(brSq);
+
+            // Bottom-left version & prompt text
+            Ui::text(window, menuFont, "v1.0.0 | PRESS ANY KEY TO CONTINUE", 14, sf::Color(110, 195, 110),
+                     58.f, static_cast<float>(H) - 48.f, false, &uiCache);
         }
 
         // 2. CAMPAIGN MAP
@@ -5489,6 +5571,18 @@ int main(int argc, char** argv) {
 
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>()) window.close();
+            if (const auto* mm = event->getIf<sf::Event::MouseMoved>()) {
+                if (currentScreen == SCREEN_MAIN_MENU) {
+                    sf::Vector2f mp = window.mapPixelToCoords(mm->position);
+                    for (int i = 0; i < 6; ++i) {
+                        float itemY = 300.f + static_cast<float>(i) * 70.f;
+                        if (Ui::inside(mp.x, mp.y, 90.f, itemY - 10.f, 430.f, 54.f)) {
+                            menuSelectedIdx = i;
+                            break;
+                        }
+                    }
+                }
+            }
             if (const auto* mr = event->getIf<sf::Event::MouseButtonReleased>()) {
                 if (mr->button == sf::Mouse::Button::Left && dragDrop.isDragging()) {
                     sf::Vector2f wRel = window.mapPixelToCoords(mr->position, levelCam.view);
@@ -5634,12 +5728,26 @@ int main(int argc, char** argv) {
                         }
                     }
                 } else if (currentScreen == SCREEN_MAIN_MENU) {
-                    if (kp->code == sf::Keyboard::Key::Num1) { currentScreen = SCREEN_CAMPAIGN_MAP; status = "Heist Wings Overview"; }
-                    if (kp->code == sf::Keyboard::Key::Num2 || kp->code == sf::Keyboard::Key::E) startEndlessMode(0u);
-                    if (kp->code == sf::Keyboard::Key::Num3) enterSandbox();
-                    if (kp->code == sf::Keyboard::Key::Num4) currentScreen = SCREEN_LEADERBOARD;
-                    if (kp->code == sf::Keyboard::Key::Num5) currentScreen = SCREEN_SETTINGS;
-                    if (kp->code == sf::Keyboard::Key::Num6) window.close();
+                    auto activateMenuIdx = [&](int idx) {
+                        if (idx == 0) { currentScreen = SCREEN_CAMPAIGN_MAP; status = "Heist Wings Overview"; }
+                        else if (idx == 1) startEndlessMode(0u);
+                        else if (idx == 2) enterSandbox();
+                        else if (idx == 3) currentScreen = SCREEN_LEADERBOARD;
+                        else if (idx == 4) currentScreen = SCREEN_SETTINGS;
+                        else if (idx == 5) window.close();
+                    };
+                    if (kp->code == sf::Keyboard::Key::Up || kp->code == sf::Keyboard::Key::W) {
+                        menuSelectedIdx = (menuSelectedIdx + 5) % 6;
+                    } else if (kp->code == sf::Keyboard::Key::Down || kp->code == sf::Keyboard::Key::S) {
+                        menuSelectedIdx = (menuSelectedIdx + 1) % 6;
+                    } else if (kp->code == sf::Keyboard::Key::Enter || kp->code == sf::Keyboard::Key::Space) {
+                        activateMenuIdx(menuSelectedIdx);
+                    } else if (kp->code == sf::Keyboard::Key::Num1) { menuSelectedIdx = 0; activateMenuIdx(0); }
+                    else if (kp->code == sf::Keyboard::Key::Num2 || kp->code == sf::Keyboard::Key::E) { menuSelectedIdx = 1; activateMenuIdx(1); }
+                    else if (kp->code == sf::Keyboard::Key::Num3) { menuSelectedIdx = 2; activateMenuIdx(2); }
+                    else if (kp->code == sf::Keyboard::Key::Num4) { menuSelectedIdx = 3; activateMenuIdx(3); }
+                    else if (kp->code == sf::Keyboard::Key::Num5) { menuSelectedIdx = 4; activateMenuIdx(4); }
+                    else if (kp->code == sf::Keyboard::Key::Num6) { menuSelectedIdx = 5; activateMenuIdx(5); }
                 } else if (currentScreen == SCREEN_LEADERBOARD) {
                     if (kp->code == sf::Keyboard::Key::E) {
                         endlessShowLastResult = false;
@@ -5740,21 +5848,26 @@ int main(int argc, char** argv) {
                     currentScreen = SCREEN_MAIN_MENU;
                 }
                 else if (currentScreen == SCREEN_MAIN_MENU) {
-                    if (Ui::inside(mx, my, W - 180.f, 24.f, 140.f, 36.f)) soundEnabled = !soundEnabled;
-                    float btnW = 440.f, btnH = 50.f, btnX = W * 0.5f - btnW * 0.5f, startY = 248.f, gap = 60.f;
-                    if (Ui::inside(mx, my, btnX, startY + 0 * gap, btnW, btnH)) {
-                        currentScreen = SCREEN_CAMPAIGN_MAP;
-                        status = "Heist Wings Overview";
-                    } else if (Ui::inside(mx, my, btnX, startY + 1 * gap, btnW, btnH)) {
-                        startEndlessMode(0u);
-                    } else if (Ui::inside(mx, my, btnX, startY + 2 * gap, btnW, btnH)) {
-                        enterSandbox();
-                    } else if (Ui::inside(mx, my, btnX, startY + 3 * gap, btnW, btnH)) {
-                        currentScreen = SCREEN_LEADERBOARD;
-                    } else if (Ui::inside(mx, my, btnX, startY + 4 * gap, btnW, btnH)) {
-                        currentScreen = SCREEN_SETTINGS;
-                    } else if (Ui::inside(mx, my, btnX, startY + 5 * gap, btnW, btnH)) {
-                        window.close();
+                    for (int i = 0; i < 6; ++i) {
+                        float itemY = 300.f + static_cast<float>(i) * 70.f;
+                        if (Ui::inside(mx, my, 90.f, itemY - 10.f, 430.f, 54.f)) {
+                            menuSelectedIdx = i;
+                            if (i == 0) {
+                                currentScreen = SCREEN_CAMPAIGN_MAP;
+                                status = "Heist Wings Overview";
+                            } else if (i == 1) {
+                                startEndlessMode(0u);
+                            } else if (i == 2) {
+                                enterSandbox();
+                            } else if (i == 3) {
+                                currentScreen = SCREEN_LEADERBOARD;
+                            } else if (i == 4) {
+                                currentScreen = SCREEN_SETTINGS;
+                            } else if (i == 5) {
+                                window.close();
+                            }
+                            break;
+                        }
                     }
                 }
                 else if (currentScreen == SCREEN_CAMPAIGN_MAP) {
