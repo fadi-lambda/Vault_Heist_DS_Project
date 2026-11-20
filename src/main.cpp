@@ -725,12 +725,11 @@ int main(int argc, char** argv) {
     if (!fontLoaded) std::cerr << "Warning: Arial Font could not be loaded!\n";
 
     sf::Font menuMonoFont;
-    bool menuMonoLoaded = menuMonoFont.openFromFile("C:/Windows/Fonts/consola.ttf") ||
-                          menuMonoFont.openFromFile("C:/Windows/Fonts/cour.ttf") ||
-                          menuMonoFont.openFromFile("assets/fonts/consola.ttf") ||
-                          menuMonoFont.openFromFile("../../assets/fonts/consola.ttf") ||
-                          menuMonoFont.openFromFile("out/build/x64-debug/assets/fonts/consola.ttf") ||
-                          menuMonoFont.openFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/fonts/consola.ttf");
+    bool menuMonoLoaded = menuMonoFont.openFromFile("assets/fonts/Orbitron-Medium.ttf") ||
+                          menuMonoFont.openFromFile("../../assets/fonts/Orbitron-Medium.ttf") ||
+                          menuMonoFont.openFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/fonts/Orbitron-Medium.ttf") ||
+                          menuMonoFont.openFromFile("C:/Windows/Fonts/consola.ttf") ||
+                          menuMonoFont.openFromFile("C:/Windows/Fonts/cour.ttf");
     const sf::Font& menuFont = menuMonoLoaded ? menuMonoFont : font;
 
     sf::Texture vaultBgTex;
@@ -847,6 +846,7 @@ int main(int argc, char** argv) {
     DragDropController dragDrop;
     int alarmSteps = 0, score = SCORE_BASE;
     float splashTimer = 0.0f;
+    float uiAnimTimer = 0.0f;
     float dialAngle = 0.0f;
     sf::Clock deltaClock;
 
@@ -3302,7 +3302,8 @@ int main(int argc, char** argv) {
 
         window.clear(Ui::bgNavy());
         if (showBgGrid && currentScreen != SCREEN_MAIN_MENU &&
-            currentScreen != SCREEN_SPLASH && currentScreen != SCREEN_CAMPAIGN_MAP) {
+            currentScreen != SCREEN_SPLASH && currentScreen != SCREEN_CAMPAIGN_MAP &&
+            currentScreen != SCREEN_SETTINGS && currentScreen != SCREEN_LEADERBOARD) {
             Ui::grid(window, static_cast<float>(W), static_cast<float>(H), &uiCache);
         }
 
@@ -3709,39 +3710,77 @@ int main(int argc, char** argv) {
 
             if (demoPromptOpen) {
                 sf::RectangleShape dim({static_cast<float>(W), static_cast<float>(H)});
-                dim.setFillColor(sf::Color(5, 10, 20, 185));
+                dim.setFillColor(sf::Color(4, 10, 6, 195));
                 window.draw(dim);
 
                 float mw = 460.f, mh = 210.f;
                 float mx0 = (static_cast<float>(W) - mw) * 0.5f;
                 float my0 = (static_cast<float>(H) - mh) * 0.5f;
-                Ui::panel(window, mx0, my0, mw, mh, Ui::gold(), 248, &uiCache);
-                Ui::textCenter(window, font,
-                               demoAllUnlocked ? "LOCK ALL LEVELS (DEMO)" : "UNLOCK ALL LEVELS (DEMO)",
-                               TXT_H2, Ui::gold(), mx0 + mw * 0.5f, my0 + 20.f, true, &uiCache);
-                Ui::textCenter(window, font, "Enter demo password:", TXT_BODY, Ui::textBody(),
-                               mx0 + mw * 0.5f, my0 + 56.f, false, &uiCache);
 
-                float ix = mx0 + 36.f, iy = my0 + 88.f, iw = mw - 72.f, ih = 42.f;
+                sf::RectangleShape modalBox({mw, mh});
+                modalBox.setPosition({mx0, my0});
+                modalBox.setFillColor(sf::Color(5, 14, 8, 244));
+                modalBox.setOutlineColor(mapBright);
+                modalBox.setOutlineThickness(2.f);
+                window.draw(modalBox);
+
+                // Corner accents
+                const float cLen = 14.f, cThk = 3.f;
+                sf::RectangleShape c1({cLen, cThk}); c1.setPosition({mx0 - 1.f, my0 - 1.f}); c1.setFillColor(mapBright); window.draw(c1);
+                sf::RectangleShape c2({cThk, cLen}); c2.setPosition({mx0 - 1.f, my0 - 1.f}); c2.setFillColor(mapBright); window.draw(c2);
+                sf::RectangleShape c3({cLen, cThk}); c3.setPosition({mx0 + mw - cLen + 1.f, my0 - 1.f}); c3.setFillColor(mapBright); window.draw(c3);
+                sf::RectangleShape c4({cThk, cLen}); c4.setPosition({mx0 + mw - cThk + 1.f, my0 - 1.f}); c4.setFillColor(mapBright); window.draw(c4);
+                sf::RectangleShape c5({cLen, cThk}); c5.setPosition({mx0 - 1.f, my0 + mh - cThk + 1.f}); c5.setFillColor(mapBright); window.draw(c5);
+                sf::RectangleShape c6({cThk, cLen}); c6.setPosition({mx0 - 1.f, my0 + mh - cLen + 1.f}); c6.setFillColor(mapBright); window.draw(c6);
+                sf::RectangleShape c7({cLen, cThk}); c7.setPosition({mx0 + mw - cLen + 1.f, my0 + mh - cThk + 1.f}); c7.setFillColor(mapBright); window.draw(c7);
+                sf::RectangleShape c8({cThk, cLen}); c8.setPosition({mx0 + mw - cThk + 1.f, my0 + mh - cLen + 1.f}); c8.setFillColor(mapBright); window.draw(c8);
+
+                Ui::textCenter(window, menuFont,
+                               demoAllUnlocked ? "LOCK ALL LEVELS (DEMO)" : "UNLOCK ALL LEVELS (DEMO)",
+                               20, mapBright, mx0 + mw * 0.5f, my0 + 18.f, true, &uiCache);
+                Ui::textCenter(window, menuFont, "Enter demo password.", 14, mapSubtle,
+                               mx0 + mw * 0.5f, my0 + 52.f, false, &uiCache);
+
+                float ix = mx0 + 36.f, iy = my0 + 86.f, iw = mw - 72.f, ih = 42.f;
                 sf::RectangleShape inputBox({iw, ih});
                 inputBox.setPosition({ix, iy});
-                inputBox.setFillColor(Ui::bgNavy());
-                inputBox.setOutlineColor(Ui::cyan());
+                inputBox.setFillColor(sf::Color(3, 10, 5));
+                inputBox.setOutlineColor(mapBright);
                 inputBox.setOutlineThickness(1.5f);
                 window.draw(inputBox);
 
                 char maskBuf[34];
                 for (int k = 0; k < demoPasswordLen; ++k) maskBuf[k] = '*';
-                if (demoPasswordLen < 32) {
+                bool showCursor = (static_cast<int>(uiAnimTimer * 2.5f) % 2 == 0);
+                if (demoPasswordLen < 32 && showCursor) {
                     maskBuf[demoPasswordLen] = '_';
                     maskBuf[demoPasswordLen + 1] = '\0';
                 } else {
                     maskBuf[demoPasswordLen] = '\0';
                 }
-                Ui::text(window, font, maskBuf, 18, sf::Color::White, ix + 12.f, iy + 9.f, false, &uiCache);
+                Ui::text(window, menuFont, maskBuf, 18, mapBright, ix + 14.f, iy + 9.f, false, &uiCache);
 
-                Ui::button(window, font, "Submit [Enter]", mx0 + 36.f, my0 + 148.f, 180.f, 38.f, BTN_PRIMARY, in, 14, &uiCache);
-                Ui::button(window, font, "Cancel [Esc]", mx0 + mw - 216.f, my0 + 148.f, 180.f, 38.f, BTN_GHOST, in, 14, &uiCache);
+                bool subHov = Ui::inside(in.mx, in.my, mx0 + 36.f, my0 + 148.f, 180.f, 38.f);
+                sf::RectangleShape subBox({180.f, 38.f});
+                subBox.setPosition({mx0 + 36.f, my0 + 148.f});
+                subBox.setFillColor(subHov ? sf::Color(0, 255, 65) : sf::Color(10, 72, 26));
+                subBox.setOutlineColor(mapBright);
+                subBox.setOutlineThickness(2.f);
+                window.draw(subBox);
+                Ui::textCenter(window, menuFont, "Submit [Enter]", 14,
+                               subHov ? sf::Color(4, 14, 6) : sf::Color::White,
+                               mx0 + 36.f + 90.f, my0 + 158.f, true, &uiCache);
+
+                bool canHov = Ui::inside(in.mx, in.my, mx0 + mw - 216.f, my0 + 148.f, 180.f, 38.f);
+                sf::RectangleShape canBox({180.f, 38.f});
+                canBox.setPosition({mx0 + mw - 216.f, my0 + 148.f});
+                canBox.setFillColor(canHov ? sf::Color(14, 38, 20) : sf::Color(5, 16, 8));
+                canBox.setOutlineColor(canHov ? mapBright : mapDim);
+                canBox.setOutlineThickness(1.5f);
+                window.draw(canBox);
+                Ui::textCenter(window, menuFont, "Cancel [Esc]", 14,
+                               canHov ? sf::Color::White : mapSubtle,
+                               mx0 + mw - 216.f + 90.f, my0 + 158.f, false, &uiCache);
             }
         }
 
@@ -4473,23 +4512,56 @@ int main(int argc, char** argv) {
 
         // 8. REAL PERSISTENT LEADERBOARD (Item 3)
         if (currentScreen == SCREEN_LEADERBOARD) {
-            Ui::screenHeader(window, font, "OPERATOR LEADERBOARD",
-                             "Recorded campaign heist scores loaded from scores.txt", &uiCache);
+            if (vaultBgSprite.has_value()) {
+                window.draw(*vaultBgSprite);
+            }
+            const sf::Color lbBright(0, 255, 65);
+            const sf::Color lbDim(74, 122, 74);
+            const sf::Color lbSubtle(120, 195, 120);
+
+            Ui::text(window, menuFont, "OPERATOR LEADERBOARD", 34, lbBright, 50.f, 24.f, true, &uiCache);
+            Ui::text(window, menuFont, "Recorded campaign heist scores loaded from scores.txt", 14, lbSubtle, 50.f, 70.f, false, &uiCache);
+            sf::RectangleShape hdrLine({1150.f, 1.f});
+            hdrLine.setPosition({50.f, 102.f});
+            hdrLine.setFillColor(sf::Color(0, 255, 65, 140));
+            window.draw(hdrLine);
+
             float mw = 920.f, mh = 600.f;
-            float mx0 = W * 0.5f - mw * 0.5f, my0 = 130.f;
-            Ui::panel(window, mx0, my0, mw, mh, Ui::gold(), 240, &uiCache);
+            float mx0 = static_cast<float>(W) * 0.5f - mw * 0.5f, my0 = 130.f;
+            sf::RectangleShape lbPanel({mw, mh});
+            lbPanel.setPosition({mx0, my0});
+            lbPanel.setFillColor(sf::Color(6, 14, 10, 228));
+            lbPanel.setOutlineColor(lbBright);
+            lbPanel.setOutlineThickness(1.5f);
+            window.draw(lbPanel);
+
+            // Corner accents
+            const float cLen = 14.f, cThk = 3.f;
+            sf::RectangleShape lc1({cLen, cThk}); lc1.setPosition({mx0 - 1.f, my0 - 1.f}); lc1.setFillColor(lbBright); window.draw(lc1);
+            sf::RectangleShape lc2({cThk, cLen}); lc2.setPosition({mx0 - 1.f, my0 - 1.f}); lc2.setFillColor(lbBright); window.draw(lc2);
+            sf::RectangleShape lc3({cLen, cThk}); lc3.setPosition({mx0 + mw - cLen + 1.f, my0 - 1.f}); lc3.setFillColor(lbBright); window.draw(lc3);
+            sf::RectangleShape lc4({cThk, cLen}); lc4.setPosition({mx0 + mw - cThk + 1.f, my0 - 1.f}); lc4.setFillColor(lbBright); window.draw(lc4);
+            sf::RectangleShape lc5({cLen, cThk}); lc5.setPosition({mx0 - 1.f, my0 + mh - cThk + 1.f}); lc5.setFillColor(lbBright); window.draw(lc5);
+            sf::RectangleShape lc6({cThk, cLen}); lc6.setPosition({mx0 - 1.f, my0 + mh - cLen + 1.f}); lc6.setFillColor(lbBright); window.draw(lc6);
+            sf::RectangleShape lc7({cLen, cThk}); lc7.setPosition({mx0 + mw - cLen + 1.f, my0 + mh - cThk + 1.f}); lc7.setFillColor(lbBright); window.draw(lc7);
+            sf::RectangleShape lc8({cThk, cLen}); lc8.setPosition({mx0 + mw - cThk + 1.f, my0 + mh - cLen + 1.f}); lc8.setFillColor(lbBright); window.draw(lc8);
 
             if (scoreLog.getCount() == 0) {
-                Ui::textCenter(window, font, "No heists recorded yet", TXT_H1, Ui::textBody(),
-                               W * 0.5f, my0 + 200.f, true, &uiCache);
-                Ui::textCenter(window, font, "Complete any campaign level to record your score here.",
-                               TXT_BODY, Ui::textMuted(), W * 0.5f, my0 + 255.f, false, &uiCache);
+                Ui::textCenter(window, menuFont, "No heists recorded yet", 24, lbBright,
+                               static_cast<float>(W) * 0.5f, my0 + 200.f, true, &uiCache);
+                Ui::textCenter(window, menuFont, "Complete any campaign level to record your score here.",
+                               15, lbSubtle, static_cast<float>(W) * 0.5f, my0 + 255.f, false, &uiCache);
             } else {
-                Ui::text(window, font, "RANK",  TXT_HINT, Ui::cyan(), mx0 + 36.f,  my0 + 24.f, true, &uiCache);
-                Ui::text(window, font, "LEVEL", TXT_HINT, Ui::cyan(), mx0 + 120.f, my0 + 24.f, true, &uiCache);
-                Ui::text(window, font, "SCORE", TXT_HINT, Ui::cyan(), mx0 + 520.f, my0 + 24.f, true, &uiCache);
-                Ui::text(window, font, "ALARM", TXT_HINT, Ui::cyan(), mx0 + 660.f, my0 + 24.f, true, &uiCache);
-                Ui::text(window, font, "STARS", TXT_HINT, Ui::cyan(), mx0 + 785.f, my0 + 24.f, true, &uiCache);
+                Ui::text(window, menuFont, "RANK",  14, lbBright, mx0 + 36.f,  my0 + 24.f, true, &uiCache);
+                Ui::text(window, menuFont, "LEVEL", 14, lbBright, mx0 + 120.f, my0 + 24.f, true, &uiCache);
+                Ui::text(window, menuFont, "SCORE", 14, lbBright, mx0 + 520.f, my0 + 24.f, true, &uiCache);
+                Ui::text(window, menuFont, "ALARM", 14, lbBright, mx0 + 660.f, my0 + 24.f, true, &uiCache);
+                Ui::text(window, menuFont, "STARS", 14, lbBright, mx0 + 785.f, my0 + 24.f, true, &uiCache);
+
+                sf::RectangleShape thLine({mw - 48.f, 1.f});
+                thLine.setPosition({mx0 + 24.f, my0 + 52.f});
+                thLine.setFillColor(sf::Color(0, 255, 65, 90));
+                window.draw(thLine);
 
                 int rows = minInt(10, scoreLog.getCount());
                 if (cachedLbCount != scoreLog.getCount()) {
@@ -4507,26 +4579,80 @@ int main(int argc, char** argv) {
                     int idx = scoreLog.topIndex(r);
                     if (idx < 0) break;
                     const ScoreEntry& e = scoreLog.get(idx);
-                    float ry = my0 + 62.f + static_cast<float>(r) * 44.f;
-                    Ui::text(window, font, cachedLbRank[r], TXT_BODY, Ui::gold(), mx0 + 36.f, ry, true, &uiCache);
-                    Ui::textFit(window, font, e.levelTitle, TXT_BODY, Ui::textBody(), mx0 + 120.f, ry, 380.f, false, &uiCache);
-                    Ui::text(window, font, cachedLbScore[r], TXT_BODY, Ui::green(), mx0 + 520.f, ry, false, &uiCache);
-                    Ui::text(window, font, cachedLbAlarm[r], TXT_BODY, Ui::textBody(), mx0 + 675.f, ry, false, &uiCache);
+                    float ry = my0 + 68.f + static_cast<float>(r) * 46.f;
+                    Ui::text(window, menuFont, cachedLbRank[r], 15, lbBright, mx0 + 36.f, ry, true, &uiCache);
+                    Ui::textFit(window, menuFont, e.levelTitle, 15, sf::Color(220, 240, 225), mx0 + 120.f, ry, 380.f, false, &uiCache);
+                    Ui::text(window, menuFont, cachedLbScore[r], 15, lbBright, mx0 + 520.f, ry, false, &uiCache);
+                    Ui::text(window, menuFont, cachedLbAlarm[r], 15, sf::Color(220, 240, 225), mx0 + 675.f, ry, false, &uiCache);
                     Ui::stars(window, mx0 + 820.f, ry + 9.f, e.stars, 3, 7.f, &uiCache);
+
+                    if (r < rows - 1) {
+                        sf::RectangleShape rowLine({mw - 48.f, 1.f});
+                        rowLine.setPosition({mx0 + 24.f, ry + 34.f});
+                        rowLine.setFillColor(sf::Color(0, 255, 65, 35));
+                        window.draw(rowLine);
+                    }
                 }
             }
 
-            Ui::button(window, font, "Endless Leaderboard [E]",  W * 0.5f - 310.f, 770.f, 290.f, 48.f, BTN_SECONDARY, in, 15, &uiCache);
-            Ui::button(window, font, "Return to Main Menu [Esc]", W * 0.5f + 20.f,  770.f, 290.f, 48.f, BTN_PRIMARY,   in, 15, &uiCache);
+            bool endHov = Ui::inside(in.mx, in.my, static_cast<float>(W) * 0.5f - 310.f, 770.f, 290.f, 48.f);
+            sf::RectangleShape endBtn({290.f, 48.f});
+            endBtn.setPosition({static_cast<float>(W) * 0.5f - 310.f, 770.f});
+            endBtn.setFillColor(endHov ? sf::Color(10, 40, 18, 235) : sf::Color(6, 16, 10, 225));
+            endBtn.setOutlineColor(endHov ? lbBright : lbDim);
+            endBtn.setOutlineThickness(endHov ? 2.f : 1.5f);
+            window.draw(endBtn);
+            Ui::textCenter(window, menuFont, "Endless Leaderboard [E]", 15,
+                           endHov ? sf::Color::White : lbBright,
+                           static_cast<float>(W) * 0.5f - 165.f, 784.f, endHov, &uiCache);
+
+            bool retHov = Ui::inside(in.mx, in.my, static_cast<float>(W) * 0.5f + 20.f, 770.f, 290.f, 48.f);
+            sf::RectangleShape retBtn({290.f, 48.f});
+            retBtn.setPosition({static_cast<float>(W) * 0.5f + 20.f, 770.f});
+            retBtn.setFillColor(retHov ? sf::Color(12, 54, 22, 240) : sf::Color(8, 28, 14, 230));
+            retBtn.setOutlineColor(lbBright);
+            retBtn.setOutlineThickness(2.f);
+            window.draw(retBtn);
+            Ui::textCenter(window, menuFont, "Return to Main Menu [ESC]", 15,
+                           retHov ? lbBright : sf::Color::White,
+                           static_cast<float>(W) * 0.5f + 165.f, 784.f, true, &uiCache);
         }
 
         // 9. REAL WORKING SETTINGS (Item 4)
         if (currentScreen == SCREEN_SETTINGS) {
-            Ui::screenHeader(window, font, "SYSTEM SETTINGS",
-                             "Every setting below takes effect immediately across the interface.", &uiCache);
+            if (vaultBgSprite.has_value()) {
+                window.draw(*vaultBgSprite);
+            }
+            const sf::Color setBright(0, 255, 65);
+            const sf::Color setDim(74, 122, 74);
+            const sf::Color setSubtle(120, 195, 120);
+
+            Ui::text(window, menuFont, "SYSTEM SETTINGS", 34, setBright, 50.f, 24.f, true, &uiCache);
+            Ui::text(window, menuFont, "Every setting below takes effect immediately across the interface.", 14, setSubtle, 50.f, 70.f, false, &uiCache);
+            sf::RectangleShape hdrLine({1150.f, 1.f});
+            hdrLine.setPosition({50.f, 102.f});
+            hdrLine.setFillColor(sf::Color(0, 255, 65, 140));
+            window.draw(hdrLine);
+
             float mw = 760.f, mh = 560.f;
-            float sx0 = W * 0.5f - mw * 0.5f, sy0 = 140.f;
-            Ui::panel(window, sx0, sy0, mw, mh, Ui::cyan(), 240, &uiCache);
+            float sx0 = static_cast<float>(W) * 0.5f - mw * 0.5f, sy0 = 140.f;
+            sf::RectangleShape setPanel({mw, mh});
+            setPanel.setPosition({sx0, sy0});
+            setPanel.setFillColor(sf::Color(6, 14, 10, 228));
+            setPanel.setOutlineColor(setBright);
+            setPanel.setOutlineThickness(1.5f);
+            window.draw(setPanel);
+
+            // Corner accents
+            const float cLen = 14.f, cThk = 3.f;
+            sf::RectangleShape sc1({cLen, cThk}); sc1.setPosition({sx0 - 1.f, sy0 - 1.f}); sc1.setFillColor(setBright); window.draw(sc1);
+            sf::RectangleShape sc2({cThk, cLen}); sc2.setPosition({sx0 - 1.f, sy0 - 1.f}); sc2.setFillColor(setBright); window.draw(sc2);
+            sf::RectangleShape sc3({cLen, cThk}); sc3.setPosition({sx0 + mw - cLen + 1.f, sy0 - 1.f}); sc3.setFillColor(setBright); window.draw(sc3);
+            sf::RectangleShape sc4({cThk, cLen}); sc4.setPosition({sx0 + mw - cThk + 1.f, sy0 - 1.f}); sc4.setFillColor(setBright); window.draw(sc4);
+            sf::RectangleShape sc5({cLen, cThk}); sc5.setPosition({sx0 - 1.f, sy0 + mh - cThk + 1.f}); sc5.setFillColor(setBright); window.draw(sc5);
+            sf::RectangleShape sc6({cThk, cLen}); sc6.setPosition({sx0 - 1.f, sy0 + mh - cLen + 1.f}); sc6.setFillColor(setBright); window.draw(sc6);
+            sf::RectangleShape sc7({cLen, cThk}); sc7.setPosition({sx0 + mw - cLen + 1.f, sy0 + mh - cThk + 1.f}); sc7.setFillColor(setBright); window.draw(sc7);
+            sf::RectangleShape sc8({cThk, cLen}); sc8.setPosition({sx0 + mw - cThk + 1.f, sy0 + mh - cLen + 1.f}); sc8.setFillColor(setBright); window.draw(sc8);
 
             if (cachedSetFpsVal != targetFps) {
                 cachedSetFpsVal = targetFps;
@@ -4534,22 +4660,40 @@ int main(int argc, char** argv) {
                 cachedSetFpsBtnStr = "Frame Rate Cap: " + std::to_string(targetFps) + " FPS (Click to toggle 60/120)";
             }
 
-            Ui::text(window, font, cachedSetResStr, TXT_BODY, Ui::textBody(), sx0 + 50.f, sy0 + 36.f, true, &uiCache);
-            Ui::text(window, font, cachedSetFpsLimStr, TXT_BODY, Ui::textBody(), sx0 + 50.f, sy0 + 68.f, true, &uiCache);
+            float bw = 560.f, bh = 52.f, bx = static_cast<float>(W) * 0.5f - bw * 0.5f;
+            Ui::text(window, menuFont, cachedSetResStr, 15, setSubtle, bx, sy0 + 36.f, false, &uiCache);
+            Ui::text(window, menuFont, cachedSetFpsLimStr, 15, setSubtle, bx, sy0 + 68.f, false, &uiCache);
 
-            float bw = 560.f, bh = 52.f, bx = W * 0.5f - bw * 0.5f;
-            Ui::button(window, font, soundEnabled ? "Audio FX Feedback: ENABLED" : "Audio FX Feedback: MUTED",
-                       bx, sy0 + 125.f, bw, bh, soundEnabled ? BTN_SECONDARY : BTN_GHOST, in, 15, &uiCache);
-            Ui::button(window, font, showNodeBadges ? "Node Badges (h / BF / sz): VISIBLE" : "Node Badges (h / BF / sz): HIDDEN",
-                       bx, sy0 + 195.f, bw, bh, showNodeBadges ? BTN_SECONDARY : BTN_GHOST, in, 15, &uiCache);
-            Ui::button(window, font, showBgGrid ? "Blueprint Grid Overlay: VISIBLE" : "Blueprint Grid Overlay: HIDDEN",
-                       bx, sy0 + 265.f, bw, bh, showBgGrid ? BTN_SECONDARY : BTN_GHOST, in, 15, &uiCache);
-            Ui::button(window, font, autoPlayEvents ? "Operation Animation Mode: AUTO-PLAY" : "Operation Animation Mode: STEP-BY-STEP",
-                       bx, sy0 + 335.f, bw, bh, autoPlayEvents ? BTN_SECONDARY : BTN_GHOST, in, 15, &uiCache);
-            Ui::button(window, font, cachedSetFpsBtnStr,
-                       bx, sy0 + 405.f, bw, bh, BTN_SECONDARY, in, 15, &uiCache);
+            auto drawSettingToggle = [&](const std::string& label, float yOff, bool active) {
+                float by = sy0 + yOff;
+                bool hov = Ui::inside(in.mx, in.my, bx, by, bw, bh);
+                sf::RectangleShape box({bw, bh});
+                box.setPosition({bx, by});
+                box.setFillColor(hov ? sf::Color(10, 38, 18, 235) : sf::Color(5, 16, 9, 220));
+                box.setOutlineColor(hov ? setBright : (active ? sf::Color(0, 255, 65, 160) : setDim));
+                box.setOutlineThickness(hov ? 2.f : 1.f);
+                window.draw(box);
+                Ui::textCenter(window, menuFont, label, 15,
+                               hov ? setBright : (active ? sf::Color(220, 245, 225) : setSubtle),
+                               bx + bw * 0.5f, by + 16.f, hov, &uiCache);
+            };
 
-            Ui::button(window, font, "Return to Main Menu [Esc]", W * 0.5f - 150.f, 740.f, 300.f, 48.f, BTN_PRIMARY, in, 15, &uiCache);
+            drawSettingToggle(soundEnabled ? "Audio FX Feedback: ENABLED" : "Audio FX Feedback: MUTED", 125.f, soundEnabled);
+            drawSettingToggle(showNodeBadges ? "Node Badges (h / BF / sz): VISIBLE" : "Node Badges (h / BF / sz): HIDDEN", 195.f, showNodeBadges);
+            drawSettingToggle(showBgGrid ? "Blueprint Grid Overlay: VISIBLE" : "Blueprint Grid Overlay: HIDDEN", 265.f, showBgGrid);
+            drawSettingToggle(autoPlayEvents ? "Operation Animation Mode: AUTO-PLAY" : "Operation Animation Mode: STEP-BY-STEP", 335.f, autoPlayEvents);
+            drawSettingToggle(cachedSetFpsBtnStr, 405.f, true);
+
+            bool retHov = Ui::inside(in.mx, in.my, static_cast<float>(W) * 0.5f - 150.f, 740.f, 300.f, 48.f);
+            sf::RectangleShape retBtn({300.f, 48.f});
+            retBtn.setPosition({static_cast<float>(W) * 0.5f - 150.f, 740.f});
+            retBtn.setFillColor(retHov ? sf::Color(12, 46, 20, 235) : sf::Color(6, 18, 10, 225));
+            retBtn.setOutlineColor(setBright);
+            retBtn.setOutlineThickness(retHov ? 2.f : 1.5f);
+            window.draw(retBtn);
+            Ui::textCenter(window, menuFont, "Return to Main Menu [ESC]", 15,
+                           retHov ? sf::Color::White : setBright,
+                           static_cast<float>(W) * 0.5f, 754.f, retHov, &uiCache);
         }
 
         // 10. ENDLESS SURVIVAL MODE (Step F)
@@ -5818,6 +5962,7 @@ int main(int argc, char** argv) {
             }
         }
 
+        uiAnimTimer += dt;
         if (currentScreen == SCREEN_SPLASH) {
             splashTimer += dt;
             if (splashTimer >= 3.8f) {
