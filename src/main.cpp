@@ -907,6 +907,42 @@ int main(int argc, char** argv) {
     std::string campCachedLabels[20];
     for (int i = 0; i < 20; ++i) { campCachedUnl[i] = false; campCachedStars[i] = -1; }
 
+    // Demo unlock-all state (non-global, password-protected)
+    bool demoAllUnlocked = false;
+    bool demoPromptOpen = false;
+    char demoPasswordBuf[33];
+    demoPasswordBuf[0] = '\0';
+    int demoPasswordLen = 0;
+    auto submitDemoPassword = [&]() {
+        if (std::strcmp(demoPasswordBuf, "lambda@fadi") == 0) {
+            if (!demoAllUnlocked) {
+                for (int i = 0; i < TOTAL_LEVELS; ++i) {
+                    levels[i].unlocked = true;
+                    campCachedUnl[i] = false;
+                    campCachedLabels[i].clear();
+                }
+                demoAllUnlocked = true;
+                toastQueue.push("[DEMO] All levels unlocked", TOAST_KIND_SUCCESS);
+            } else {
+                levels[0].unlocked = true;
+                campCachedUnl[0] = false;
+                campCachedLabels[0].clear();
+                for (int i = 1; i < TOTAL_LEVELS; ++i) {
+                    levels[i].unlocked = false;
+                    campCachedUnl[i] = false;
+                    campCachedLabels[i].clear();
+                }
+                demoAllUnlocked = false;
+                toastQueue.push("[DEMO] Levels locked", TOAST_KIND_WARNING);
+            }
+        } else {
+            toastQueue.push("Wrong password", TOAST_KIND_WARNING);
+        }
+        demoPromptOpen = false;
+        demoPasswordLen = 0;
+        demoPasswordBuf[0] = '\0';
+    };
+
     int cachedHudLid = -1;
     std::string cachedHudObj;
     std::string cachedHudCtrlLine;
@@ -3410,12 +3446,18 @@ int main(int argc, char** argv) {
 
         // 2. CAMPAIGN MAP
         if (currentScreen == SCREEN_CAMPAIGN_MAP) {
+            UiInput mapIn = in;
+            if (demoPromptOpen) {
+                mapIn.mx = -1.f;
+                mapIn.my = -1.f;
+                mapIn.down = false;
+            }
             Ui::screenHeader(window, font, "HEIST CAMPAIGN // 4 OPERATIONAL WINGS",
                              "Complete levels sequentially to decrypt subsequent vault wings.", &uiCache);
 
-            Ui::button(window, font, "Act 1 Explorer",   1000.f, 26.f, 170.f, 38.f, BTN_SECONDARY, in, 13, &uiCache);
-            Ui::button(window, font, "Act 2 Explorer",   1185.f, 26.f, 170.f, 38.f, BTN_SECONDARY, in, 13, &uiCache);
-            Ui::button(window, font, "Back to Menu [Esc]", 1370.f, 26.f, 190.f, 38.f, BTN_GHOST, in, 13, &uiCache);
+            Ui::button(window, font, "Act 1 Explorer",   1000.f, 26.f, 170.f, 38.f, BTN_SECONDARY, mapIn, 13, &uiCache);
+            Ui::button(window, font, "Act 2 Explorer",   1185.f, 26.f, 170.f, 38.f, BTN_SECONDARY, mapIn, 13, &uiCache);
+            Ui::button(window, font, "Back to Menu [Esc]", 1370.f, 26.f, 190.f, 38.f, BTN_GHOST, mapIn, 13, &uiCache);
 
             const char* wingTitles[4] = {
                 "WING 1: BLUEPRINT WING (ACT 1 - BINARY TREE)",
@@ -3447,11 +3489,52 @@ int main(int argc, char** argv) {
                         campCachedLabels[li] = unl ? levels[li].title : (levels[li].title + "  [LOCKED]");
                     }
                     int st = unl ? (wIdx == 3 ? BTN_PRIMARY : BTN_SECONDARY) : BTN_DISABLED;
-                    Ui::button(window, font, campCachedLabels[li], bx, by, cw - 40.f, 48.f, st, in, 15, &uiCache);
+                    Ui::button(window, font, campCachedLabels[li], bx, by, cw - 40.f, 48.f, st, mapIn, 15, &uiCache);
                     if (unl && levels[li].stars > 0) {
                         Ui::stars(window, bx + cw - 110.f, by + 24.f, levels[li].stars, 3, 7.f, &uiCache);
                     }
                 }
+            }
+
+            Ui::button(window, font,
+                       demoAllUnlocked ? "[DEMO] Lock All Levels" : "[DEMO] Unlock All Levels",
+                       40.f, 862.f, 250.f, 32.f, BTN_GHOST, mapIn, 13, &uiCache);
+
+            if (demoPromptOpen) {
+                sf::RectangleShape dim({static_cast<float>(W), static_cast<float>(H)});
+                dim.setFillColor(sf::Color(5, 10, 20, 185));
+                window.draw(dim);
+
+                float mw = 460.f, mh = 210.f;
+                float mx0 = (static_cast<float>(W) - mw) * 0.5f;
+                float my0 = (static_cast<float>(H) - mh) * 0.5f;
+                Ui::panel(window, mx0, my0, mw, mh, Ui::gold(), 248, &uiCache);
+                Ui::textCenter(window, font,
+                               demoAllUnlocked ? "LOCK ALL LEVELS (DEMO)" : "UNLOCK ALL LEVELS (DEMO)",
+                               TXT_H2, Ui::gold(), mx0 + mw * 0.5f, my0 + 20.f, true, &uiCache);
+                Ui::textCenter(window, font, "Enter demo password:", TXT_BODY, Ui::textBody(),
+                               mx0 + mw * 0.5f, my0 + 56.f, false, &uiCache);
+
+                float ix = mx0 + 36.f, iy = my0 + 88.f, iw = mw - 72.f, ih = 42.f;
+                sf::RectangleShape inputBox({iw, ih});
+                inputBox.setPosition({ix, iy});
+                inputBox.setFillColor(Ui::bgNavy());
+                inputBox.setOutlineColor(Ui::cyan());
+                inputBox.setOutlineThickness(1.5f);
+                window.draw(inputBox);
+
+                char maskBuf[34];
+                for (int k = 0; k < demoPasswordLen; ++k) maskBuf[k] = '*';
+                if (demoPasswordLen < 32) {
+                    maskBuf[demoPasswordLen] = '_';
+                    maskBuf[demoPasswordLen + 1] = '\0';
+                } else {
+                    maskBuf[demoPasswordLen] = '\0';
+                }
+                Ui::text(window, font, maskBuf, 18, sf::Color::White, ix + 12.f, iy + 9.f, false, &uiCache);
+
+                Ui::button(window, font, "Submit [Enter]", mx0 + 36.f, my0 + 148.f, 180.f, 38.f, BTN_PRIMARY, in, 14, &uiCache);
+                Ui::button(window, font, "Cancel [Esc]", mx0 + mw - 216.f, my0 + 148.f, 180.f, 38.f, BTN_GHOST, in, 14, &uiCache);
             }
         }
 
@@ -5617,12 +5700,36 @@ int main(int argc, char** argv) {
                 }
             }
 
+            if (const auto* te = event->getIf<sf::Event::TextEntered>()) {
+                if (currentScreen == SCREEN_CAMPAIGN_MAP && demoPromptOpen) {
+                    std::uint32_t uc = te->unicode;
+                    if (uc == 8) {
+                        if (demoPasswordLen > 0) {
+                            --demoPasswordLen;
+                            demoPasswordBuf[demoPasswordLen] = '\0';
+                        }
+                    } else if (uc >= 32 && uc < 127) {
+                        if (demoPasswordLen < 32) {
+                            demoPasswordBuf[demoPasswordLen++] = static_cast<char>(uc);
+                            demoPasswordBuf[demoPasswordLen] = '\0';
+                        }
+                    }
+                    continue;
+                }
+            }
+
             if (const auto* kp = event->getIf<sf::Event::KeyPressed>()) {
                 if (currentScreen == SCREEN_SPLASH) {
                     currentScreen = SCREEN_MAIN_MENU;
                     continue;
                 }
                 if (kp->code == sf::Keyboard::Key::Escape) {
+                    if (currentScreen == SCREEN_CAMPAIGN_MAP && demoPromptOpen) {
+                        demoPromptOpen = false;
+                        demoPasswordLen = 0;
+                        demoPasswordBuf[0] = '\0';
+                        continue;
+                    }
                     if (currentScreen == SCREEN_LEVEL_PLAY || currentScreen == SCREEN_RESULT) {
                         dragDrop.cancel();
                         currentScreen = SCREEN_CAMPAIGN_MAP;
@@ -5640,6 +5747,12 @@ int main(int argc, char** argv) {
                         status = "Main Menu";
                     } else {
                         window.close();
+                    }
+                    continue;
+                }
+                if (currentScreen == SCREEN_CAMPAIGN_MAP && demoPromptOpen) {
+                    if (kp->code == sf::Keyboard::Key::Enter) {
+                        submitDemoPassword();
                     }
                     continue;
                 }
@@ -5871,6 +5984,25 @@ int main(int argc, char** argv) {
                     }
                 }
                 else if (currentScreen == SCREEN_CAMPAIGN_MAP) {
+                    if (demoPromptOpen) {
+                        float mw = 460.f, mh = 210.f;
+                        float mx0 = (static_cast<float>(W) - mw) * 0.5f;
+                        float my0 = (static_cast<float>(H) - mh) * 0.5f;
+                        if (Ui::inside(mx, my, mx0 + 36.f, my0 + 148.f, 180.f, 38.f)) {
+                            submitDemoPassword();
+                        } else if (Ui::inside(mx, my, mx0 + mw - 216.f, my0 + 148.f, 180.f, 38.f)) {
+                            demoPromptOpen = false;
+                            demoPasswordLen = 0;
+                            demoPasswordBuf[0] = '\0';
+                        }
+                        continue;
+                    }
+                    if (Ui::inside(mx, my, 40.f, 862.f, 250.f, 32.f)) {
+                        demoPromptOpen = true;
+                        demoPasswordLen = 0;
+                        demoPasswordBuf[0] = '\0';
+                        continue;
+                    }
                     if (Ui::inside(mx, my, 1000.f, 26.f, 170.f, 38.f)) { currentScreen = SCREEN_ACT1_DEMO; demoCam.reset(); animCtrl.clearCurrent(); layoutDirty = true; }
                     if (Ui::inside(mx, my, 1185.f, 26.f, 170.f, 38.f)) { currentScreen = SCREEN_ACT2_DEMO; demoCam.reset(); animCtrl.clearCurrent(); layoutDirty = true; }
                     if (Ui::inside(mx, my, 1370.f, 26.f, 190.f, 38.f)) { currentScreen = SCREEN_MAIN_MENU; status = "Main Menu"; }
