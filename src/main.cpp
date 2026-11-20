@@ -3806,8 +3806,8 @@ int main(int argc, char** argv) {
             }
 
             // Top HUD bar (x=30..1570)
-            Ui::textFit(window, menuFont, levels[currentLevelIdx].title, 24, sf::Color(0, 255, 65), 30.f, 12.f, 675.f, true, &menuUiCache);
-            Ui::textFit(window, menuFont, cachedHudObj, 14, sf::Color(215, 240, 220), 30.f, 46.f, 675.f, false, &menuUiCache);
+            Ui::textFit(window, menuFont, levels[currentLevelIdx].title, 24, sf::Color(0, 255, 65), 30.f, 10.f, 675.f, true, &menuUiCache);
+            Ui::textWrap(window, font, cachedHudObj, 12, sf::Color(215, 240, 220), 30.f, 42.f, 675.f, false, &uiCache);
 
             Ui::button(window, font, hintSys.isAvailable() ? "Hint [H]" : "Hint Used", 722.f, 18.f, 115.f, 34.f,
                        hintSys.isAvailable() ? BTN_PRIMARY : BTN_DISABLED, in, 13, &uiCache);
@@ -3996,6 +3996,14 @@ int main(int argc, char** argv) {
 
                 Ui::text(window, font, levelCam.zoomText(), 11, Ui::textMuted(),
                          CANVAS_X + 12.f, CANVAS_Y + 6.f, false, &uiCache);
+                if (lid == LEVEL_1_1) {
+                    const char* ruleStr = "Rule: visit ROOT first, then LEFT subtree, then RIGHT subtree";
+                    if (act1TravMode == TRAV_INORDER)          ruleStr = "Rule: visit LEFT subtree first, then ROOT, then RIGHT subtree";
+                    else if (act1TravMode == TRAV_POSTORDER)   ruleStr = "Rule: visit LEFT subtree first, then RIGHT subtree, then ROOT";
+                    else if (act1TravMode == TRAV_LEVEL_ORDER) ruleStr = "Rule: visit rooms level by level, left to right";
+                    Ui::textCenter(window, menuFont, ruleStr, 16, sf::Color(0, 255, 65),
+                                   CANVAS_X + CANVAS_W * 0.5f, CANVAS_Y + 26.f, true, &menuUiCache);
+                }
                 if (lid != LEVEL_1_3 && !(lid == LEVEL_1_2 && !act1Reconstructed)) {
                     drawCamTooltip(levelCam, *activeDrawLayout, hl.hoveredNodeId);
                 }
@@ -4183,8 +4191,8 @@ int main(int argc, char** argv) {
                 bool askingDiam = (act1PostIdx >= act1Tree.getSize());
                 std::string valLabel = (askingDiam ? "Diam: " : "Height: ") + std::to_string(act1StepperVal);
                 Ui::button(window, font, "-", 1130.f, 705.f, 60.f, 52.f, BTN_SECONDARY, in, 18, &uiCache);
-                Ui::panel(window, 1200.f, 705.f, 150.f, 52.f, Ui::gold(), 240, &uiCache);
-                Ui::textCenter(window, font, valLabel, 17, Ui::gold(), 1275.f, 719.f, true, &uiCache);
+                Ui::panel(window, 1200.f, 705.f, 150.f, 52.f, sf::Color(0, 255, 65), 240, &uiCache);
+                Ui::textCenter(window, font, valLabel, 17, sf::Color(0, 255, 65), 1275.f, 719.f, true, &uiCache);
                 Ui::button(window, font, "+", 1360.f, 705.f, 60.f, 52.f, BTN_SECONDARY, in, 18, &uiCache);
                 Ui::button(window, font, "Submit", 1430.f, 705.f, 120.f, 52.f, BTN_PRIMARY, in, 15, &uiCache);
             } else if (lid == LEVEL_1_5 && !act1Mirrored && !pendingWin) {
@@ -4343,11 +4351,11 @@ int main(int argc, char** argv) {
             bool failed = (currentLevelIdx >= 0 && levels[currentLevelIdx].stars == 0);
             float cardW = 760.f, cardH = 520.f;
             float cardX = W * 0.5f - cardW * 0.5f, cardY = 170.f;
-            Ui::panel(window, cardX, cardY, cardW, cardH, failed ? Ui::red() : Ui::gold(), 240, &uiCache);
+            Ui::panel(window, cardX, cardY, cardW, cardH, failed ? Ui::red() : sf::Color(0, 255, 65), 240, &uiCache);
 
             Ui::textCenter(window, font,
                            failed ? "ALARM TRIGGERED - LEVEL FAILED" : "LEVEL COMPLETE",
-                           36, failed ? Ui::red() : Ui::gold(), W * 0.5f, cardY + 34.f, true, &uiCache);
+                           36, failed ? Ui::red() : sf::Color(0, 255, 65), W * 0.5f, cardY + 34.f, true, &uiCache);
 
             if (currentLevelIdx >= 0) {
                 int bc = animCtrl.getLog().getBatchCount();
@@ -4387,8 +4395,8 @@ int main(int argc, char** argv) {
                              "Interactive free-play over real AVLTree & MaxHeap instances with EventLog & Undo.", &uiCache);
             Ui::button(window, font, "Back to Menu [Esc]", 1370.f, 26.f, 190.f, 38.f, BTN_GHOST, in, 13, &uiCache);
 
-            Ui::panel(window, 30.f,  95.f, 560.f, 540.f, Ui::cyan(), 248, &uiCache);
-            Ui::panel(window, 605.f, 95.f, 565.f, 540.f, Ui::gold(), 248, &uiCache);
+            Ui::panel(window, 30.f,  95.f, 560.f, 540.f, sf::Color(0, 255, 65), 248, &uiCache);
+            Ui::panel(window, 605.f, 95.f, 565.f, 540.f, sf::Color(0, 255, 65), 248, &uiCache);
 
             if (!animCtrl.hasEvents() && needLayout) {
                 layoutAvlForScreen(30.f, 95.f, 560.f, 540.f);
@@ -4452,7 +4460,7 @@ int main(int argc, char** argv) {
             Ui::button(window, font, "[Z] Undo",         904.f,  674.f, 170.f, 46.f, undoStack.isEmpty() ? BTN_DISABLED : BTN_GHOST, in, 14, &uiCache);
             Ui::button(window, font, "[R] Reset",        1094.f, 674.f, 170.f, 46.f, BTN_DANGER, in, 14, &uiCache);
 
-            Ui::textFit(window, font, status, TXT_BODY, Ui::gold(), 54.f, 746.f, 1480.f, false, &uiCache);
+            Ui::textFit(window, font, status, TXT_BODY, sf::Color(0, 255, 65), 54.f, 746.f, 1480.f, false, &uiCache);
             Ui::textFit(window, font, "Shortcuts: [I] Insert AVL  |  [D] Delete AVL  |  [K] kth  |  [E] Extract Heap  |  [Z] Undo  |  [Space] Play/Pause  |  [Right] Step",
                         TXT_HINT, Ui::textMuted(), 54.f, 820.f, 1480.f, false, &uiCache);
         }
@@ -4468,7 +4476,7 @@ int main(int argc, char** argv) {
             Ui::screenHeader(window, font, "ACT 1 EXPLORER // GENERAL BINARY TREE", cachedAct1Stats, &uiCache);
             Ui::button(window, font, "Campaign Map [Esc]", 1350.f, 26.f, 210.f, 38.f, BTN_GHOST, in, 13, &uiCache);
 
-            Ui::panel(window, 30.f, 110.f, 1140.f, 470.f, Ui::cyan(), 248, &uiCache);
+            Ui::panel(window, 30.f, 110.f, 1140.f, 470.f, sf::Color(0, 255, 65), 248, &uiCache);
             if (!animCtrl.hasEvents() && needLayout) {
                 layoutBtForScreen(true);
                 layoutDirty = false;
@@ -4513,9 +4521,9 @@ int main(int argc, char** argv) {
             Ui::button(window, font, "[S] Symmetry",      1164.f, 620.f, 180.f, 44.f, BTN_GHOST, in, 14, &uiCache);
             Ui::button(window, font, "[Z] Reset",         1364.f, 620.f, 170.f, 44.f, BTN_DANGER, in, 14, &uiCache);
 
-            Ui::textFit(window, font, status, TXT_BODY, Ui::gold(), 54.f, 690.f, 1480.f, false, &uiCache);
+            Ui::textFit(window, font, status, TXT_BODY, sf::Color(0, 255, 65), 54.f, 690.f, 1480.f, false, &uiCache);
             if (!act1TraversalStr.empty()) {
-                Ui::textWrap(window, font, act1TraversalStr, TXT_HINT, Ui::cyan(), 54.f, 728.f, 1480.f, false, &uiCache);
+                Ui::textWrap(window, font, act1TraversalStr, TXT_HINT, sf::Color(120, 235, 145), 54.f, 728.f, 1480.f, false, &uiCache);
             }
             Ui::textFit(window, font, "Click any node to compute root-to-node path  |  [Space] Play/Pause  |  [Right] Step",
                         TXT_HINT, Ui::textMuted(), 54.f, 830.f, 1480.f, false, &uiCache);
@@ -4531,7 +4539,7 @@ int main(int argc, char** argv) {
             Ui::screenHeader(window, font, "ACT 2 EXPLORER // BINARY SEARCH TREE", cachedAct2Stats, &uiCache);
             Ui::button(window, font, "Campaign Map [Esc]", 1350.f, 26.f, 210.f, 38.f, BTN_GHOST, in, 13, &uiCache);
 
-            Ui::panel(window, 30.f, 110.f, 1140.f, 470.f, sf::Color(168, 85, 247), 248, &uiCache);
+            Ui::panel(window, 30.f, 110.f, 1140.f, 470.f, sf::Color(0, 255, 65), 248, &uiCache);
             if (!animCtrl.hasEvents() && needLayout) {
                 layoutBstForScreen(true);
                 layoutDirty = false;
@@ -4578,9 +4586,9 @@ int main(int argc, char** argv) {
             Ui::button(window, font, "[C] Chain",       1220.f, 620.f, 145.f, 44.f, BTN_GHOST, in, 14, &uiCache);
             Ui::button(window, font, "[Z] Reset",       1378.f, 620.f, 156.f, 44.f, BTN_DANGER, in, 14, &uiCache);
 
-            Ui::textFit(window, font, status, TXT_BODY, Ui::gold(), 54.f, 690.f, 1480.f, false, &uiCache);
+            Ui::textFit(window, font, status, TXT_BODY, sf::Color(0, 255, 65), 54.f, 690.f, 1480.f, false, &uiCache);
             if (!act2ExtraInfo.empty()) {
-                Ui::textFit(window, font, act2ExtraInfo, TXT_HINT, Ui::cyan(), 54.f, 730.f, 1480.f, false, &uiCache);
+                Ui::textFit(window, font, act2ExtraInfo, TXT_HINT, sf::Color(120, 235, 145), 54.f, 730.f, 1480.f, false, &uiCache);
             }
             Ui::textFit(window, font, "Click any BST node to search & inspect Pred/Succ  |  [Space] Play/Pause  |  [Right] Step",
                         TXT_HINT, Ui::textMuted(), 54.f, 830.f, 1480.f, false, &uiCache);
@@ -4792,7 +4800,7 @@ int main(int argc, char** argv) {
                                    std::to_string(rateTenths % 10) + " ops/min";
             }
 
-            Ui::textFit(window, font, "ENDLESS SURVIVAL // LIVE AVL STREAM", 24, Ui::gold(),
+            Ui::textFit(window, font, "ENDLESS SURVIVAL // LIVE AVL STREAM", 24, sf::Color(0, 255, 65),
                         30.f, 12.f, 620.f, true, &uiCache);
             Ui::textFit(window, font, cachedEndlessSub, 14, Ui::textBody(),
                         30.f, 46.f, 620.f, false, &uiCache);
@@ -4827,7 +4835,7 @@ int main(int argc, char** argv) {
             Ui::textFit(window, font, hudTimerStr, 14, sf::Color::White, meterX, 44.f, meterW, true, &uiCache);
 
             // Canvas + AVL render
-            Ui::panel(window, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, Ui::cyan(), 248, &uiCache);
+            Ui::panel(window, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, sf::Color(0, 255, 65), 248, &uiCache);
             if (!animCtrl.hasEvents() && needLayout) {
                 layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
                 layoutDirty = false;
@@ -4874,7 +4882,7 @@ int main(int argc, char** argv) {
                                           "  - Click [Execute] to apply real AVL operation & check invariants!";
                 }
             }
-            Ui::textFit(window, font, cachedEndlessPrompt, TXT_H2, Ui::gold(), 54.f, 678.f, 1040.f, true, &uiCache);
+            Ui::textFit(window, font, cachedEndlessPrompt, TXT_H2, sf::Color(0, 255, 65), 54.f, 678.f, 1040.f, true, &uiCache);
             Ui::textWrap(window, font, status, TXT_BODY, Ui::textBody(), 54.f, 720.f, 1040.f, false, &uiCache);
             Ui::textFit(window, font, "[Enter / X] Execute Pending Op  |  [P] Pause  |  [F5] Save Run  |  [F9] Load Run  |  [L] Leaderboard  |  [Esc] Main Menu",
                         TXT_HINT, Ui::textMuted(), 54.f, 832.f, 1480.f, false, &uiCache);

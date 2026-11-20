@@ -21,13 +21,13 @@ void drawTokenBody(sf::RenderTarget& t, const sf::Font& font, const DragToken& t
     float r = tok.radius * scale;
     if (lifted) {
         drawRing(t, x + 5.f, y + 7.f, r, sf::Color(0, 0, 0, 90), sf::Color::Transparent, 0.f);
+        drawRing(t, x, y, r + 4.f, sf::Color::Transparent, sf::Color(0, 255, 65, 70), 3.f);
     }
-    sf::Color fill = lifted ? sf::Color(250, 205, 80) : sf::Color(30, 48, 78);
-    sf::Color outline = lifted ? Ui::gold() : Ui::cyan();
-    drawRing(t, x, y, r, fill, outline, 2.5f);
+    sf::Color fill = lifted ? sf::Color(14, 74, 28) : sf::Color(8, 26, 12);
+    sf::Color outline = lifted ? sf::Color(0, 255, 65) : sf::Color(74, 155, 85);
+    drawRing(t, x, y, r, fill, outline, lifted ? 3.f : 2.5f);
     const std::string& text = tok.label.empty() ? std::to_string(tok.value) : tok.label;
-    Ui::textCenter(t, font, text, 16,
-                   lifted ? sf::Color(20, 20, 30) : sf::Color::White, x, y - 10.f, true, cache);
+    Ui::textCenter(t, font, text, 16, sf::Color::White, x, y - 10.f, true, cache);
 }
 
 } // namespace
@@ -41,19 +41,19 @@ void DragDropView::draw(sf::RenderTarget& target, const sf::Font& font,
         const DropSlot* s = dd.slot(i);
         if (!s || !s->enabled) continue;
         bool hovered = dragging && dd.hoveredSlotId() == i;
-        sf::Color outline = sf::Color(90, 110, 145);
-        sf::Color fill = sf::Color(16, 24, 42, 120);
+        sf::Color outline = sf::Color(74, 122, 74);
+        sf::Color fill = sf::Color(6, 16, 9, 140);
         float thick = 2.f;
-        if (dragging) outline = sf::Color(120, 150, 200);
+        if (dragging) outline = sf::Color(0, 210, 65);
         if (hovered) {
             bool ok = dd.hoveredSlotAccepts();
-            outline = ok ? Ui::green() : Ui::red();
-            fill = ok ? sf::Color(40, 120, 80, 110) : sf::Color(140, 50, 50, 110);
+            outline = ok ? sf::Color(0, 255, 65) : Ui::red();
+            fill = ok ? sf::Color(14, 68, 28, 150) : sf::Color(140, 50, 50, 110);
             thick = 3.5f;
         }
         drawRing(target, s->x, s->y, s->radius, fill, outline, thick);
         if (s->tokenId < 0 && !s->label.empty()) {
-            Ui::textCenter(target, font, s->label, 12, sf::Color(150, 175, 210, 180),
+            Ui::textCenter(target, font, s->label, 12, sf::Color(110, 175, 120, 200),
                            s->x, s->y - 7.f, false, cache);
         }
     }
@@ -73,8 +73,8 @@ void DragDropView::draw(sf::RenderTarget& target, const sf::Font& font,
         const DragToken* t = dd.token(dd.draggedTokenId());
         if (t) {
             sf::Vertex line[] = {
-                sf::Vertex({t->x, t->y}, sf::Color(245, 185, 40, 120)),
-                sf::Vertex({dd.dragX(), dd.dragY()}, sf::Color(245, 185, 40, 200))
+                sf::Vertex({t->x, t->y}, sf::Color(0, 255, 65, 120)),
+                sf::Vertex({dd.dragX(), dd.dragY()}, sf::Color(0, 255, 65, 210))
             };
             target.draw(line, 2, sf::PrimitiveType::Lines);
             drawTokenBody(target, font, *t, dd.dragX(), dd.dragY(), 1.15f, true, cache);
