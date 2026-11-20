@@ -3804,11 +3804,11 @@ int main(int argc, char** argv) {
             }
 
             // Top HUD bar (x=30..1570)
-            Ui::textFit(window, font, levels[currentLevelIdx].title, 24, Ui::gold(), 30.f, 12.f, 675.f, true, &uiCache);
-            Ui::textFit(window, font, cachedHudObj, 14, Ui::textBody(), 30.f, 46.f, 675.f, false, &uiCache);
+            Ui::textFit(window, menuFont, levels[currentLevelIdx].title, 24, sf::Color(0, 255, 65), 30.f, 12.f, 675.f, true, &uiCache);
+            Ui::textFit(window, menuFont, cachedHudObj, 14, sf::Color(215, 240, 220), 30.f, 46.f, 675.f, false, &uiCache);
 
             Ui::button(window, font, hintSys.isAvailable() ? "Hint [H]" : "Hint Used", 722.f, 18.f, 115.f, 34.f,
-                       hintSys.isAvailable() ? BTN_SECONDARY : BTN_DISABLED, in, 13, &uiCache);
+                       hintSys.isAvailable() ? BTN_PRIMARY : BTN_DISABLED, in, 13, &uiCache);
             Ui::button(window, font, "Undo [Z]", 850.f, 18.f, 115.f, 34.f,
                        undoStack.isEmpty() ? BTN_DISABLED : BTN_GHOST, in, 13, &uiCache);
             Ui::button(window, font, "Map [Esc]", 978.f, 18.f, 115.f, 34.f, BTN_GHOST, in, 13, &uiCache);
@@ -3818,19 +3818,19 @@ int main(int argc, char** argv) {
             meterRect.setSize({meterW, 20.f});
             meterRect.setOrigin({0.f, 0.f});
             meterRect.setPosition({meterX, 16.f});
-            meterRect.setFillColor(sf::Color(35, 42, 58));
+            meterRect.setFillColor(sf::Color(6, 18, 10));
             meterRect.setOutlineThickness(1.5f);
-            meterRect.setOutlineColor(sf::Color(100, 115, 140));
+            meterRect.setOutlineColor(sf::Color(0, 255, 65, 160));
             window.draw(meterRect);
 
             float ratio = minFloat(1.0f, static_cast<float>(alarmSteps) / static_cast<float>(alarmCap));
             meterRect.setSize({meterW * ratio, 20.f});
             meterRect.setPosition({meterX, 16.f});
             meterRect.setOutlineThickness(0.f);
-            meterRect.setFillColor(ratio > 0.8f ? Ui::red() : Ui::amber());
+            meterRect.setFillColor(ratio > 0.8f ? Ui::red() : sf::Color(0, 255, 65));
             window.draw(meterRect);
 
-            Ui::textFit(window, font, cachedHudAlarmScore, 14, sf::Color::White, meterX, 44.f, meterW, true, &uiCache);
+            Ui::textFit(window, menuFont, cachedHudAlarmScore, 14, sf::Color(0, 255, 65), meterX, 44.f, meterW, true, &uiCache);
 
             // Structure Canvas Frame (opaque interior so only canvas world grid shows)
             Ui::panel(window, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, sf::Color(55, 85, 130), 248, &uiCache);
@@ -4167,11 +4167,11 @@ int main(int argc, char** argv) {
             }
             float headMaxW = (lid == LEVEL_3_4) ? 960.f : 1080.f;
             float bodyMaxW = (lid == LEVEL_3_4) ? 960.f : 1050.f;
-            Ui::textFit(window, font, cachedPromptHead, TXT_H2, Ui::gold(), 54.f, 678.f, headMaxW, true, &uiCache);
-            Ui::textWrap(window, font, status, TXT_BODY, Ui::textBody(), 54.f, 718.f, bodyMaxW, false, &uiCache);
+            Ui::textFit(window, menuFont, cachedPromptHead, TXT_H2, sf::Color(0, 255, 65), 54.f, 678.f, headMaxW, true, &uiCache);
+            Ui::textWrap(window, font, status, TXT_BODY, sf::Color(225, 245, 230), 54.f, 718.f, bodyMaxW, false, &uiCache);
             if (hintSys.wasUsed()) {
                 Ui::textWrap(window, font, "HINT (-1 star cap): " + hintSys.shownText(),
-                             TXT_HINT, Ui::cyan(), 54.f, 774.f, bodyMaxW, false, &uiCache);
+                             TXT_HINT, sf::Color(0, 255, 65), 54.f, 774.f, bodyMaxW, false, &uiCache);
             }
 
             if (lid == LEVEL_1_1 && act1SeqIdx == 0 && !pendingWin) {
@@ -4223,42 +4223,116 @@ int main(int argc, char** argv) {
 
             Ui::textFit(window, font, cachedHudCtrlLine, TXT_HINT, Ui::textMuted(), 54.f, 832.f, 1480.f, false, &uiCache);
 
-            // Mission Briefing Modal (7D — wrapped strictly inside card)
+            // Mission Briefing Modal (Part B)
             if (showingBriefing) {
+                if (vaultBgSprite.has_value()) {
+                    window.draw(*vaultBgSprite);
+                }
                 sf::RectangleShape& bd = uiCache.rect;
                 bd.setSize({static_cast<float>(W), static_cast<float>(H)});
                 bd.setOrigin({0.f, 0.f});
                 bd.setPosition({0.f, 0.f});
                 bd.setOutlineThickness(0.f);
-                bd.setFillColor(sf::Color(6, 10, 20, 210));
+                bd.setFillColor(sf::Color(4, 12, 7, 175));
                 window.draw(bd);
 
                 if (cachedBriefLid != lid || cachedBriefCap != alarmCap) {
                     cachedBriefLid = lid;
                     cachedBriefCap = alarmCap;
                     cachedBriefAct = "MISSION BRIEFING // ACT " + std::to_string(levels[currentLevelIdx].act);
-                    cachedBriefObj = "OBJECTIVE: " + levels[currentLevelIdx].objective;
-                    cachedBriefInt = "INTERACTION: " + levels[currentLevelIdx].controls +
-                                     "\nALARM CAPACITY: " + std::to_string(alarmCap) + " steps";
+                    cachedBriefObj = levels[currentLevelIdx].objective;
+                    cachedBriefInt = levels[currentLevelIdx].controls;
                 }
 
-                float bw = 760.f, bh = 380.f;
-                float bx = W * 0.5f - bw * 0.5f, by = H * 0.5f - bh * 0.5f;
-                Ui::panel(window, bx, by, bw, bh, Ui::gold(), 250, &uiCache);
+                const sf::Color brBright(0, 255, 65);
+                float bw = 820.f, bh = 420.f;
+                float bx = static_cast<float>(W) * 0.5f - bw * 0.5f;
+                float by = static_cast<float>(H) * 0.5f - bh * 0.5f;
 
-                Ui::text(window, font, cachedBriefAct, TXT_HINT, Ui::cyan(), bx + 36.f, by + 26.f, true, &uiCache);
-                Ui::textFit(window, font, levels[currentLevelIdx].title, TXT_H1, Ui::gold(),
-                            bx + 36.f, by + 54.f, bw - 72.f, true, &uiCache);
+                // Layered glow + dark terminal panel
+                Ui::panel(window, bx, by, bw, bh, brBright, 236, &uiCache);
 
-                float objY = by + 110.f;
-                float objH = Ui::textWrap(window, font, cachedBriefObj,
-                                          TXT_BODY, sf::Color::White, bx + 36.f, objY, bw - 72.f, false, &uiCache);
-                float ctrlY = objY + objH + 18.f;
-                Ui::textWrap(window, font, cachedBriefInt,
-                             TXT_HINT, Ui::textBody(), bx + 36.f, ctrlY, bw - 72.f, false, &uiCache);
+                // Cut/notched corner accents
+                const float cLen = 18.f, cThk = 3.5f;
+                sf::RectangleShape bc1({cLen, cThk}); bc1.setPosition({bx - 1.f, by - 1.f}); bc1.setFillColor(brBright); window.draw(bc1);
+                sf::RectangleShape bc2({cThk, cLen}); bc2.setPosition({bx - 1.f, by - 1.f}); bc2.setFillColor(brBright); window.draw(bc2);
+                sf::RectangleShape bc3({cLen, cThk}); bc3.setPosition({bx + bw - cLen + 1.f, by - 1.f}); bc3.setFillColor(brBright); window.draw(bc3);
+                sf::RectangleShape bc4({cThk, cLen}); bc4.setPosition({bx + bw - cThk + 1.f, by - 1.f}); bc4.setFillColor(brBright); window.draw(bc4);
+                sf::RectangleShape bc5({cLen, cThk}); bc5.setPosition({bx - 1.f, by + bh - cThk + 1.f}); bc5.setFillColor(brBright); window.draw(bc5);
+                sf::RectangleShape bc6({cThk, cLen}); bc6.setPosition({bx - 1.f, by + bh - cLen + 1.f}); bc6.setFillColor(brBright); window.draw(bc6);
+                sf::RectangleShape bc7({cLen, cThk}); bc7.setPosition({bx + bw - cLen + 1.f, by + bh - cThk + 1.f}); bc7.setFillColor(brBright); window.draw(bc7);
+                sf::RectangleShape bc8({cThk, cLen}); bc8.setPosition({bx + bw - cThk + 1.f, by + bh - cLen + 1.f}); bc8.setFillColor(brBright); window.draw(bc8);
 
-                Ui::button(window, font, "START MISSION [Enter]", W * 0.5f - 150.f, by + bh - 74.f,
-                           300.f, 48.f, BTN_PRIMARY, in, 16, &uiCache);
+                // Header + extending thin green line
+                Ui::text(window, menuFont, cachedBriefAct, 14, brBright, bx + 40.f, by + 26.f, true, &uiCache);
+                float hdrW = Ui::textWidth(menuFont, cachedBriefAct, 14, true);
+                float lineX = bx + 54.f + hdrW;
+                if (lineX < bx + bw - 40.f) {
+                    sf::RectangleShape hdrLine({(bx + bw - 40.f) - lineX, 1.f});
+                    hdrLine.setPosition({lineX, by + 35.f});
+                    hdrLine.setFillColor(sf::Color(0, 255, 65, 160));
+                    window.draw(hdrLine);
+                }
+
+                // Level title
+                Ui::textFit(window, menuFont, levels[currentLevelIdx].title, 32, brBright,
+                            bx + 40.f, by + 58.f, bw - 80.f, true, &uiCache);
+
+                // Row 1: Target icon + OBJECTIVE: + objective text
+                float r1Y = by + 132.f;
+                float iconX = bx + 50.f;
+                sf::CircleShape tgtOuter(10.f);
+                tgtOuter.setOrigin({10.f, 10.f});
+                tgtOuter.setPosition({iconX, r1Y + 10.f});
+                tgtOuter.setFillColor(sf::Color::Transparent);
+                tgtOuter.setOutlineColor(brBright);
+                tgtOuter.setOutlineThickness(2.f);
+                window.draw(tgtOuter);
+                sf::CircleShape tgtDot(3.5f);
+                tgtDot.setOrigin({3.5f, 3.5f});
+                tgtDot.setPosition({iconX, r1Y + 10.f});
+                tgtDot.setFillColor(brBright);
+                window.draw(tgtDot);
+
+                Ui::text(window, menuFont, "OBJECTIVE:", 15, brBright, bx + 76.f, r1Y, true, &uiCache);
+                float objH = Ui::textWrap(window, font, cachedBriefObj, 15, sf::Color::White,
+                                          bx + 216.f, r1Y, bw - 256.f, false, &uiCache);
+
+                // Divider line
+                float divY = r1Y + ((objH > 26.f) ? objH + 14.f : 38.f);
+                sf::RectangleShape divLine({bw - 80.f, 1.f});
+                divLine.setPosition({bx + 40.f, divY});
+                divLine.setFillColor(sf::Color(0, 255, 65, 90));
+                window.draw(divLine);
+
+                // Row 2: Info icon + INTERACTION: + controls text
+                float r2Y = divY + 20.f;
+                sf::CircleShape infoCirc(10.f);
+                infoCirc.setOrigin({10.f, 10.f});
+                infoCirc.setPosition({iconX, r2Y + 10.f});
+                infoCirc.setFillColor(brBright);
+                window.draw(infoCirc);
+                Ui::textCenter(window, menuFont, "i", 14, sf::Color(4, 14, 6), iconX, r2Y + 1.f, true, &uiCache);
+                Ui::text(window, menuFont, "INTERACTION:", 15, brBright, bx + 76.f, r2Y, true, &uiCache);
+                float intH = Ui::textWrap(window, font, cachedBriefInt, 15, sf::Color::White,
+                                          bx + 216.f, r2Y, bw - 256.f, false, &uiCache);
+
+                // Row 3: Warning icon + ALARM CAPACITY: + capacity strikes
+                float r3Y = r2Y + ((intH > 26.f) ? intH + 16.f : 42.f);
+                sf::ConvexShape warnTri(3);
+                warnTri.setPoint(0, {iconX, r3Y});
+                warnTri.setPoint(1, {iconX - 10.f, r3Y + 19.f});
+                warnTri.setPoint(2, {iconX + 10.f, r3Y + 19.f});
+                warnTri.setFillColor(brBright);
+                window.draw(warnTri);
+                Ui::textCenter(window, menuFont, "!", 13, sf::Color(4, 14, 6), iconX, r3Y + 3.f, true, &uiCache);
+                Ui::text(window, menuFont, "ALARM CAPACITY:", 15, brBright, bx + 76.f, r3Y, true, &uiCache);
+                float alarmLblW = Ui::textWidth(menuFont, "ALARM CAPACITY:", 15, true);
+                Ui::text(window, font, std::to_string(alarmCap) + " strikes", 15, sf::Color::White,
+                         bx + 90.f + alarmLblW, r3Y, false, &uiCache);
+
+                Ui::button(window, menuFont, "START MISSION [Enter]", static_cast<float>(W) * 0.5f - 150.f,
+                           by + bh - 74.f, 300.f, 48.f, BTN_PRIMARY, in, 16, &uiCache);
             }
         }
 
@@ -6477,7 +6551,7 @@ int main(int argc, char** argv) {
                 }
                 else if (currentScreen == SCREEN_LEVEL_PLAY && currentLevelIdx >= 0) {
                     if (showingBriefing) {
-                        float bh = 380.f, by = H * 0.5f - bh * 0.5f;
+                        float bh = 420.f, by = H * 0.5f - bh * 0.5f;
                         if (Ui::inside(mx, my, W * 0.5f - 150.f, by + bh - 74.f, 300.f, 48.f)) {
                             showingBriefing = false;
                         }

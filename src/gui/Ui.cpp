@@ -286,12 +286,26 @@ void panel(sf::RenderTarget& t, float x, float y, float w, float h, sf::Color ou
            unsigned char alpha, UiCache* cache) {
     sf::RectangleShape fb;
     sf::RectangleShape& r = acquireRect(cache, fb);
+    bool isDanger = (outline.r > 200 && outline.g < 110 && outline.b < 110);
+    sf::Color glowEdge = isDanger ? sf::Color(240, 80, 80, 55) : sf::Color(0, 255, 65, 55);
+    sf::Color mainEdge = isDanger ? outline : sf::Color(0, 255, 65, 210);
+
+    // Layered soft glow behind panel
+    r.setSize({w + 4.f, h + 4.f});
+    r.setOrigin({0.f, 0.f});
+    r.setPosition({x - 2.f, y - 2.f});
+    r.setFillColor(sf::Color::Transparent);
+    r.setOutlineThickness(3.f);
+    r.setOutlineColor(glowEdge);
+    t.draw(r);
+
+    // Main panel
     r.setSize({w, h});
     r.setOrigin({0.f, 0.f});
     r.setPosition({x, y});
-    r.setFillColor(sf::Color(16, 24, 42, alpha));
+    r.setFillColor(sf::Color(5, 13, 8, alpha));
     r.setOutlineThickness(1.5f);
-    r.setOutlineColor(outline);
+    r.setOutlineColor(mainEdge);
     t.draw(r);
 }
 
@@ -304,39 +318,39 @@ bool button(sf::RenderTarget& t, const sf::Font& font, const std::string& label,
 
     sf::Color fill, edge, txt = sf::Color::White;
     switch (style) {
-        case BTN_PRIMARY:   fill = sf::Color(52, 40, 14);  edge = gold();                  break;
-        case BTN_SECONDARY: fill = sf::Color(20, 38, 62);  edge = cyan();                  break;
-        case BTN_DANGER:    fill = sf::Color(60, 22, 26);  edge = sf::Color(230, 70, 70);  break;
-        case BTN_GHOST:     fill = sf::Color(16, 24, 40);  edge = sf::Color(90, 110, 145); break;
-        default:            fill = sf::Color(14, 18, 28);  edge = sf::Color(48, 58, 78);
-                            txt = sf::Color(100, 112, 135);                                 break;
+        case BTN_PRIMARY:   fill = sf::Color(10, 44, 18); edge = sf::Color(0, 255, 65);   break;
+        case BTN_SECONDARY: fill = sf::Color(6, 22, 11);  edge = sf::Color(0, 230, 60);   break;
+        case BTN_DANGER:    fill = sf::Color(55, 18, 22); edge = sf::Color(235, 70, 70);  break;
+        case BTN_GHOST:     fill = sf::Color(5, 14, 8);   edge = sf::Color(50, 140, 70);  break;
+        default:            fill = sf::Color(6, 12, 8);   edge = sf::Color(35, 72, 42);
+                            txt = sf::Color(74, 122, 74);                                 break;
     }
 
-    float s = pressed ? 0.97f : (hover ? 1.04f : 1.0f);
+    float s = pressed ? 0.97f : (hover ? 1.03f : 1.0f);
     float cw = w * s, ch = h * s;
     float cx = x + w * 0.5f, cy = y + h * 0.5f;
 
     sf::RectangleShape fb;
     sf::RectangleShape& r = acquireRect(cache, fb);
 
-    if (hover) {
-        r.setSize({cw, ch});
-        r.setOrigin({cw * 0.5f, ch * 0.5f});
+    if (!disabled && (hover || style == BTN_PRIMARY)) {
+        r.setSize({cw + 4.f, ch + 4.f});
+        r.setOrigin({(cw + 4.f) * 0.5f, (ch + 4.f) * 0.5f});
         r.setPosition({cx, cy});
         r.setFillColor(sf::Color::Transparent);
-        r.setOutlineThickness(5.f);
-        r.setOutlineColor(sf::Color(edge.r, edge.g, edge.b, 70));
+        r.setOutlineThickness(hover ? 4.f : 2.5f);
+        r.setOutlineColor(sf::Color(edge.r, edge.g, edge.b, hover ? 80 : 50));
         t.draw(r);
     }
 
     r.setSize({cw, ch});
     r.setOrigin({cw * 0.5f, ch * 0.5f});
     r.setPosition({cx, cy});
-    int add = hover ? 22 : 0;
+    int add = hover ? 18 : 0;
     r.setFillColor(sf::Color(static_cast<std::uint8_t>(fill.r + add), static_cast<std::uint8_t>(fill.g + add),
                              static_cast<std::uint8_t>(fill.b + add)));
-    r.setOutlineThickness(2.f);
-    r.setOutlineColor(edge);
+    r.setOutlineThickness(hover ? 2.f : 1.5f);
+    r.setOutlineColor(hover ? sf::Color(0, 255, 65) : edge);
     t.draw(r);
 
     if (cache) {
