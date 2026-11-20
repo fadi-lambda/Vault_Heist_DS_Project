@@ -956,7 +956,7 @@ int main(int argc, char** argv) {
     std::string cachedHudObj;
     std::string cachedHudCtrlLine;
     int cachedHudAlarm = -1, cachedHudCap = -1, cachedHudScore = -1;
-    std::string cachedHudAlarmScore;
+    std::string cachedHudAlarmStr, cachedHudScoreStr;
     int cachedPromptLid = -1, cachedPromptSeq = -1, cachedPromptAvl = -1;
     int cachedPromptMode = -1, cachedPromptPost = -1, cachedPromptLca = -1;
     int cachedPromptAct2A = -9999, cachedPromptAct2B = -9999;
@@ -3318,8 +3318,19 @@ int main(int argc, char** argv) {
             const sf::Color splashDim(74, 122, 74);
             float cx = W * 0.5f;
 
-            Ui::textCenter(window, menuFont, "VAULT HEIST", 56, splashBright, cx, 326.f, true, &uiCache);
-            Ui::textCenter(window, menuFont, "THE LIVING VAULT", 18, splashDim, cx, 396.f, false, &uiCache);
+            sf::Text t1(menuFont, "VAULT ", 56);
+            sf::Text t2(menuFont, "HEIST", 56);
+
+            // 2. .width ki jagah .size.x use karein
+            float w1 = t1.getLocalBounds().size.x;
+            float w2 = t2.getLocalBounds().size.x;
+
+            float startX = cx - (w1 + w2) / 2.f;
+
+            Ui::text(window, menuFont, "VAULT ", 56, splashBright, startX, 326.f, true, &uiCache);
+            Ui::text(window, menuFont, "HEIST", 56, sf::Color::White, startX + w1, 326.f, true, &uiCache);
+
+            Ui::textCenter(window, menuFont, "THE LIVING VAULT", 18, sf::Color::White, cx, 396.f, false, &uiCache);
 
             float barW = 400.f, barH = 10.f;
             float barX = cx - barW * 0.5f, barY = 442.f;
@@ -3346,8 +3357,8 @@ int main(int argc, char** argv) {
             };
             int msgIdx = static_cast<int>(splashTimer / 0.8f) % 4;
             if (msgIdx < 0) msgIdx = 0;
-            Ui::textCenter(window, menuFont, splashMsgs[msgIdx], 15, sf::Color(110, 195, 110), cx, 474.f, false, &uiCache);
-            Ui::textCenter(window, menuFont, "[Press any key or click to skip]", 14, sf::Color(95, 165, 95), cx, 780.f, false, &uiCache);
+            Ui::textCenter(window, menuFont, splashMsgs[msgIdx], 15, sf::Color::White, cx, 474.f, false, &uiCache);
+            Ui::textCenter(window, menuFont, "[Press any key or click to skip]", 14, sf::Color::White, cx, 780.f, false, &uiCache);
         }
 
         // 1. MAIN MENU
@@ -3381,11 +3392,11 @@ int main(int argc, char** argv) {
             window.draw(titleLine);
 
             // Subtitle below title
-            Ui::text(window, menuFont, "BREAK IN . TAKE CONTROL . GET OUT", 15, menuDim, titleX, titleY + 100.f, false, &uiCache);
+            Ui::text(window, menuFont, "BREAK  IN   .   TAKE  CONTROL   .   GET  OUT", 15, sf::Color::White, titleX, titleY + 100.f, false, &uiCache);
 
             // Top-right corner: "SECURE SYSTEM ▪"
             float ssW = Ui::textWidth(menuFont, "SECURE SYSTEM", 14, false);
-            Ui::text(window, menuFont, "SECURE SYSTEM", 14, sf::Color(0, 255, 65, 200),
+            Ui::text(window, menuFont, "SECURE SYSTEM", 14, sf::Color::White,
                      static_cast<float>(W) - 62.f - ssW, 34.f, false, &uiCache);
             sf::RectangleShape topSq({10.f, 10.f});
             topSq.setPosition({static_cast<float>(W) - 46.f, 37.f});
@@ -3412,7 +3423,7 @@ int main(int argc, char** argv) {
                     itemUnderline.setFillColor(menuBright);
                     window.draw(itemUnderline);
                 } else {
-                    Ui::text(window, menuFont, menuItems[i], 24, menuDim, 128.f, itemY, false, &uiCache);
+                    Ui::text(window, menuFont, menuItems[i], 24, sf::Color::White, 128.f, itemY, false, &uiCache);
                 }
             }
 
@@ -3434,8 +3445,7 @@ int main(int argc, char** argv) {
             window.draw(brSq);
 
             // Bottom-left version & prompt text
-            Ui::text(window, menuFont, "v1.0.0 | PRESS ANY KEY TO CONTINUE", 14, sf::Color(110, 195, 110),
-                     58.f, static_cast<float>(H) - 48.f, false, &uiCache);
+            Ui::text(window, menuFont, "v1.0.0", 14, sf::Color::White, 58.f, static_cast<float>(H) - 48.f, false, &uiCache);
         }
 
         // 2. CAMPAIGN MAP
@@ -3509,8 +3519,8 @@ int main(int argc, char** argv) {
             mapBorder.setOutlineThickness(1.f);
             window.draw(mapBorder);
 
-            // Top bar: "VAULT HEIST //" left, active act center, "BACK TO MENU [ESC]" right
-            Ui::text(window, menuFont, "VAULT HEIST //", 28, mapBright, 44.f, 24.f, true, &uiCache);
+            // Top bar: "VAULT HEIST" left, active act center, "BACK TO MENU [ESC]" right
+            Ui::text(window, menuFont, "VAULT HEIST", 28, mapBright, 44.f, 24.f, true, &uiCache);
 
             const char* curActTitle = actNames[selectedActIdx];
             float actTitleW = Ui::textWidth(menuFont, curActTitle, 20, true);
@@ -3532,7 +3542,7 @@ int main(int argc, char** argv) {
             window.draw(topLineR);
 
             bool backHov = Ui::inside(mapIn.mx, mapIn.my, 1350.f, 20.f, 220.f, 38.f);
-            Ui::text(window, menuFont, "BACK TO MENU [ESC]", 15, backHov ? sf::Color::White : mapBright,
+            Ui::text(window, menuFont, "BACK TO MENU [ESC]", 15, backHov ? sf::Color::White : mapDim,
                      1370.f, 30.f, backHov, &uiCache);
 
             // Left panel (~280px wide): 4 act buttons connected by dots/lines
@@ -3556,7 +3566,7 @@ int main(int argc, char** argv) {
                 window.draw(actBox);
 
                 std::string actLbl = active ? (std::string("> ") + actShort[a]) : std::string(actShort[a]);
-                Ui::textCenter(window, menuFont, actLbl, 20, (active || hov) ? mapBright : mapDim,
+                Ui::textCenter(window, menuFont, actLbl, 20, (active || hov) ? mapBright : sf::Color::White,
                                bx + bw * 0.5f, by + 20.f, active, &uiCache);
 
                 if (a < 3) {
@@ -3609,7 +3619,7 @@ int main(int argc, char** argv) {
                     char numBuf[4];
                     numBuf[0] = static_cast<char>('1' + i);
                     numBuf[1] = '\0';
-                    Ui::textCenter(window, menuFont, numBuf, 28, mapBright,
+                    Ui::textCenter(window, menuFont, numBuf, 28, (unl || isSel || hov) ? mapBright : sf::Color::White,
                                    nodeX[i], nodeY[i] - 18.f, true, &uiCache);
                     if (levels[li].stars > 0) {
                         Ui::stars(window, nodeX[i], nodeY[i] + nodeR + 14.f, levels[li].stars, 3, 6.f, &uiCache);
@@ -3657,8 +3667,8 @@ int main(int argc, char** argv) {
             std::string missionTitle = "Mission " + std::to_string(selectedActIdx + 1) + "." +
                                        std::to_string(selectedLevelInAct + 1) + " : " +
                                        lvlNames[selectedActIdx][selectedLevelInAct];
-            Ui::text(window, menuFont, missionTitle, 22, mapBright, infoX + 28.f, infoY + 26.f, true, &uiCache);
-            Ui::textWrap(window, menuFont, lvlDescs[selectedActIdx][selectedLevelInAct], 15, mapSubtle,
+            Ui::text(window, menuFont, missionTitle, 22, sf::Color::White, infoX + 28.f, infoY + 26.f, true, &uiCache);
+            Ui::textWrap(window, menuFont, lvlDescs[selectedActIdx][selectedLevelInAct], 15, sf::Color(220, 220, 220),
                          infoX + 28.f, infoY + 72.f, infoW - 56.f, false, &uiCache);
 
             int selLi = selectedActIdx * 5 + selectedLevelInAct;
@@ -3681,7 +3691,7 @@ int main(int argc, char** argv) {
             blSq.setFillColor(mapBright);
             window.draw(blSq);
 
-            Ui::text(window, menuFont, "SELECT A ACT | NAVIGATE WITH ARROWS", 14, mapSubtle,
+            Ui::text(window, menuFont, "SELECT A ACT | NAVIGATE WITH ARROWS", 14, sf::Color::White,
                      58.f, static_cast<float>(H) - 48.f, false, &uiCache);
 
             // Demo unlock button centered in bottom status bar
@@ -3697,7 +3707,7 @@ int main(int argc, char** argv) {
             window.draw(demoBox);
             Ui::textCenter(window, menuFont,
                            demoAllUnlocked ? "Demo - Lock All Levels" : "Demo - Unlock All Levels",
-                           14, demoHov ? sf::Color::White : mapBright,
+                           14, demoHov ? sf::Color::White : sf::Color::White,
                            static_cast<float>(W) * 0.5f, demoBtnY + 8.f, false, &uiCache);
 
             // Right progress counter
@@ -3707,7 +3717,7 @@ int main(int argc, char** argv) {
             }
             std::string progStr = "PROGRESS: " + std::to_string(actCleared) + " / 5";
             float progW = Ui::textWidth(menuFont, progStr, 14, false);
-            Ui::text(window, menuFont, progStr, 14, mapSubtle,
+            Ui::text(window, menuFont, progStr, 14, sf::Color::White,
                      static_cast<float>(W) - 36.f - progW, static_cast<float>(H) - 48.f, false, &uiCache);
 
             if (demoPromptOpen) {
@@ -3740,7 +3750,7 @@ int main(int argc, char** argv) {
                 Ui::textCenter(window, menuFont,
                                demoAllUnlocked ? "LOCK ALL LEVELS (DEMO)" : "UNLOCK ALL LEVELS (DEMO)",
                                20, mapBright, mx0 + mw * 0.5f, my0 + 18.f, true, &uiCache);
-                Ui::textCenter(window, menuFont, "Enter demo password.", 14, mapSubtle,
+                Ui::textCenter(window, menuFont, "Enter demo password.", 14, sf::Color::White,
                                mx0 + mw * 0.5f, my0 + 52.f, false, &uiCache);
 
                 float ix = mx0 + 36.f, iy = my0 + 86.f, iw = mw - 72.f, ih = 42.f;
@@ -3801,8 +3811,8 @@ int main(int argc, char** argv) {
                 cachedHudAlarm = alarmSteps;
                 cachedHudCap = alarmCap;
                 cachedHudScore = score;
-                cachedHudAlarmScore = "Alarm: " + std::to_string(alarmSteps) + " / " +
-                                      std::to_string(alarmCap) + "    Score: " + std::to_string(score);
+                cachedHudAlarmStr = "Alarm: " + std::to_string(alarmSteps) + " / " + std::to_string(alarmCap);
+                cachedHudScoreStr = "Score: " + std::to_string(score);
             }
 
             // Top HUD bar (x=30..1570)
@@ -3832,7 +3842,9 @@ int main(int argc, char** argv) {
             meterRect.setFillColor(ratio > 0.8f ? Ui::red() : sf::Color(0, 255, 65));
             window.draw(meterRect);
 
-            Ui::textFit(window, menuFont, cachedHudAlarmScore, 14, sf::Color(0, 255, 65), meterX, 44.f, meterW, true, &menuUiCache);
+            Ui::text(window, menuFont, cachedHudAlarmStr, 14, sf::Color(240, 90, 90), meterX, 44.f, true, &menuUiCache);
+            float alarmStrW = Ui::textWidth(menuFont, cachedHudAlarmStr + "    ", 14, true);
+            Ui::textFit(window, menuFont, cachedHudScoreStr, 14, sf::Color::White, meterX + alarmStrW, 44.f, meterW - alarmStrW, true, &menuUiCache);
 
             // Structure Canvas Frame (opaque interior so only canvas world grid shows)
             Ui::panel(window, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, sf::Color(55, 85, 130), 248, &uiCache);
@@ -4296,7 +4308,7 @@ int main(int argc, char** argv) {
                 tgtDot.setFillColor(brBright);
                 window.draw(tgtDot);
 
-                Ui::text(window, menuFont, "OBJECTIVE:", 15, brBright, bx + 76.f, r1Y, true, &uiCache);
+                Ui::text(window, menuFont, "OBJECTIVE:", 15, sf::Color(255, 210, 40), bx + 76.f, r1Y, true, &uiCache);
                 float objH = Ui::textWrap(window, font, cachedBriefObj, 15, sf::Color::White,
                                           bx + 216.f, r1Y, bw - 256.f, false, &uiCache);
 
@@ -4315,7 +4327,7 @@ int main(int argc, char** argv) {
                 infoCirc.setFillColor(brBright);
                 window.draw(infoCirc);
                 Ui::textCenter(window, menuFont, "i", 14, sf::Color(4, 14, 6), iconX, r2Y + 1.f, true, &uiCache);
-                Ui::text(window, menuFont, "INTERACTION:", 15, brBright, bx + 76.f, r2Y, true, &uiCache);
+                Ui::text(window, menuFont, "INTERACTION:", 15, sf::Color(255, 210, 40), bx + 76.f, r2Y, true, &uiCache);
                 float intH = Ui::textWrap(window, font, cachedBriefInt, 15, sf::Color::White,
                                           bx + 216.f, r2Y, bw - 256.f, false, &uiCache);
 
@@ -4328,7 +4340,7 @@ int main(int argc, char** argv) {
                 warnTri.setFillColor(brBright);
                 window.draw(warnTri);
                 Ui::textCenter(window, menuFont, "!", 13, sf::Color(4, 14, 6), iconX, r3Y + 3.f, true, &uiCache);
-                Ui::text(window, menuFont, "ALARM CAPACITY:", 15, brBright, bx + 76.f, r3Y, true, &uiCache);
+                Ui::text(window, menuFont, "ALARM CAPACITY:", 15, sf::Color(255, 210, 40), bx + 76.f, r3Y, true, &uiCache);
                 float alarmLblW = Ui::textWidth(menuFont, "ALARM CAPACITY:", 15, true);
                 Ui::text(window, font, std::to_string(alarmCap) + " strikes", 15, sf::Color::White,
                          bx + 90.f + alarmLblW, r3Y, false, &uiCache);
@@ -4599,7 +4611,7 @@ int main(int argc, char** argv) {
             const sf::Color lbSubtle(120, 195, 120);
 
             Ui::text(window, menuFont, "OPERATOR LEADERBOARD", 34, lbBright, 50.f, 24.f, true, &uiCache);
-            Ui::text(window, menuFont, "Recorded campaign heist scores loaded from scores.txt", 14, lbSubtle, 50.f, 70.f, false, &uiCache);
+            Ui::text(window, menuFont, "Recorded campaign heist scores loaded from scores.txt", 14, sf::Color::White, 50.f, 70.f, false, &uiCache);
             sf::RectangleShape hdrLine({1150.f, 1.f});
             hdrLine.setPosition({50.f, 102.f});
             hdrLine.setFillColor(sf::Color(0, 255, 65, 140));
@@ -4707,7 +4719,7 @@ int main(int argc, char** argv) {
             const sf::Color setSubtle(120, 195, 120);
 
             Ui::text(window, menuFont, "SYSTEM SETTINGS", 34, setBright, 50.f, 24.f, true, &uiCache);
-            Ui::text(window, menuFont, "Every setting below takes effect immediately across the interface.", 14, setSubtle, 50.f, 70.f, false, &uiCache);
+            Ui::text(window, menuFont, "Every setting below takes effect immediately across the interface.", 14, sf::Color::White, 50.f, 70.f, false, &uiCache);
             sf::RectangleShape hdrLine({1150.f, 1.f});
             hdrLine.setPosition({50.f, 102.f});
             hdrLine.setFillColor(sf::Color(0, 255, 65, 140));

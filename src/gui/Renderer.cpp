@@ -181,15 +181,15 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
             thickness = 3.2f;
         }
         if (isMarked && !isPrimary) {
-            fill = sf::Color(16, 64, 30, alpha);
-            outline = sf::Color(0, 255, 65, alpha);
+            fill = sf::Color(80, 70, 10, alpha);
+            outline = sf::Color(255, 210, 40, alpha);
             thickness = 3.0f;
         }
         if (isPrimary) {
             thickness = 3.8f;
             if (hl.primaryStyle == HL_INSERT || hl.primaryStyle == HL_SUCCESS) {
-                fill = sf::Color(16, 82, 34, alpha);
-                outline = sf::Color(0, 255, 65, alpha);
+                fill = sf::Color(80, 70, 10, alpha);
+                outline = sf::Color(255, 210, 40, alpha);
             } else if (hl.primaryStyle == HL_DELETE) {
                 fill = sf::Color(115, 32, 32, alpha);
                 outline = sf::Color(255, 95, 95, alpha);
@@ -200,8 +200,8 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
                 fill = sf::Color(24, 78, 42, alpha);
                 outline = sf::Color(0, 255, 110, alpha);
             } else {
-                fill = sf::Color(16, 76, 30, alpha);
-                outline = sf::Color(0, 255, 65, alpha);
+                fill = sf::Color(80, 70, 10, alpha);
+                outline = sf::Color(255, 210, 40, alpha);
             }
         }
         if (isHovered) {
@@ -219,7 +219,7 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
         vis[i].markOrder = markOrder;
 
         if (isSelected || isMarked) {
-            sf::Color selCol = isSelected ? sf::Color(0, 255, 65, alpha) : sf::Color(70, 220, 130, alpha);
+            sf::Color selCol = isSelected ? sf::Color(0, 255, 65, alpha) : sf::Color(255, 210, 40, alpha);
             appendRing(m_shapeVertices, n.x, n.y, r + 5.f, r + 7.6f, selCol, cosT, sinT);
         }
 
