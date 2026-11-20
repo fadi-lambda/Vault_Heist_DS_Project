@@ -3305,7 +3305,7 @@ int main(int argc, char** argv) {
         if (showBgGrid && currentScreen != SCREEN_MAIN_MENU &&
             currentScreen != SCREEN_SPLASH && currentScreen != SCREEN_CAMPAIGN_MAP &&
             currentScreen != SCREEN_SETTINGS && currentScreen != SCREEN_LEADERBOARD &&
-            currentScreen != SCREEN_ENDLESS_LEADERBOARD) {
+            currentScreen != SCREEN_ENDLESS_LEADERBOARD && currentScreen != SCREEN_RESULT) {
             Ui::grid(window, static_cast<float>(W), static_cast<float>(H), &uiCache);
         }
 
@@ -4348,6 +4348,9 @@ int main(int argc, char** argv) {
 
         // 4. RESULT SCREEN
         if (currentScreen == SCREEN_RESULT) {
+            if (vaultBgSprite.has_value()) {
+                window.draw(*vaultBgSprite);
+            }
             bool failed = (currentLevelIdx >= 0 && levels[currentLevelIdx].stars == 0);
             float cardW = 760.f, cardH = 520.f;
             float cardX = W * 0.5f - cardW * 0.5f, cardY = 170.f;
