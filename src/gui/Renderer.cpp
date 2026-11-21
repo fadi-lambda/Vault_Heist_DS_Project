@@ -158,8 +158,8 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
         int markOrder = 0;
         bool isMarked   = hl.isMarked(n.id, markOrder);
 
-        sf::Color fill(6, 22, 10, alpha);
-        sf::Color outline(0, 255, 65, alpha);
+        sf::Color fill(70, 60, 8, alpha);
+        sf::Color outline(255, 210, 40, alpha);
         float thickness = 2.4f;
 
         if (n.isViolation) {
@@ -181,15 +181,15 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
             thickness = 3.2f;
         }
         if (isMarked && !isPrimary) {
-            fill = sf::Color(80, 70, 10, alpha);
-            outline = sf::Color(255, 210, 40, alpha);
+            fill = sf::Color(16, 82, 34, alpha);
+            outline = sf::Color(0, 255, 65, alpha);
             thickness = 3.0f;
         }
         if (isPrimary) {
             thickness = 3.8f;
             if (hl.primaryStyle == HL_INSERT || hl.primaryStyle == HL_SUCCESS) {
-                fill = sf::Color(80, 70, 10, alpha);
-                outline = sf::Color(255, 210, 40, alpha);
+                fill = sf::Color(16, 82, 34, alpha);
+                outline = sf::Color(0, 255, 65, alpha);
             } else if (hl.primaryStyle == HL_DELETE) {
                 fill = sf::Color(115, 32, 32, alpha);
                 outline = sf::Color(255, 95, 95, alpha);
@@ -200,8 +200,8 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
                 fill = sf::Color(24, 78, 42, alpha);
                 outline = sf::Color(0, 255, 110, alpha);
             } else {
-                fill = sf::Color(80, 70, 10, alpha);
-                outline = sf::Color(255, 210, 40, alpha);
+                fill = sf::Color(16, 82, 34, alpha);
+                outline = sf::Color(0, 255, 65, alpha);
             }
         }
         if (isHovered) {
@@ -211,6 +211,11 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
                 thickness = 3.2f;
             }
         }
+        if (n.id == hl.errorFlashNodeId) {
+            fill = sf::Color(115, 32, 32, alpha);
+            outline = sf::Color(255, 95, 95, alpha);
+            thickness = 3.6f;
+        }
 
         vis[i].r = r;
         vis[i].alpha = alpha;
@@ -219,7 +224,7 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
         vis[i].markOrder = markOrder;
 
         if (isSelected || isMarked) {
-            sf::Color selCol = isSelected ? sf::Color(0, 255, 65, alpha) : sf::Color(255, 210, 40, alpha);
+            sf::Color selCol = isSelected ? sf::Color(0, 255, 65, alpha) : sf::Color(70, 220, 130, alpha);
             appendRing(m_shapeVertices, n.x, n.y, r + 5.f, r + 7.6f, selCol, cosT, sinT);
         }
 

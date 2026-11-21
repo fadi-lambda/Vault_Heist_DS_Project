@@ -1057,6 +1057,13 @@ int main(int argc, char** argv) {
         }
     };
 
+    int wrongFlashNodeId = -1;
+    float wrongFlashTimer = 0.f;
+    auto triggerWrongFlash = [&](int nodeId) {
+        wrongFlashNodeId = nodeId;
+        wrongFlashTimer = 0.4f;
+    };
+
     auto raisePenalty = [&](int penaltyKind, const std::string& msg) {
         int added = scoring.applyPenalty(penaltyKind);
         syncScoringHud();
@@ -2290,6 +2297,7 @@ int main(int argc, char** argv) {
                     }
                     if (scoring.isAlarmFull()) triggerAlarmFullFail();
                 } else {
+                    triggerWrongFlash(clickedId);
                     raisePenalty(PENALTY_WRONG_TRAVERSAL,
                                  "Expected " + std::to_string(expSeq[act1SeqIdx]) + " next in " +
                                  traversalModeName(act1TravMode) + ", got " + std::to_string(clickedKey) + "!");
@@ -2302,6 +2310,7 @@ int main(int argc, char** argv) {
         }
         else if (lid == LEVEL_1_3) {
             if (act1Hl1 != -9999 && clickedKey != act1Hl1) {
+                triggerWrongFlash(clickedId);
                 raisePenalty(PENALTY_WRONG_TRAVERSAL,
                              "Postorder processes leaves/children first! Current room is " +
                              std::to_string(act1Hl1) + ".");
@@ -2349,6 +2358,7 @@ int main(int argc, char** argv) {
                              " by clicking each room along it in order!";
                     if (scoring.isAlarmFull()) triggerAlarmFullFail();
                 } else {
+                    triggerWrongFlash(clickedId);
                     raisePenalty(PENALTY_WRONG_TRAVERSAL,
                                  "Room " + std::to_string(clickedKey) + " is not the LCA of " +
                                  std::to_string(act1LcaA) + " and " + std::to_string(act1LcaB) + "!");
@@ -2379,6 +2389,7 @@ int main(int argc, char** argv) {
                                  ": clicked " + std::to_string(clickedKey) + ". Click next room along the route!";
                     }
                 } else {
+                    triggerWrongFlash(clickedId);
                     raisePenalty(PENALTY_WRONG_TRAVERSAL,
                                  "Wrong path room " + std::to_string(clickedKey) + "! Expected " +
                                  std::to_string(act1RoutePath[act1RouteIdx]) + " next along the route.");
@@ -2404,6 +2415,7 @@ int main(int argc, char** argv) {
                 } else if (containsInt(act1SwappedKeys, act1SwappedCount, clickedKey)) {
                     toastQueue.push("Room " + std::to_string(clickedKey) + " already swapped!", TOAST_KIND_WARNING);
                 } else if (!allInternalDescendantsSwapped(u, act1SwappedKeys, act1SwappedCount)) {
+                    triggerWrongFlash(clickedId);
                     raisePenalty(PENALTY_WRONG_TRAVERSAL,
                                  "Bottom-up order required! Swap lower subtrees before clicking " +
                                  std::to_string(clickedKey) + "!");
@@ -2484,6 +2496,7 @@ int main(int argc, char** argv) {
                     }
                 }
             } else {
+                triggerWrongFlash(clickedId);
                 raisePenalty(PENALTY_WRONG_TRAVERSAL, "Node " + std::to_string(clickedKey) + " is balanced (|BF| <= 1)!");
             }
         }
@@ -2503,6 +2516,7 @@ int main(int argc, char** argv) {
                         status = "Pivot " + std::to_string(clickedKey) + " (BF=" + std::to_string(bf) +
                                  ") selected! Click [LL: Rotate Right (1)] or [RR: Rotate Left (2)].";
                     } else {
+                        triggerWrongFlash(clickedId);
                         raisePenalty(PENALTY_WRONG_ROTATION,
                                      "Node " + std::to_string(clickedKey) + " is balanced (BF=" +
                                      std::to_string(bf) + ")! Click an unbalanced pivot (|BF| > 1).");
@@ -2565,6 +2579,7 @@ int main(int argc, char** argv) {
                                  std::to_string(rootNode->key) + "!";
                         if (scoring.isAlarmFull()) triggerAlarmFullFail();
                     } else {
+                        triggerWrongFlash(clickedId);
                         raisePenalty(PENALTY_WRONG_ROTATION,
                                      "Click heavy child pivot " +
                                      std::to_string(childPivot ? childPivot->key : d.puzzles[pIdx].childKey) +
@@ -2610,6 +2625,7 @@ int main(int argc, char** argv) {
                             status = "Final double rotation complete! Verifying balanced AVL tree...";
                         }
                     } else {
+                        triggerWrongFlash(clickedId);
                         raisePenalty(PENALTY_WRONG_ROTATION,
                                      "Step 3/3: Click root pivot " +
                                      std::to_string(rootNode ? rootNode->key : d.puzzles[pIdx].rootKey) +
@@ -2694,6 +2710,7 @@ int main(int argc, char** argv) {
                                  std::to_string(d.kQueries[bossQueryIdx]) + " MOST VALUABLE!";
                     }
                 } else {
+                    triggerWrongFlash(clickedId);
                     raisePenalty(PENALTY_WRONG_TRAVERSAL,
                                  "Node " + std::to_string(clickedKey) + " is not the #" + std::to_string(k) +
                                  " MOST VALUABLE (largest) key! Compare right subtree sz.");
@@ -2730,6 +2747,7 @@ int main(int argc, char** argv) {
                     animCtrl.loadOperation(batch, before, heapLayout, true, autoPlayEvents);
                     if (scoring.isAlarmFull()) triggerAlarmFullFail();
                 } else {
+                    triggerWrongFlash(clickedId);
                     raisePenalty(PENALTY_ACT4_INVALID,
                                  "Sift down node [" + std::to_string(buildStepIdx) + "] next (bottom-up order)!");
                 }
@@ -2756,6 +2774,7 @@ int main(int argc, char** argv) {
                     status = "Sabotaged node sifted down! Playing repair animation...";
                     if (scoring.isAlarmFull()) triggerAlarmFullFail();
                 } else {
+                    triggerWrongFlash(clickedId);
                     raisePenalty(PENALTY_ACT4_INVALID,
                                  "Click sabotaged node [" + std::to_string(buildStepIdx) + "] (or child [" +
                                  std::to_string(partner) + "]) to repair!");
@@ -2808,6 +2827,7 @@ int main(int argc, char** argv) {
                     }
                     if (scoring.isAlarmFull()) triggerAlarmFullFail();
                 } else {
+                    triggerWrongFlash(clickedId);
                     raisePenalty(PENALTY_ACT4_INVALID, "Max Heap extraction always removes root [0]!");
                 }
             }
@@ -2848,6 +2868,7 @@ int main(int argc, char** argv) {
                     }
                     if (scoring.isAlarmFull()) triggerAlarmFullFail();
                 } else {
+                    triggerWrongFlash(clickedId);
                     raisePenalty(PENALTY_ACT4_INVALID, "Click root [0] to extract the next maximum!");
                 }
             }
@@ -3816,7 +3837,7 @@ int main(int argc, char** argv) {
             }
 
             // Top HUD bar (x=30..1570)
-            Ui::textFit(window, menuFont, levels[currentLevelIdx].title, 24, sf::Color(0, 255, 65), 30.f, 10.f, 675.f, true, &menuUiCache);
+            Ui::textFit(window, menuFont, levels[currentLevelIdx].title, 24, sf::Color(255, 210, 40), 30.f, 10.f, 675.f, true, &menuUiCache);
             Ui::textWrap(window, font, cachedHudObj, 12, sf::Color(215, 240, 220), 30.f, 42.f, 675.f, false, &uiCache);
 
             Ui::button(window, font, hintSys.isAvailable() ? "Hint [H]" : "Hint Used", 722.f, 18.f, 115.f, 34.f,
@@ -3852,6 +3873,7 @@ int main(int argc, char** argv) {
             // Populate Highlight State
             RenderHighlightState hl;
             hl.selectedNodeId = selectedNodeId;
+            hl.errorFlashNodeId = wrongFlashNodeId;
             hl.showBadges = showNodeBadges;
             for (int m = 0; m < markedCount; ++m) hl.addMarked(markedIds[m]);
 
@@ -4181,8 +4203,8 @@ int main(int argc, char** argv) {
             }
             float headMaxW = (lid == LEVEL_3_4) ? 960.f : 1080.f;
             float bodyMaxW = (lid == LEVEL_3_4) ? 960.f : 1050.f;
-            Ui::textFit(window, menuFont, cachedPromptHead, TXT_H2, sf::Color(0, 255, 65), 54.f, 678.f, headMaxW, true, &menuUiCache);
-            Ui::textWrap(window, font, status, TXT_BODY, sf::Color(225, 245, 230), 54.f, 718.f, bodyMaxW, false, &uiCache);
+            Ui::textFit(window, menuFont, cachedPromptHead, TXT_H2, sf::Color(255, 210, 40), 54.f, 678.f, headMaxW, true, &menuUiCache);
+            Ui::textWrap(window, font, status, TXT_BODY, sf::Color(255, 210, 40), 54.f, 718.f, bodyMaxW, false, &uiCache);
             if (hintSys.wasUsed()) {
                 Ui::textWrap(window, font, "HINT (-1 star cap): " + hintSys.shownText(),
                              TXT_HINT, sf::Color(0, 255, 65), 54.f, 774.f, bodyMaxW, false, &uiCache);
@@ -4491,6 +4513,7 @@ int main(int argc, char** argv) {
             const LayoutResult& drawL = animCtrl.hasEvents() ? animCtrl.getRenderLayout() : btLayout;
             RenderHighlightState hl;
             hl.selectedNodeId = selectedNodeId;
+            hl.errorFlashNodeId = wrongFlashNodeId;
             hl.showBadges = showNodeBadges;
             sf::Vector2f wPos(0.f, 0.f);
             if (mapHoverToCam(demoCam, in.mx, in.my, wPos)) {
@@ -4554,6 +4577,7 @@ int main(int argc, char** argv) {
             const LayoutResult& drawL = animCtrl.hasEvents() ? animCtrl.getRenderLayout() : bstLayout;
             RenderHighlightState hl;
             hl.selectedNodeId = selectedNodeId;
+            hl.errorFlashNodeId = wrongFlashNodeId;
             hl.showBadges = showNodeBadges;
             sf::Vector2f wPos(0.f, 0.f);
             if (mapHoverToCam(demoCam, in.mx, in.my, wPos)) {
@@ -6052,6 +6076,13 @@ int main(int argc, char** argv) {
         dialAngle += 50.f * dt;
         animCtrl.update(dt);
         toastQueue.update(dt);
+        if (wrongFlashTimer > 0.f) {
+            wrongFlashTimer -= dt;
+            if (wrongFlashTimer <= 0.f) {
+                wrongFlashTimer = 0.f;
+                wrongFlashNodeId = -1;
+            }
+        }
         if (act2TwoChildPhase2Pending && animCtrl.isAtEnd() && !animCtrl.isPlaying()) {
             startAct2TwoChildPhase2();
         }

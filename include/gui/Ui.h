@@ -29,8 +29,8 @@ static const int TEXT_ALIGN_BOTTOM_X  = 3;
 static const unsigned int TXT_TITLE = 46;
 static const unsigned int TXT_H1    = 28;
 static const unsigned int TXT_H2    = 20;
-static const unsigned int TXT_BODY  = 15;
-static const unsigned int TXT_HINT  = 13;
+static const unsigned int TXT_BODY  = 17;
+static const unsigned int TXT_HINT  = 15;
 
 struct UiInput {
     float mx;
