@@ -3986,6 +3986,19 @@ int main(int argc, char** argv) {
                     if (hlIdx1 >= 0) { hl.primaryNodeId = activeDrawLayout->nodes[hlIdx1].id; hl.primaryStyle = HL_VISIT; }
                     if (hlIdx2 >= 0) hl.secondaryNodeId = activeDrawLayout->nodes[hlIdx2].id;
                 }
+                hl.targetNodeId = -1;
+                const LevelData& curLvlD = levelData[currentLevelIdx];
+                if (lid == LEVEL_2_1 && act2TargetIdx >= 0 && act2TargetIdx < curLvlD.targetKeyCount) {
+                    int tgtIdx = activeDrawLayout->findNodeIndexByKey(curLvlD.targetKeys[act2TargetIdx]);
+                    if (tgtIdx >= 0) hl.targetNodeId = activeDrawLayout->nodes[tgtIdx].id;
+                } else if (lid == LEVEL_2_5 && act2BossStage == 1) {
+                    int tgtKey = (curLvlD.kQueryCount > 0) ? curLvlD.kQueries[0]
+                               : (curLvlD.targetKeyCount > 0 ? curLvlD.targetKeys[curLvlD.targetKeyCount - 1] : -1);
+                    if (tgtKey >= 0) {
+                        int tgtIdx = activeDrawLayout->findNodeIndexByKey(tgtKey);
+                        if (tgtIdx >= 0) hl.targetNodeId = activeDrawLayout->nodes[tgtIdx].id;
+                    }
+                }
                 showId = true;
             }
             else if (lid >= LEVEL_3_1 && lid <= LEVEL_3_5) {

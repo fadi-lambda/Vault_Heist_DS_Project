@@ -24,6 +24,7 @@ struct RenderHighlightState {
     int hoveredNodeId;
     int prunedSubtreeId;
     int errorFlashNodeId;
+    int targetNodeId;
     int primaryStyle;
     int arrayHl1;
     int arrayHl2;
@@ -33,7 +34,7 @@ struct RenderHighlightState {
 
     RenderHighlightState()
         : primaryNodeId(-1), secondaryNodeId(-1), selectedNodeId(-1),
-          hoveredNodeId(-1), prunedSubtreeId(-1), errorFlashNodeId(-1), primaryStyle(HL_NONE),
+          hoveredNodeId(-1), prunedSubtreeId(-1), errorFlashNodeId(-1), targetNodeId(-1), primaryStyle(HL_NONE),
           arrayHl1(-1), arrayHl2(-1), showBadges(true), markedCount(0) {
         for (int i = 0; i < 16; ++i) markedNodeIds[i] = -1;
     }

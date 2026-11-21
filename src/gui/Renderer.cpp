@@ -171,8 +171,8 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
         }
 
         if (isPruned) {
-            fill = sf::Color(12, 42, 32, alpha);
-            outline = sf::Color(0, 210, 120, alpha);
+            fill = sf::Color(40, 40, 40, alpha);
+            outline = sf::Color(140, 140, 140, alpha);
             thickness = 3.2f;
         }
         if (isSecond) {
@@ -199,6 +199,9 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
             } else if (hl.primaryStyle == HL_SWAP) {
                 fill = sf::Color(24, 78, 42, alpha);
                 outline = sf::Color(0, 255, 110, alpha);
+            } else if (hl.primaryStyle == HL_VISIT) {
+                fill = sf::Color(16, 40, 80, alpha);
+                outline = sf::Color(70, 150, 255, alpha);
             } else {
                 fill = sf::Color(16, 82, 34, alpha);
                 outline = sf::Color(0, 255, 65, alpha);
@@ -235,6 +238,9 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
 
         appendDisc(m_shapeVertices, n.x, n.y, r, fill, cosT, sinT);
         appendRing(m_shapeVertices, n.x, n.y, r, r + thickness, outline, cosT, sinT);
+        if (n.id == hl.targetNodeId) {
+            appendRing(m_shapeVertices, n.x, n.y, r + thickness + 2.f, r + thickness + 5.5f, sf::Color(245, 185, 40, alpha), cosT, sinT);
+        }
 
         if (isMarked) {
             float mx = n.x - r * 0.85f, my = n.y - r * 0.85f;
