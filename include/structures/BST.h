@@ -58,6 +58,8 @@ public:
     BST();
     ~BST();
 
+    void clear();
+
     // --- Benchmark-only Counter API ---
     static void resetCounters();
     static long long getComparisons();

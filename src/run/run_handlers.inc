@@ -673,7 +673,7 @@
             act1Hl1 = a; act1Hl2 = b;
             status = "LCA(" + std::to_string(a) + ", " + std::to_string(b) + ") = " + std::to_string(lcaVal);
         } else if (actionCode == 6) {
-            act1Tree = BinaryTree();
+            act1Tree.clear();
             auto r1 = act1Tree.addNode(1, nullptr, true);
             auto r2L = act1Tree.addNode(2, r1, true);
             auto r2R = act1Tree.addNode(2, r1, false);

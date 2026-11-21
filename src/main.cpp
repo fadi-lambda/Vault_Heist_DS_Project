@@ -313,7 +313,7 @@ static void attachBinaryTreeFromSpec(BinaryTree& tree, const LevelData& d, int k
 }
 
 static void buildBinaryTreeFromData(BinaryTree& tree, const LevelData& d) {
-    tree = BinaryTree();
+    tree.clear();
     if (d.nodeCount > 0) attachBinaryTreeFromSpec(tree, d, d.nodes[0].key, nullptr, true);
 }
 
@@ -386,7 +386,7 @@ static void buildTreeFromSlotsRec(const LayoutResult& slotLayout, const DragDrop
 }
 
 static void buildTreeFromSlots(const LayoutResult& slotLayout, const DragDropController& dd, BinaryTree& outTree) {
-    outTree = BinaryTree();
+    outTree.clear();
     int rootSlot = -1;
     for (int i = 0; i < slotLayout.nodeCount; ++i) {
         if (slotLayout.nodes[i].parentId == -1) { rootSlot = i; break; }
