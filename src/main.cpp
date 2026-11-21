@@ -1223,7 +1223,6 @@ int main(int argc, char** argv) {
     auto startLevel = [&](int idx) {
         currentLevelIdx = idx;
         currentScreen = SCREEN_LEVEL_PLAY;
-        playSfx(missionStartSnd);
         const LevelData& d = levelData[idx];
         int opt = computeOptimalSteps(d);
         scoring.begin(opt);
@@ -6399,6 +6398,7 @@ int main(int argc, char** argv) {
                     if (showingBriefing) {
                         if (kp->code == sf::Keyboard::Key::Enter || kp->code == sf::Keyboard::Key::Space) {
                             showingBriefing = false;
+                            playSfx(missionStartSnd);
                         }
                         continue;
                     }
@@ -6770,6 +6770,7 @@ int main(int argc, char** argv) {
                         float bh = 420.f, by = H * 0.5f - bh * 0.5f;
                         if (Ui::inside(mx, my, W * 0.5f - 150.f, by + bh - 74.f, 300.f, 48.f)) {
                             showingBriefing = false;
+                            playSfx(missionStartSnd);
                         }
                         continue;
                     }
@@ -6986,10 +6987,13 @@ int main(int argc, char** argv) {
             }
         }
 
+        if (bgmLoaded) {
+            bgm.setVolume(soundEnabled ? 35.f : 0.f);
+        }
         static int lastScreenForBgm = -1;
         if (currentScreen != lastScreenForBgm) {
             if (bgmLoaded) {
-                bgm.setPitch(currentScreen == SCREEN_LEVEL_PLAY ? 0.92f : 1.0f);
+                bgm.setPitch((currentScreen == SCREEN_LEVEL_PLAY || currentScreen == SCREEN_SANDBOX || currentScreen == SCREEN_ENDLESS) ? 0.92f : 1.0f);
             }
             lastScreenForBgm = currentScreen;
         }
