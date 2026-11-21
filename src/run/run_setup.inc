@@ -362,7 +362,7 @@
                 playSfx(lockLevelsSnd);
             }
         } else {
-            pushToast("Wrong password", TOAST_KIND_INFO);
+            pushToast("Wrong password", TOAST_KIND_PENALTY);
             playSfx(errorSnd);
         }
         demoPromptOpen = false;
