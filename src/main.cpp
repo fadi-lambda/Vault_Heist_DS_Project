@@ -750,6 +750,24 @@ int main(int argc, char** argv) {
         }
     }
 
+    sf::Texture missionBgTex;
+    bool missionBgLoaded = missionBgTex.loadFromFile("assets/images/mission_bg.png") ||
+                           missionBgTex.loadFromFile("../../assets/images/mission_bg.png") ||
+                           missionBgTex.loadFromFile("out/build/x64-debug/assets/images/mission_bg.png") ||
+                           missionBgTex.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/images/mission_bg.png");
+    if (missionBgLoaded) missionBgTex.setSmooth(true);
+    std::optional<sf::Sprite> missionBgSprite;
+    if (missionBgLoaded) {
+        missionBgSprite.emplace(missionBgTex);
+        sf::Vector2u mTexSz = missionBgTex.getSize();
+        if (mTexSz.x > 0 && mTexSz.y > 0) {
+            missionBgSprite->setScale({
+                static_cast<float>(W) / static_cast<float>(mTexSz.x),
+                static_cast<float>(H) / static_cast<float>(mTexSz.y)
+            });
+        }
+    }
+
     // Persistent score logs (Campaign scores.txt & Endless endless_leaderboard.txt)
     ScoreLog scoreLog;
     scoreLog.load("scores.txt");
@@ -3351,7 +3369,7 @@ int main(int argc, char** argv) {
             Ui::text(window, menuFont, "VAULT ", 56, splashBright, startX, 326.f, true, &uiCache);
             Ui::text(window, menuFont, "HEIST", 56, sf::Color::White, startX + w1, 326.f, true, &uiCache);
 
-            Ui::textCenter(window, menuFont, "THE LIVING VAULT", 18, sf::Color::White, cx, 396.f, false, &uiCache);
+            Ui::textCenter(window, menuFont, "THE LIVING VAULT", 18, sf::Color(255, 210, 40), cx, 396.f, false, &uiCache);
 
             float barW = 400.f, barH = 10.f;
             float barX = cx - barW * 0.5f, barY = 442.f;
@@ -3413,7 +3431,7 @@ int main(int argc, char** argv) {
             window.draw(titleLine);
 
             // Subtitle below title
-            Ui::text(window, menuFont, "BREAK  IN   .   TAKE  CONTROL   .   GET  OUT", 15, sf::Color::White, titleX, titleY + 100.f, false, &uiCache);
+            Ui::text(window, menuFont, "BREAK  IN   .   TAKE  CONTROL   .   GET  OUT", 15, sf::Color(255, 210, 40), titleX, titleY + 100.f, false, &uiCache);
 
             // Top-right corner: "SECURE SYSTEM ▪"
             float ssW = Ui::textWidth(menuFont, "SECURE SYSTEM", 14, false);
@@ -3541,12 +3559,30 @@ int main(int argc, char** argv) {
             window.draw(mapBorder);
 
             // Top bar: "VAULT HEIST" left, active act center, "BACK TO MENU [ESC]" right
-            Ui::text(window, menuFont, "VAULT HEIST", 28, mapBright, 44.f, 24.f, true, &uiCache);
+            sf::Text t1(menuFont, "VAULT ", 28);
+            t1.setStyle(sf::Text::Bold);
+            float w1 = t1.getLocalBounds().size.x;
+
+            // 2. Dono ko alag-alag colour mein draw karein
+            Ui::text(window, menuFont, "VAULT ", 28, mapBright, 44.f, 24.f, true, &uiCache);
+            Ui::text(window, menuFont, "HEIST", 28, sf::Color::White, 44.f + w1, 24.f, true, &uiCache);
 
             const char* curActTitle = actNames[selectedActIdx];
             float actTitleW = Ui::textWidth(menuFont, curActTitle, 20, true);
             float actTitleX = static_cast<float>(W) * 0.5f - actTitleW * 0.5f;
-            Ui::text(window, menuFont, curActTitle, 20, mapBright, actTitleX, 28.f, true, &uiCache);
+            {
+                std::string actStr(curActTitle);
+                size_t sep = actStr.find(" : ");
+                if (sep != std::string::npos) {
+                    std::string actHead = actStr.substr(0, sep);
+                    std::string actTail = actStr.substr(sep);
+                    float actHeadW = Ui::textWidth(menuFont, actHead, 20, true);
+                    Ui::text(window, menuFont, actHead, 20, mapBright, actTitleX, 28.f, true, &uiCache);
+                    Ui::text(window, menuFont, actTail, 20, sf::Color::White, actTitleX + actHeadW, 28.f, true, &uiCache);
+                } else {
+                    Ui::text(window, menuFont, curActTitle, 20, mapBright, actTitleX, 28.f, true, &uiCache);
+                }
+            }
 
             float topLineLW = actTitleX - 380.f;
             if (topLineLW < 20.f) topLineLW = 20.f;
@@ -3640,13 +3676,13 @@ int main(int argc, char** argv) {
                     char numBuf[4];
                     numBuf[0] = static_cast<char>('1' + i);
                     numBuf[1] = '\0';
-                    Ui::textCenter(window, menuFont, numBuf, 28, (unl || isSel || hov) ? mapBright : sf::Color::White,
+                    Ui::textCenter(window, menuFont, numBuf, 28, sf::Color::White,
                                    nodeX[i], nodeY[i] - 18.f, true, &uiCache);
                     if (levels[li].stars > 0) {
                         Ui::stars(window, nodeX[i], nodeY[i] + nodeR + 14.f, levels[li].stars, 3, 6.f, &uiCache);
                     }
                 } else {
-                    sf::Color lockCol = (isSel || hov) ? mapBright : mapDim;
+                    sf::Color lockCol = sf::Color::White;
                     // Padlock shackle
                     sf::RectangleShape shackle({16.f, 13.f});
                     shackle.setOrigin({8.f, 13.f});
@@ -3688,7 +3724,18 @@ int main(int argc, char** argv) {
             std::string missionTitle = "Mission " + std::to_string(selectedActIdx + 1) + "." +
                                        std::to_string(selectedLevelInAct + 1) + " : " +
                                        lvlNames[selectedActIdx][selectedLevelInAct];
-            Ui::text(window, menuFont, missionTitle, 22, sf::Color::White, infoX + 28.f, infoY + 26.f, true, &uiCache);
+            {
+                size_t mSep = missionTitle.find(" : ");
+                if (mSep != std::string::npos) {
+                    std::string mHead = missionTitle.substr(0, mSep);
+                    std::string mTail = missionTitle.substr(mSep);
+                    float mHeadW = Ui::textWidth(menuFont, mHead, 22, true);
+                    Ui::text(window, menuFont, mHead, 22, sf::Color(255, 210, 40), infoX + 28.f, infoY + 26.f, true, &uiCache);
+                    Ui::text(window, menuFont, mTail, 22, sf::Color::White, infoX + 28.f + mHeadW, infoY + 26.f, true, &uiCache);
+                } else {
+                    Ui::text(window, menuFont, missionTitle, 22, sf::Color::White, infoX + 28.f, infoY + 26.f, true, &uiCache);
+                }
+            }
             Ui::textWrap(window, menuFont, lvlDescs[selectedActIdx][selectedLevelInAct], 15, sf::Color(220, 220, 220),
                          infoX + 28.f, infoY + 72.f, infoW - 56.f, false, &uiCache);
 
@@ -3819,6 +3866,9 @@ int main(int argc, char** argv) {
 
         // 3. LEVEL PLAY SCREEN
         if (currentScreen == SCREEN_LEVEL_PLAY && currentLevelIdx >= 0) {
+            if (missionBgSprite.has_value()) {
+                window.draw(*missionBgSprite);
+            }
             int lid = levels[currentLevelIdx].id;
             int alarmCap = levels[currentLevelIdx].alarmCapacity;
 
@@ -3860,7 +3910,7 @@ int main(int argc, char** argv) {
             meterRect.setSize({meterW * ratio, 20.f});
             meterRect.setPosition({meterX, 16.f});
             meterRect.setOutlineThickness(0.f);
-            meterRect.setFillColor(ratio > 0.8f ? Ui::red() : sf::Color(0, 255, 65));
+            meterRect.setFillColor(ratio > 0.8f ? Ui::red() : sf::Color(255, 210, 40));
             window.draw(meterRect);
 
             Ui::text(window, menuFont, cachedHudAlarmStr, 14, sf::Color(240, 90, 90), meterX, 44.f, true, &menuUiCache);
@@ -4489,7 +4539,7 @@ int main(int argc, char** argv) {
             Ui::button(window, font, "[Z] Undo",         904.f,  674.f, 170.f, 46.f, undoStack.isEmpty() ? BTN_DISABLED : BTN_GHOST, in, 14, &uiCache);
             Ui::button(window, font, "[R] Reset",        1094.f, 674.f, 170.f, 46.f, BTN_DANGER, in, 14, &uiCache);
 
-            Ui::textFit(window, font, status, TXT_BODY, sf::Color(0, 255, 65), 54.f, 746.f, 1480.f, false, &uiCache);
+            Ui::textFit(window, font, status, TXT_BODY, sf::Color::White, 54.f, 746.f, 1480.f, false, &uiCache);
             Ui::textFit(window, font, "Shortcuts: [I] Insert AVL  |  [D] Delete AVL  |  [K] kth  |  [E] Extract Heap  |  [Z] Undo  |  [Space] Play/Pause  |  [Right] Step",
                         TXT_HINT, Ui::textMuted(), 54.f, 820.f, 1480.f, false, &uiCache);
         }
@@ -4667,11 +4717,11 @@ int main(int argc, char** argv) {
                 Ui::textCenter(window, menuFont, "Complete any campaign level to record your score here.",
                                15, lbSubtle, static_cast<float>(W) * 0.5f, my0 + 255.f, false, &uiCache);
             } else {
-                Ui::text(window, menuFont, "RANK",  14, lbBright, mx0 + 36.f,  my0 + 24.f, true, &uiCache);
-                Ui::text(window, menuFont, "LEVEL", 14, lbBright, mx0 + 120.f, my0 + 24.f, true, &uiCache);
-                Ui::text(window, menuFont, "SCORE", 14, lbBright, mx0 + 520.f, my0 + 24.f, true, &uiCache);
-                Ui::text(window, menuFont, "ALARM", 14, lbBright, mx0 + 660.f, my0 + 24.f, true, &uiCache);
-                Ui::text(window, menuFont, "STARS", 14, lbBright, mx0 + 785.f, my0 + 24.f, true, &uiCache);
+                Ui::text(window, menuFont, "RANK",  14, sf::Color(255, 210, 40), mx0 + 36.f,  my0 + 24.f, true, &uiCache);
+                Ui::text(window, menuFont, "LEVEL", 14, sf::Color(255, 210, 40), mx0 + 120.f, my0 + 24.f, true, &uiCache);
+                Ui::text(window, menuFont, "SCORE", 14, sf::Color(255, 210, 40), mx0 + 520.f, my0 + 24.f, true, &uiCache);
+                Ui::text(window, menuFont, "ALARM", 14, sf::Color(255, 210, 40), mx0 + 660.f, my0 + 24.f, true, &uiCache);
+                Ui::text(window, menuFont, "STARS", 14, sf::Color(255, 210, 40), mx0 + 785.f, my0 + 24.f, true, &uiCache);
 
                 sf::RectangleShape thLine({mw - 48.f, 1.f});
                 thLine.setPosition({mx0 + 24.f, my0 + 52.f});
@@ -4776,8 +4826,8 @@ int main(int argc, char** argv) {
             }
 
             float bw = 560.f, bh = 52.f, bx = static_cast<float>(W) * 0.5f - bw * 0.5f;
-            Ui::text(window, menuFont, cachedSetResStr, 15, setSubtle, bx, sy0 + 36.f, false, &uiCache);
-            Ui::text(window, menuFont, cachedSetFpsLimStr, 15, setSubtle, bx, sy0 + 68.f, false, &uiCache);
+            Ui::text(window, menuFont, cachedSetResStr, 15, sf::Color(255, 210, 40), bx, sy0 + 36.f, false, &uiCache);
+            Ui::text(window, menuFont, cachedSetFpsLimStr, 15, sf::Color(255, 210, 40), bx, sy0 + 68.f, false, &uiCache);
 
             auto drawSettingToggle = [&](const std::string& label, float yOff, bool active) {
                 float by = sy0 + yOff;
@@ -4831,7 +4881,7 @@ int main(int argc, char** argv) {
                                    std::to_string(rateTenths % 10) + " ops/min";
             }
 
-            Ui::textFit(window, font, "ENDLESS SURVIVAL // LIVE AVL STREAM", 24, sf::Color(0, 255, 65),
+            Ui::textFit(window, font, "ENDLESS SURVIVAL // LIVE AVL STREAM", 24, sf::Color(255, 210, 40),
                         30.f, 12.f, 620.f, true, &uiCache);
             Ui::textFit(window, font, cachedEndlessSub, 14, Ui::textBody(),
                         30.f, 46.f, 620.f, false, &uiCache);
@@ -4855,7 +4905,7 @@ int main(int argc, char** argv) {
             mRect.setSize({meterW * ratio, 20.f});
             mRect.setPosition({meterX, 16.f});
             mRect.setOutlineThickness(0.f);
-            mRect.setFillColor(ratio < 0.25f ? Ui::red() : (ratio < 0.55f ? Ui::amber() : Ui::green()));
+            mRect.setFillColor(ratio < 0.25f ? Ui::red() : sf::Color(255, 210, 40));
             window.draw(mRect);
 
             int remMs = static_cast<int>(remSec * 1000.0f + 0.5f);
@@ -4913,7 +4963,7 @@ int main(int argc, char** argv) {
                                           "  - Click [Execute] to apply real AVL operation & check invariants!";
                 }
             }
-            Ui::textFit(window, font, cachedEndlessPrompt, TXT_H2, sf::Color(0, 255, 65), 54.f, 678.f, 1040.f, true, &uiCache);
+            Ui::textFit(window, font, cachedEndlessPrompt, TXT_H2, sf::Color(255, 210, 40), 54.f, 678.f, 1040.f, true, &uiCache);
             Ui::textWrap(window, font, status, TXT_BODY, Ui::textBody(), 54.f, 720.f, 1040.f, false, &uiCache);
             Ui::textFit(window, font, "[Enter / X] Execute Pending Op  |  [P] Pause  |  [F5] Save Run  |  [F9] Load Run  |  [L] Leaderboard  |  [Esc] Main Menu",
                         TXT_HINT, Ui::textMuted(), 54.f, 832.f, 1480.f, false, &uiCache);
@@ -4937,7 +4987,7 @@ int main(int argc, char** argv) {
             const sf::Color elbSubtle(120, 195, 120);
 
             Ui::text(window, menuFont, "ENDLESS SURVIVAL LEADERBOARD", 34, elbBright, 50.f, 20.f, true, &menuUiCache);
-            Ui::text(window, menuFont, "Survival times ranked descending from endless_leaderboard.txt", 14, elbSubtle, 50.f, 64.f, false, &menuUiCache);
+            Ui::text(window, menuFont, "Survival times ranked descending from endless_leaderboard.txt", 14, sf::Color::White, 50.f, 64.f, false, &menuUiCache);
             sf::RectangleShape hdrLine({1150.f, 1.f});
             hdrLine.setPosition({50.f, 92.f});
             hdrLine.setFillColor(sf::Color(0, 255, 65, 140));
@@ -4965,11 +5015,11 @@ int main(int argc, char** argv) {
                 Ui::textCenter(window, menuFont, "Start Endless Survival Mode from the Main Menu to set a survival record!",
                                15, elbSubtle, static_cast<float>(W) * 0.5f, my0 + 235.f, false, &menuUiCache);
             } else {
-                Ui::text(window, menuFont, "RANK",            14, elbBright, mx0 + 36.f,  my0 + 22.f, true, &menuUiCache);
-                Ui::text(window, menuFont, "OPERATOR / DATE", 14, elbBright, mx0 + 120.f, my0 + 22.f, true, &menuUiCache);
-                Ui::text(window, menuFont, "SURVIVAL TIME",   14, elbBright, mx0 + 500.f, my0 + 22.f, true, &menuUiCache);
-                Ui::text(window, menuFont, "OPS",             14, elbBright, mx0 + 670.f, my0 + 22.f, true, &menuUiCache);
-                Ui::text(window, menuFont, "SEED",            14, elbBright, mx0 + 760.f, my0 + 22.f, true, &menuUiCache);
+                Ui::text(window, menuFont, "RANK",            14, sf::Color(255, 210, 40), mx0 + 36.f,  my0 + 22.f, true, &menuUiCache);
+                Ui::text(window, menuFont, "OPERATOR / DATE", 14, sf::Color(255, 210, 40), mx0 + 120.f, my0 + 22.f, true, &menuUiCache);
+                Ui::text(window, menuFont, "SURVIVAL TIME",   14, sf::Color(255, 210, 40), mx0 + 500.f, my0 + 22.f, true, &menuUiCache);
+                Ui::text(window, menuFont, "OPS",             14, sf::Color(255, 210, 40), mx0 + 670.f, my0 + 22.f, true, &menuUiCache);
+                Ui::text(window, menuFont, "SEED",            14, sf::Color(255, 210, 40), mx0 + 760.f, my0 + 22.f, true, &menuUiCache);
 
                 sf::RectangleShape thLine({mw - 48.f, 1.f});
                 thLine.setPosition({mx0 + 24.f, my0 + 48.f});

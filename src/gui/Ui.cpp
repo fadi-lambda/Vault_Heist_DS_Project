@@ -408,8 +408,8 @@ void grid(sf::RenderTarget& t, float w, float h, UiCache* cache) {
 
 void screenHeader(sf::RenderTarget& t, const sf::Font& font, const std::string& title,
                   const std::string& subtitle, UiCache* cache) {
-    text(t, font, title, TXT_H1, sf::Color(0, 255, 65), 40.f, 24.f, true, cache);
-    if (!subtitle.empty()) textFit(t, font, subtitle, TXT_HINT, sf::Color(110, 185, 120), 40.f, 62.f, 1000.f, false, cache);
+    text(t, font, title, TXT_H1, sf::Color(255, 210, 40), 40.f, 24.f, true, cache);
+    if (!subtitle.empty()) textFit(t, font, subtitle, TXT_HINT, sf::Color::White, 40.f, 62.f, 1000.f, false, cache);
     sf::RectangleShape fb;
     sf::RectangleShape& u = acquireRect(cache, fb);
     u.setSize({120.f, 3.f});
