@@ -1034,7 +1034,7 @@ int main(int argc, char** argv) {
                     campCachedLabels[i].clear();
                 }
                 demoAllUnlocked = false;
-                pushToast("[DEMO] Levels locked", TOAST_KIND_WARNING);
+                pushToast("[DEMO] Levels locked", TOAST_KIND_SUCCESS);
                 playSfx(lockLevelsSnd);
             }
         } else {
