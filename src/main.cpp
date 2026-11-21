@@ -3642,7 +3642,7 @@ int main(int argc, char** argv) {
             }
 
             // Center area: 5 level nodes for active act as circles connected by lines
-            const float nodeX[5] = { 440.f, 610.f, 780.f, 950.f, 1120.f };
+            const float nodeX[5] = { 440.f, 580.f, 720.f, 860.f, 1000.f };
             const float nodeY[5] = { 360.f, 460.f, 295.f, 450.f, 305.f };
             const float nodeR = 44.f;
 
@@ -4768,7 +4768,7 @@ int main(int argc, char** argv) {
             endBtn.setOutlineThickness(endHov ? 2.f : 1.5f);
             window.draw(endBtn);
             Ui::textCenter(window, menuFont, "Endless Leaderboard [E]", 15,
-                           endHov ? sf::Color::White : lbBright,
+                           endHov ? sf::Color::White : sf::Color::Yellow,
                            static_cast<float>(W) * 0.5f - 165.f, 784.f, endHov, &uiCache);
 
             bool retHov = Ui::inside(in.mx, in.my, static_cast<float>(W) * 0.5f + 20.f, 770.f, 290.f, 48.f);
@@ -4779,7 +4779,7 @@ int main(int argc, char** argv) {
             retBtn.setOutlineThickness(2.f);
             window.draw(retBtn);
             Ui::textCenter(window, menuFont, "Return to Main Menu [ESC]", 15,
-                           retHov ? lbBright : sf::Color::White,
+                           retHov ? sf::Color::White : sf::Color::Yellow,
                            static_cast<float>(W) * 0.5f + 165.f, 784.f, true, &uiCache);
         }
 
@@ -4857,7 +4857,7 @@ int main(int argc, char** argv) {
             retBtn.setOutlineThickness(retHov ? 2.f : 1.5f);
             window.draw(retBtn);
             Ui::textCenter(window, menuFont, "Return to Main Menu [ESC]", 15,
-                           retHov ? sf::Color::White : setBright,
+                           retHov ? sf::Color::White : sf::Color::Yellow,
                            static_cast<float>(W) * 0.5f, 754.f, retHov, &uiCache);
         }
 
@@ -6569,7 +6569,7 @@ int main(int argc, char** argv) {
                             break;
                         }
                     }
-                    const float nodeX[5] = { 440.f, 610.f, 780.f, 950.f, 1120.f };
+                    const float nodeX[5] = { 440.f, 580.f, 720.f, 860.f, 1000.f };
                     const float nodeY[5] = { 360.f, 460.f, 295.f, 450.f, 305.f };
                     const float nodeR = 44.f;
                     for (int i = 0; i < 5; ++i) {
