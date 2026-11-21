@@ -410,7 +410,7 @@ void Renderer::drawEventLogPanel(sf::RenderWindow& window, const sf::Font& font,
     appendOutlinedRect(m_shapeVertices, x - 2.f, y - 2.f, w + 4.f, h + 4.f, 3.f,
                        sf::Color(0, 0, 0, 0), sf::Color(0, 255, 65, 55));
     appendOutlinedRect(m_shapeVertices, x, y, w, h, 1.5f, sf::Color(5, 13, 8, 235), sf::Color(0, 255, 65, 210));
-    appendQuad(m_shapeVertices, x + 10.f, y + 28.f, w - 20.f, 1.f, sf::Color(0, 255, 65, 90));
+    appendQuad(m_shapeVertices, x + 10.f, y + 28.f, w - 20.f, 1.f, sf::Color(255, 210, 40, 140));
 
     if (total > 0 && cursor >= startIdx && cursor < startIdx + visibleRows && cursor < total) {
         float rowY = y + 34.f + static_cast<float>(cursor - startIdx) * 24.f;
@@ -425,15 +425,19 @@ void Renderer::drawEventLogPanel(sf::RenderWindow& window, const sf::Font& font,
         m_cachedHdrBatches = totalBatchesLogged;
         m_cachedLogHeader = "EVENT LOG  [" +
             std::to_string(total > 0 && cursor >= 0 ? (cursor + 1) : 0) +
-            "/" + std::to_string(total) + "]  Ops:" + std::to_string(totalBatchesLogged);
+            "/" + std::to_string(total) + "]";
+        m_cachedLogOps = "  Ops:" + std::to_string(totalBatchesLogged);
+        m_cachedLogHeaderW = Ui::textWidth(font, m_cachedLogHeader, 12, true);
     }
 
     Ui::drawPooledText(window, &m_ui, font, m_cachedLogHeader, 12, true, TEXT_ALIGN_TOP_LEFT,
-                       sf::Color(0, 255, 65), x + 10.f, y + 8.f);
+                       sf::Color(255, 210, 40), x + 10.f, y + 8.f);
+    Ui::drawPooledText(window, &m_ui, font, m_cachedLogOps, 12, true, TEXT_ALIGN_TOP_LEFT,
+                       sf::Color::White, x + 10.f + m_cachedLogHeaderW, y + 8.f);
 
     if (total == 0) {
         Ui::textWrap(window, font, "No operation events yet. Trigger an action or click a node on the canvas.", 12,
-                     sf::Color(110, 185, 125), x + 12.f, y + 40.f, w - 24.f, false, &m_ui);
+                     sf::Color::White, x + 12.f, y + 40.f, w - 24.f, false, &m_ui);
         return;
     }
 
@@ -485,7 +489,7 @@ void Renderer::drawPlaybackControls(sf::RenderWindow& window, const sf::Font& fo
     float row1Y = panelY + panelH - 64.f;
     float row2Y = panelY + panelH - 30.f;
 
-    Ui::button(window, font, "Replay", panelX + 8.f, row0Y, 72.f, 24.f, BTN_SECONDARY, in, 12, &m_ui);
+    Ui::button(window, font, "Replay", panelX + 8.f, row0Y, 72.f, 24.f, BTN_ACCENT, in, 12, &m_ui);
     float scrubX = panelX + 90.f;
     float scrubW = panelW - 104.f;
     if (scrubW < 40.f) scrubW = 40.f;
@@ -503,17 +507,22 @@ void Renderer::drawPlaybackControls(sf::RenderWindow& window, const sf::Font& fo
     float btnW = (panelW - 32.f) / 3.f;
     if (btnW > 116.f) btnW = 116.f;
     Ui::button(window, font, isPlaying ? "Pause [Spc]" : "Play [Spc]", panelX + 8.f, row1Y, btnW, 25.f,
-               isPlaying ? BTN_PRIMARY : BTN_SECONDARY, in, 12, &m_ui);
+               BTN_ACCENT, in, 12, &m_ui);
     Ui::button(window, font, "Step [>]", panelX + 16.f + btnW, row1Y, btnW, 25.f, BTN_SECONDARY, in, 12, &m_ui);
     Ui::button(window, font, "Skip [>>]", panelX + 24.f + 2.f * btnW, row1Y, btnW, 25.f, BTN_GHOST, in, 12, &m_ui);
 
     int tenths = static_cast<int>(speedMultiplier * 10.f + 0.5f);
     if (m_cachedSpeedTenths != tenths) {
         m_cachedSpeedTenths = tenths;
-        m_cachedSpeedStr = "Speed " + std::to_string(tenths / 10) + "." + std::to_string(tenths % 10) + "x";
+        m_cachedSpeedStr = std::to_string(tenths / 10) + "." + std::to_string(tenths % 10) + "x";
     }
+    if (m_cachedSpeedLabelW < 0.f) {
+        m_cachedSpeedLabelW = Ui::textWidth(font, "Speed: ", 12, false);
+    }
+    Ui::drawPooledText(window, &m_ui, font, "Speed: ", 12, false, TEXT_ALIGN_TOP_LEFT,
+                       sf::Color::White, panelX + 10.f, row2Y + 2.f);
     Ui::drawPooledText(window, &m_ui, font, m_cachedSpeedStr, 12, false, TEXT_ALIGN_TOP_LEFT,
-                       sf::Color(140, 230, 155), panelX + 10.f, row2Y + 2.f);
+                       sf::Color(0, 255, 65), panelX + 10.f + m_cachedSpeedLabelW, row2Y + 2.f);
 
     float trackX = panelX + 94.f;
     float trackW = panelW - 108.f;
@@ -530,8 +539,8 @@ void Renderer::drawPlaybackControls(sf::RenderWindow& window, const sf::Font& fo
     m_shapeVertices.clear();
     m_shapeVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
     appendQuad(m_shapeVertices, scrubX, scrubY, scrubW, 5.f, sf::Color(20, 40, 28));
-    if (scrubNorm > 0.f) appendQuad(m_shapeVertices, scrubX, scrubY, scrubW * scrubNorm, 5.f, sf::Color(0, 255, 65));
-    appendDisc(m_shapeVertices, scrubX + scrubW * scrubNorm, scrubY + 2.5f, 6.f, sf::Color(0, 255, 65), cosT, sinT);
+    if (scrubNorm > 0.f) appendQuad(m_shapeVertices, scrubX, scrubY, scrubW * scrubNorm, 5.f, sf::Color(255, 210, 40));
+    appendDisc(m_shapeVertices, scrubX + scrubW * scrubNorm, scrubY + 2.5f, 6.f, sf::Color(255, 210, 40), cosT, sinT);
     appendRing(m_shapeVertices, scrubX + scrubW * scrubNorm, scrubY + 2.5f, 6.f, 7.4f, sf::Color::White, cosT, sinT);
 
     appendQuad(m_shapeVertices, trackX, trackY, trackW, 5.f, sf::Color(20, 40, 28));

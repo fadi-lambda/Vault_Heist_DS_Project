@@ -18,6 +18,7 @@ static const int BTN_SECONDARY = 1;
 static const int BTN_DANGER    = 2;
 static const int BTN_GHOST     = 3;
 static const int BTN_DISABLED  = 4;
+static const int BTN_ACCENT    = 5;
 
 // Text alignment modes for pooled sf::Text cache (no enum allowed)
 static const int TEXT_ALIGN_TOP_LEFT  = 0;

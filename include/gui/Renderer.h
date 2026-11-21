@@ -80,6 +80,8 @@ private:
     mutable int m_cachedHdrCursor;
     mutable int m_cachedHdrBatches;
     mutable std::string m_cachedLogHeader;
+    mutable std::string m_cachedLogOps;
+    mutable float m_cachedLogHeaderW;
 
     // Heap / speed / tooltip string caches
     mutable int m_cachedHeapActive;
@@ -88,6 +90,7 @@ private:
 
     mutable int m_cachedSpeedTenths;
     mutable std::string m_cachedSpeedStr;
+    mutable float m_cachedSpeedLabelW;
 
     mutable int m_cachedTipId;
     mutable int m_cachedTipKey;
@@ -110,8 +113,10 @@ public:
           m_cachedLogLastType(-1), m_cachedLogLastKey(-999999),
           m_cachedLogW(-1.f),
           m_cachedHdrTotal(-1), m_cachedHdrCursor(-2), m_cachedHdrBatches(-1),
+          m_cachedLogHeaderW(0.f),
           m_cachedHeapActive(-1), m_cachedHeapSorted(-1),
           m_cachedSpeedTenths(-1),
+          m_cachedSpeedLabelW(-1.f),
           m_cachedTipId(-2), m_cachedTipKey(0), m_cachedTipType(-1),
           m_cachedTipH(0), m_cachedTipBf(0), m_cachedTipSz(0),
           m_cachedTipD(0), m_cachedTipViol(false) {}

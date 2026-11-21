@@ -4358,7 +4358,7 @@ int main(int argc, char** argv) {
             float headMaxW = (lid == LEVEL_3_4) ? 960.f : 1080.f;
             float bodyMaxW = (lid == LEVEL_3_4) ? 960.f : 1050.f;
             Ui::textFit(window, menuFont, cachedPromptHead, TXT_H2, sf::Color(255, 210, 40), 54.f, 678.f, headMaxW, true, &menuUiCache);
-            Ui::textWrap(window, font, status, TXT_BODY, sf::Color(255, 210, 40), 54.f, 718.f, bodyMaxW, false, &uiCache);
+            Ui::textWrap(window, font, status, TXT_BODY, sf::Color::White, 54.f, 718.f, bodyMaxW, false, &uiCache);
             if (hintSys.wasUsed()) {
                 Ui::textWrap(window, font, "HINT (-1 star cap): " + hintSys.shownText(),
                              TXT_HINT, sf::Color(0, 255, 65), 54.f, 774.f, bodyMaxW, false, &uiCache);

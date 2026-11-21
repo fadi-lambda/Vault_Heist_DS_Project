@@ -322,6 +322,7 @@ bool button(sf::RenderTarget& t, const sf::Font& font, const std::string& label,
         case BTN_SECONDARY: fill = sf::Color(6, 22, 11);  edge = sf::Color(0, 230, 60);   break;
         case BTN_DANGER:    fill = sf::Color(55, 18, 22); edge = sf::Color(235, 70, 70);  break;
         case BTN_GHOST:     fill = sf::Color(5, 14, 8);   edge = sf::Color(50, 140, 70);  break;
+        case BTN_ACCENT:    fill = sf::Color(42, 36, 4);  edge = sf::Color(255, 210, 40); break;
         default:            fill = sf::Color(6, 12, 8);   edge = sf::Color(35, 72, 42);
                             txt = sf::Color(74, 122, 74);                                 break;
     }
