@@ -769,7 +769,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    sf::SoundBuffer successBuf, errorBuf, levelCompleteBuf, levelFailBuf, missionStartBuf, menuClickBuf, campaignClickBuf, escBuf;
+    sf::SoundBuffer successBuf, errorBuf, levelCompleteBuf, levelFailBuf, missionStartBuf, menuClickBuf, campaignClickBuf, escBuf, unlockLevelsBuf, lockLevelsBuf;
     bool successLoaded = successBuf.loadFromFile("assets/sounds/Success_correct-action.wav") ||
                          successBuf.loadFromFile("../../assets/sounds/Success_correct-action.wav") ||
                          successBuf.loadFromFile("out/build/x64-debug/assets/sounds/Success_correct-action.wav") ||
@@ -802,8 +802,16 @@ int main(int argc, char** argv) {
                      escBuf.loadFromFile("../../assets/sounds/ESC.mp3") ||
                      escBuf.loadFromFile("out/build/x64-debug/assets/sounds/ESC.mp3") ||
                      escBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/ESC.mp3");
+    bool unlockLevelsLoaded = unlockLevelsBuf.loadFromFile("assets/sounds/unlock_levels.mp3") ||
+                              unlockLevelsBuf.loadFromFile("../../assets/sounds/unlock_levels.mp3") ||
+                              unlockLevelsBuf.loadFromFile("out/build/x64-debug/assets/sounds/unlock_levels.mp3") ||
+                              unlockLevelsBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/unlock_levels.mp3");
+    bool lockLevelsLoaded = lockLevelsBuf.loadFromFile("assets/sounds/lock_levels.mp3") ||
+                            lockLevelsBuf.loadFromFile("../../assets/sounds/lock_levels.mp3") ||
+                            lockLevelsBuf.loadFromFile("out/build/x64-debug/assets/sounds/lock_levels.mp3") ||
+                            lockLevelsBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/lock_levels.mp3");
 
-    std::optional<sf::Sound> successSnd, errorSnd, levelCompleteSnd, levelFailSnd, missionStartSnd, menuClickSnd, campaignClickSnd, escSnd;
+    std::optional<sf::Sound> successSnd, errorSnd, levelCompleteSnd, levelFailSnd, missionStartSnd, menuClickSnd, campaignClickSnd, escSnd, unlockLevelsSnd, lockLevelsSnd;
     if (successLoaded) successSnd.emplace(successBuf);
     if (errorLoaded) errorSnd.emplace(errorBuf);
     if (levelCompleteLoaded) levelCompleteSnd.emplace(levelCompleteBuf);
@@ -812,6 +820,8 @@ int main(int argc, char** argv) {
     if (menuClickLoaded) menuClickSnd.emplace(menuClickBuf);
     if (campaignClickLoaded) campaignClickSnd.emplace(campaignClickBuf);
     if (escLoaded) escSnd.emplace(escBuf);
+    if (unlockLevelsLoaded) unlockLevelsSnd.emplace(unlockLevelsBuf);
+    if (lockLevelsLoaded) lockLevelsSnd.emplace(lockLevelsBuf);
 
     sf::Music bgm;
     bool bgmLoaded = bgm.openFromFile("assets/sounds/BGM.mp3") ||
@@ -1013,6 +1023,7 @@ int main(int argc, char** argv) {
                 }
                 demoAllUnlocked = true;
                 pushToast("[DEMO] All levels unlocked", TOAST_KIND_SUCCESS);
+                playSfx(unlockLevelsSnd);
             } else {
                 levels[0].unlocked = true;
                 campCachedUnl[0] = false;
@@ -1024,9 +1035,11 @@ int main(int argc, char** argv) {
                 }
                 demoAllUnlocked = false;
                 pushToast("[DEMO] Levels locked", TOAST_KIND_WARNING);
+                playSfx(lockLevelsSnd);
             }
         } else {
             pushToast("Wrong password", TOAST_KIND_INFO);
+            playSfx(errorSnd);
         }
         demoPromptOpen = false;
         demoPasswordLen = 0;
@@ -6652,6 +6665,7 @@ int main(int argc, char** argv) {
                         continue;
                     }
                     if (Ui::inside(mx, my, static_cast<float>(W) * 0.5f - 135.f, static_cast<float>(H) - 54.f, 270.f, 34.f)) {
+                        playSfx(campaignClickSnd);
                         demoPromptOpen = true;
                         demoPasswordLen = 0;
                         demoPasswordBuf[0] = '\0';
