@@ -3642,9 +3642,9 @@ int main(int argc, char** argv) {
             }
 
             // Center area: 5 level nodes for active act as circles connected by lines
-            const float nodeX[5] = { 440.f, 580.f, 720.f, 860.f, 1000.f };
+            const float nodeX[5] = { 400.f, 520.f, 640.f, 760.f, 880.f };
             const float nodeY[5] = { 360.f, 460.f, 295.f, 450.f, 305.f };
-            const float nodeR = 44.f;
+            const float nodeR = 36.f;
 
             for (int i = 0; i < 4; ++i) {
                 int liNext = selectedActIdx * 5 + (i + 1);
@@ -3684,23 +3684,23 @@ int main(int argc, char** argv) {
                 } else {
                     sf::Color lockCol = sf::Color::White;
                     // Padlock shackle
-                    sf::RectangleShape shackle({16.f, 13.f});
-                    shackle.setOrigin({8.f, 13.f});
+                    sf::RectangleShape shackle({13.f, 10.5f});
+                    shackle.setOrigin({6.5f, 10.5f});
                     shackle.setPosition({nodeX[i], nodeY[i] - 2.f});
                     shackle.setFillColor(sf::Color::Transparent);
                     shackle.setOutlineColor(lockCol);
-                    shackle.setOutlineThickness(2.5f);
+                    shackle.setOutlineThickness(2.0f);
                     window.draw(shackle);
                     // Padlock body
-                    sf::RectangleShape lockBody({24.f, 18.f});
-                    lockBody.setOrigin({12.f, 0.f});
+                    sf::RectangleShape lockBody({19.f, 14.5f});
+                    lockBody.setOrigin({9.5f, 0.f});
                     lockBody.setPosition({nodeX[i], nodeY[i] - 2.f});
                     lockBody.setFillColor(lockCol);
                     window.draw(lockBody);
                     // Keyhole
-                    sf::RectangleShape keyhole({4.f, 7.f});
-                    keyhole.setOrigin({2.f, 0.f});
-                    keyhole.setPosition({nodeX[i], nodeY[i] + 4.f});
+                    sf::RectangleShape keyhole({3.f, 5.5f});
+                    keyhole.setOrigin({1.5f, 0.f});
+                    keyhole.setPosition({nodeX[i], nodeY[i] + 3.f});
                     keyhole.setFillColor(sf::Color(6, 14, 8));
                     window.draw(keyhole);
                 }
@@ -6575,9 +6575,9 @@ int main(int argc, char** argv) {
                             break;
                         }
                     }
-                    const float nodeX[5] = { 420.f, 560.f, 700.f, 840.f, 980.f };
+                    const float nodeX[5] = { 400.f, 520.f, 640.f, 760.f, 880.f };
                     const float nodeY[5] = { 360.f, 460.f, 295.f, 450.f, 305.f };
-                    const float nodeR = 44.f;
+                    const float nodeR = 36.f;
                     for (int i = 0; i < 5; ++i) {
                         float dx = mx - nodeX[i];
                         float dy = my - nodeY[i];
