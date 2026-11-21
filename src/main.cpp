@@ -4470,6 +4470,9 @@ int main(int argc, char** argv) {
 
         // 5. SANDBOX MODE
         if (currentScreen == SCREEN_SANDBOX) {
+            if (missionBgSprite.has_value()) {
+                window.draw(*missionBgSprite);
+            }
             Ui::screenHeader(window, font, "SANDBOX SIMULATOR // AVL TREE + MAX HEAP",
                              "Interactive free-play over real AVLTree & MaxHeap instances with EventLog & Undo.", &uiCache);
             Ui::button(window, font, "Back to Menu [Esc]", 1370.f, 26.f, 190.f, 38.f, BTN_GHOST, in, 13, &uiCache);
@@ -4863,6 +4866,9 @@ int main(int argc, char** argv) {
 
         // 10. ENDLESS SURVIVAL MODE (Step F)
         if (currentScreen == SCREEN_ENDLESS) {
+            if (missionBgSprite.has_value()) {
+                window.draw(*missionBgSprite);
+            }
             int opsNow = endlessSession.getOpsCompleted();
             int nodesNow = avl.getSize();
             float winSec = endlessSession.getOpWindowSec();
@@ -6569,7 +6575,7 @@ int main(int argc, char** argv) {
                             break;
                         }
                     }
-                    const float nodeX[5] = { 440.f, 580.f, 720.f, 860.f, 1000.f };
+                    const float nodeX[5] = { 420.f, 560.f, 700.f, 840.f, 980.f };
                     const float nodeY[5] = { 360.f, 460.f, 295.f, 450.f, 305.f };
                     const float nodeR = 44.f;
                     for (int i = 0; i < 5; ++i) {
