@@ -105,16 +105,16 @@ void UndoStack::restoreStructures(const GameSnapshot& snap,
                                   AVLTree& avl, MaxHeap& heap,
                                   int* rawHeapArr, int& rawHeapSize,
                                   int* sortedArr, int& sortedCount) {
-    bt = BinaryTree();
+    bt.clear();
     int idx = 0;
     rebuildTreeFromNullPreorder(bt, nullptr, true, snap.btPre, snap.btLen, idx);
 
-    bst = BST();
+    bst.clear();
     for (int i = 0; i < snap.bstLen; ++i) {
         bst.insert(snap.bstPre[i]);
     }
 
-    avl = AVLTree();
+    avl.clear();
     for (int i = 0; i < snap.avlLen; ++i) {
         avl.insert(snap.avlPre[i]);
     }

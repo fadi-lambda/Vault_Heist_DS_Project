@@ -22,10 +22,10 @@ private:
 
     // --- Recursive helpers ---
     TreeNode* insertHelper(TreeNode* node, TreeNode* parent, int key, bool& inserted,
-                           EventBatch& events);
-    TreeNode* deleteHelper(TreeNode* node, int key, bool& deleted, EventBatch& events);
+                           EventBatch* events);
+    TreeNode* deleteHelper(TreeNode* node, int key, bool& deleted, EventBatch* events);
     TreeNode* searchHelper(TreeNode* node, int key) const;
-    TreeNode* searchHelper(TreeNode* node, int key, EventBatch& events) const;
+    TreeNode* searchHelper(TreeNode* node, int key, EventBatch* events) const;
 
     TreeNode* findMinNode(TreeNode* node) const;
     TreeNode* findMaxNode(TreeNode* node) const;
@@ -34,13 +34,14 @@ private:
 
     // Inorder helper for rangeQuery
     void rangeQueryHelper(TreeNode* node, int lo, int hi, int* out, int& idx,
-                          EventBatch& events) const;
+                          EventBatch* events) const;
 
     // Inorder counter for kthSmallest
     void kthHelper(TreeNode* node, int& count, int k, int& result) const;
 
-    // Validator
-    bool validateBST(TreeNode* node, const TreeNode* minNode, const TreeNode* maxNode) const;
+    // Validator (also checks parent pointers and counts visited nodes)
+    bool validateBST(TreeNode* node, const TreeNode* minNode, const TreeNode* maxNode,
+                     int& visitedCount) const;
 
     // Cleanup
     void destroyRecursive(TreeNode* node);
@@ -54,6 +55,10 @@ private:
 public:
     BST();
     ~BST();
+    BST(const BST&) = delete;
+    BST& operator=(const BST&) = delete;
+
+    void clear();
 
     // --- Core Operations (§5.3) ---
     // Event overloads (PLAN.md §6.4):

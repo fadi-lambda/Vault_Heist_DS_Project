@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
+#include <climits>
 #include "structures/AVLTree.h"
+#include "structures/Validator.h"
+#include "game/SaveManager.h"
 
 using namespace VaultHeist;
 
@@ -236,4 +239,81 @@ TEST(AVLTreeTest, EventsSearchDeleteDuplicate) {
     EXPECT_GE(del.countOfType(EVENT_UPDATE_SIZE), 1);
     EXPECT_TRUE(tree.isValidAVL());
     EXPECT_EQ(tree.getSize(), 6);
+}
+
+// 12. Delete case where heavy child has balance factor 0 (must use single rotation)
+TEST(AVLTreeTest, DeleteHeavyChildBFZeroUsesSingleRotation) {
+    AVLTree tree;
+    int keys[] = { 20, 10, 30, 25, 40 };
+    for (int k : keys) tree.insert(k);
+
+    EventBatch del;
+    EXPECT_TRUE(tree.deleteKey(10, del));
+    EXPECT_EQ(del.countOfType(EVENT_ROTATE), 1);
+    EXPECT_EQ(countRotations(del, ROTATION_RR), 1);
+    EXPECT_TRUE(Validator::validateAVL(tree));
+    EXPECT_EQ(tree.getRoot()->key, 30);
+    EXPECT_EQ(tree.getRoot()->left->key, 20);
+    EXPECT_EQ(tree.getRoot()->left->right->key, 25);
+    EXPECT_EQ(tree.getRoot()->right->key, 40);
+}
+
+// 13. Boundary safety for countInRange(INT_MIN, ...) & INT_MIN/INT_MAX keys
+TEST(AVLTreeTest, ExtremeIntegerBoundsAndClear) {
+    AVLTree tree;
+    EXPECT_TRUE(tree.insert(INT_MIN));
+    EXPECT_TRUE(tree.insert(0));
+    EXPECT_TRUE(tree.insert(INT_MAX));
+    EXPECT_TRUE(Validator::validateAVL(tree));
+    EXPECT_EQ(tree.countInRange(INT_MIN, 0), 2);
+    EXPECT_EQ(tree.countInRange(INT_MIN, INT_MAX), 3);
+
+    tree.clear();
+    EXPECT_TRUE(tree.isEmpty());
+    EXPECT_EQ(tree.getSize(), 0);
+    EXPECT_TRUE(Validator::validateAVL(tree));
+}
+
+// 14. SaveManager round-trip with preorder '#' null markers & Validator checks
+TEST(SaveManagerTest, SaveAndLoadRoundTrip) {
+    BinaryTree bt;
+    TreeNode* r = bt.addNode(50, nullptr, true);
+    bt.addNode(30, r, true);
+    TreeNode* rc = bt.addNode(70, r, false);
+    bt.addNode(60, rc, true);
+    EXPECT_EQ(SaveManager::exportBinaryTreePreorder(bt), "50 30 # # 70 60 # # #");
+
+    BST bst;
+    bst.insert(50); bst.insert(30); bst.insert(70);
+
+    AVLTree avl;
+    avl.insert(40); avl.insert(20); avl.insert(60);
+
+    int heapArr[4] = { 80, 50, 70, 30 };
+    int sortedArr[2] = { 90, 95 };
+
+    SaveData outData;
+    outData.endlessWave = 4;
+    outData.endlessScore = 450;
+    outData.seed = 999u;
+    outData.stars[0] = 3;
+    outData.unlocked[1] = true;
+
+    EXPECT_TRUE(SaveManager::saveToFile("test_save.dat", outData, bt, bst, avl, heapArr, 4, sortedArr, 2));
+
+    SaveData inData;
+    BinaryTree inBt;
+    BST inBst;
+    AVLTree inAvl;
+    EXPECT_TRUE(SaveManager::loadFromFile("test_save.dat", inData, inBt, inBst, inAvl));
+    EXPECT_EQ(inData.endlessWave, 4);
+    EXPECT_EQ(inData.endlessScore, 450);
+    EXPECT_EQ(inData.seed, 999u);
+    EXPECT_EQ(inData.stars[0], 3);
+    EXPECT_TRUE(inData.unlocked[1]);
+    EXPECT_TRUE(inBt.isSameTree(bt));
+    EXPECT_TRUE(Validator::validateBST(inBst));
+    EXPECT_TRUE(Validator::validateAVL(inAvl));
+    EXPECT_EQ(inData.activeHeapSize, 4);
+    EXPECT_EQ(inData.sortedCount, 2);
 }

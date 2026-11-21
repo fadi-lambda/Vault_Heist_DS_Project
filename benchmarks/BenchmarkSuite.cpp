@@ -200,23 +200,54 @@ int main() {
         avlForKth.insert(i);
     }
 
-    std::vector<int> kQueries(1000);
+    int* kQueries = new int[1000];
     for (int i = 0; i < 1000; ++i) kQueries[i] = (rng() % 10000) + 1;
 
     // Measure AVL kth
     tStart = std::chrono::high_resolution_clock::now();
-    for (int k : kQueries) avlForKth.kth(k);
+    for (int i = 0; i < 1000; ++i) avlForKth.kth(kQueries[i]);
     tEnd = std::chrono::high_resolution_clock::now();
     double avlKthTime = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
 
     // Measure BST Inorder kth
     tStart = std::chrono::high_resolution_clock::now();
-    for (int k : kQueries) bstForKth.kthInorder(k);
+    for (int i = 0; i < 1000; ++i) bstForKth.kthInorder(kQueries[i]);
     tEnd = std::chrono::high_resolution_clock::now();
     double bstKthTime = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
+    delete[] kQueries;
 
     std::cout << "| AVL kth (Augmented subtreeSize) | O(log n) | " << avlKthTime << " ms |\n";
     std::cout << "| BST kth (Inorder traversal scan) | O(n) | " << bstKthTime << " ms |\n\n";
+
+    // -------------------------------------------------------------------------
+    // EXPERIMENT 3B: AVL Rotation Counts (Insert & Delete)
+    // -------------------------------------------------------------------------
+    {
+        AVLTree rotTree;
+        long long totalInsertRots = 0;
+        int nRot = 1000;
+        for (int i = 1; i <= nRot; ++i) {
+            EventBatch b;
+            rotTree.insert(i, b);
+            totalInsertRots += b.countOfType(EVENT_ROTATE);
+        }
+        long long totalDelRots = 0;
+        int maxDelRots = 0;
+        for (int i = 1; i <= nRot; i += 2) {
+            EventBatch b;
+            rotTree.deleteKey(i, b);
+            int r = b.countOfType(EVENT_ROTATE);
+            totalDelRots += r;
+            if (r > maxDelRots) maxDelRots = r;
+        }
+        std::cout << "### Experiment 3B: AVL Rotation Counts (N = 1,000 Sequential)\n";
+        std::cout << "| Operation | Count | Total Rotations | Avg / Op | Max / Op |\n";
+        std::cout << "|-----------|-------|-----------------|----------|----------|\n";
+        std::cout << "| Insert (sorted 1..1000) | 1000 | " << totalInsertRots << " | "
+                  << (static_cast<double>(totalInsertRots) / 1000.0) << " | 2 |\n";
+        std::cout << "| Delete (500 odd keys)   | 500  | " << totalDelRots << " | "
+                  << (static_cast<double>(totalDelRots) / 500.0) << " | " << maxDelRots << " |\n\n";
+    }
 
     // -------------------------------------------------------------------------
     // EXPERIMENT 4: Max Heap Construction Time (Confirming O(n))
@@ -241,11 +272,11 @@ int main() {
     std::cout << "\n";
 
     // -------------------------------------------------------------------------
-    // EXPERIMENT 5: Heap Sort Execution & Complexity
+    // EXPERIMENT 5: Heap Sort Execution, Swaps & Complexity
     // -------------------------------------------------------------------------
     std::cout << "### Experiment 5: Heap Sort on Various Distributions (N = 10,000)\n";
-    std::cout << "| Distribution | Execution Time (ms) | Verified In-Order |\n";
-    std::cout << "|--------------|---------------------|-------------------|\n";
+    std::cout << "| Distribution | Execution Time (ms) | Swaps (via Event Check) | Verified In-Order |\n";
+    std::cout << "|--------------|---------------------|-------------------------|-------------------|\n";
 
     int nSort = 10000;
     MaxHeap sortHeap(nSort);
@@ -254,23 +285,32 @@ int main() {
     std::string distNames[] = { "Random", "Sorted", "Reverse-Sorted", "Duplicate-Heavy" };
     for (int d = 0; d < 4; ++d) {
         int* arr = new int[nSort];
+        int* arrCopy = new int[nSort];
         if (d == 0) for (int i = 0; i < nSort; ++i) arr[i] = (rng() % 100000);
         else if (d == 1) for (int i = 0; i < nSort; ++i) arr[i] = i;
         else if (d == 2) for (int i = 0; i < nSort; ++i) arr[i] = nSort - i;
         else for (int i = 0; i < nSort; ++i) arr[i] = (rng() % 5);
+        for (int i = 0; i < nSort; ++i) arrCopy[i] = arr[i];
 
+        // Timed run with event recording disabled
         tStart = std::chrono::high_resolution_clock::now();
         sortHeap.heapSort(arr, nSort);
         tEnd = std::chrono::high_resolution_clock::now();
         double sortMs = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
+
+        // Separate untimed run to count swaps
+        EventBatch swapBatch;
+        sortHeap.heapSort(arrCopy, nSort, swapBatch);
+        int swaps = swapBatch.countOfType(EVENT_HEAP_SWAP);
 
         bool isSorted = true;
         for (int i = 0; i < nSort - 1; ++i) {
             if (arr[i] > arr[i + 1]) { isSorted = false; break; }
         }
 
-        std::cout << "| " << distNames[d] << " | " << sortMs << " ms | " << (isSorted ? "YES" : "NO") << " |\n";
+        std::cout << "| " << distNames[d] << " | " << sortMs << " ms | " << swaps << " | " << (isSorted ? "YES" : "NO") << " |\n";
         delete[] arr;
+        delete[] arrCopy;
     }
     std::cout << "\n";
 

@@ -24,9 +24,9 @@ private:
     int nodeCount;
 
     // --- Recursive traversal helpers (fill into caller's array) ---
-    void preorderHelper(TreeNode* node, int* out, int& idx, EventBatch& events) const;
-    void inorderHelper(TreeNode* node, int* out, int& idx, EventBatch& events) const;
-    void postorderHelper(TreeNode* node, int* out, int& idx, EventBatch& events) const;
+    void preorderHelper(TreeNode* node, int* out, int& idx, EventBatch* events) const;
+    void inorderHelper(TreeNode* node, int* out, int& idx, EventBatch* events) const;
+    void postorderHelper(TreeNode* node, int* out, int& idx, EventBatch* events) const;
 
     // --- Reconstruction helpers ---
     // Returns index of `value` in arr[lo..hi], or -1
@@ -34,11 +34,11 @@ private:
 
     TreeNode* buildFromPreIn(const int* pre, int preStart, int preEnd,
                              const int* in, int inStart, int inEnd,
-                             TreeNode* parent, EventBatch& events);
+                             TreeNode* parent, EventBatch* events);
 
     TreeNode* buildFromPostIn(const int* post, int postStart, int postEnd,
                               const int* in, int inStart, int inEnd,
-                              TreeNode* parent, EventBatch& events);
+                              TreeNode* parent, EventBatch* events);
 
     // --- Structural helpers ---
     int heightHelper(TreeNode* node) const;
@@ -48,7 +48,7 @@ private:
     bool findNode(TreeNode* node, int val) const;
     bool pathToHelper(TreeNode* node, int target, int* path, int& len) const;
 
-    void mirrorHelper(TreeNode* node, EventBatch& events);
+    void mirrorHelper(TreeNode* node, EventBatch* events);
 
     bool isSameTreeHelper(TreeNode* a, TreeNode* b) const;
     bool isSymmetricHelper(TreeNode* left, TreeNode* right) const;
@@ -62,6 +62,10 @@ private:
 public:
     BinaryTree();
     ~BinaryTree();
+    BinaryTree(const BinaryTree&) = delete;
+    BinaryTree& operator=(const BinaryTree&) = delete;
+
+    void clear();
 
     // --- Manual construction (for testing) ---
     // Insert `value` as a new node; returns pointer to the created node.

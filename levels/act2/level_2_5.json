@@ -1,0 +1,14 @@
+{
+  "level_id": 25,
+  "act": 2,
+  "seed": 205,
+  "title": "2.5 Boss: Range Vault Heist",
+  "concept": "BST Range Query Pruning & kth-Smallest",
+  "objective": "Click all 5 keys inside Range [25..75], then click the 4th-smallest key to breach Wing 3!",
+  "optimal_steps": 6,
+  "alarm_capacity": 11,
+  "tree_type": "BST",
+  "range_lo": 25,
+  "range_hi": 75,
+  "k": 4
+}

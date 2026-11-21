@@ -2,9 +2,9 @@
 
 if(POLICY CMP0141)
     cmake_policy(SET CMP0141 NEW)
-    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
-        "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
-    )
+    if(MSVC)
+        set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
+    endif()
 endif()
 
 project(Vault_Heist LANGUAGES CXX)
@@ -29,6 +29,7 @@ add_executable(Vault_Heist
     src/gui/ToastQueue.cpp
     src/gui/Ui.cpp
     src/gui/ScoreLog.cpp
+    src/game/SaveManager.cpp
     src/structures/MaxHeap.cpp
     src/structures/AVLTree.cpp
     src/structures/BinaryTree.cpp
@@ -40,7 +41,7 @@ target_include_directories(Vault_Heist
 )
 
 if(MSVC)
-    target_compile_options(Vault_Heist PRIVATE /Z7 /EHsc)
+    target_compile_options(Vault_Heist PRIVATE /EHsc)
 endif()
 
 target_link_libraries(Vault_Heist
@@ -59,7 +60,7 @@ target_include_directories(Vault_Heist_Benchmarks
 )
 
 if(MSVC)
-    target_compile_options(Vault_Heist_Benchmarks PRIVATE /Z7 /EHsc)
+    target_compile_options(Vault_Heist_Benchmarks PRIVATE /EHsc)
 endif()
 
 # Tests

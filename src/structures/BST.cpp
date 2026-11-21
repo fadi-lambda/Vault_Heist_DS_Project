@@ -15,25 +15,27 @@ static inline int maxInt(int a, int b) { return (a > b) ? a : b; }
 
 // ========================== Event helpers (file-local functions) =============
 
-static inline void emitOp(EventBatch& events, int type, const char* label, int key) {
+static inline void emitOp(EventBatch* events, int type, const char* label, int key) {
+    if (!events) return;
     Event e(type, label);
     e.newValue = key;
-    events.append(e);
+    events->append(e);
 }
 
 // VISIT + COMPARE for one node checked against `key`.
 // COMPARE: nodeId = node, oldValue = node value, newValue = key being compared.
-static inline void emitVisitCompare(EventBatch& events, const TreeNode* node, int key) {
+static inline void emitVisitCompare(EventBatch* events, const TreeNode* node, int key) {
+    if (!events) return;
     Event v(EVENT_VISIT, "visit");
     v.nodeId = node->id;
     v.newValue = node->value;
-    events.append(v);
+    events->append(v);
 
     Event c(EVENT_COMPARE, "compare");
     c.nodeId = node->id;
     c.oldValue = node->value;
     c.newValue = key;
-    events.append(c);
+    events->append(c);
 }
 
 // ========================== Construction / Destruction ========================
@@ -42,6 +44,13 @@ BST::BST() : root(nullptr), nextId(1), nodeCount(0) {}
 
 BST::~BST() {
     destroyRecursive(root);
+}
+
+void BST::clear() {
+    destroyRecursive(root);
+    root = nullptr;
+    nodeCount = 0;
+    nextId = 1;
 }
 
 void BST::destroyRecursive(TreeNode* node) {
@@ -54,17 +63,19 @@ void BST::destroyRecursive(TreeNode* node) {
 // ========================== Insert ===========================================
 
 TreeNode* BST::insertHelper(TreeNode* node, TreeNode* parent, int key, bool& inserted,
-                            EventBatch& events) {
+                            EventBatch* events) {
     if (!node) {
         TreeNode* n = new TreeNode(nextId++, key);
         n->parent = parent;
         inserted = true;
         nodeCount++;
-        Event e(EVENT_INSERT, "insert");
-        e.nodeId = n->id;
-        e.otherNodeId = parent ? parent->id : -1;
-        e.newValue = key;
-        events.append(e);
+        if (events) {
+            Event e(EVENT_INSERT, "insert");
+            e.nodeId = n->id;
+            e.otherNodeId = parent ? parent->id : -1;
+            e.newValue = key;
+            events->append(e);
+        }
         return n;
     }
     emitVisitCompare(events, node, key);
@@ -73,24 +84,28 @@ TreeNode* BST::insertHelper(TreeNode* node, TreeNode* parent, int key, bool& ins
     } else if (key > node->value) {
         node->right = insertHelper(node->right, node, key, inserted, events);
     }
-    // key == node->value → duplicate, inserted stays false
+    // key == node->value -> duplicate, inserted stays false
     return node;
 }
 
 bool BST::insert(int key) {
-    EventBatch tmp;
-    return insert(key, tmp);
+    bool inserted = false;
+    root = insertHelper(root, nullptr, key, inserted, nullptr);
+    if (!inserted) {
+        std::cout << "Duplicate key " << key << " rejected." << std::endl;
+    }
+    return inserted;
 }
 
 bool BST::insert(int key, EventBatch& events) {
-    emitOp(events, EVENT_OPERATION_STARTED, "insert", key);
+    emitOp(&events, EVENT_OPERATION_STARTED, "insert", key);
     bool inserted = false;
-    root = insertHelper(root, nullptr, key, inserted, events);
+    root = insertHelper(root, nullptr, key, inserted, &events);
     if (!inserted) {
         std::cout << "Duplicate key " << key << " rejected." << std::endl;
-        emitOp(events, EVENT_OPERATION_FAILED, "insert: duplicate", key);
+        emitOp(&events, EVENT_OPERATION_FAILED, "insert: duplicate", key);
     } else {
-        emitOp(events, EVENT_OPERATION_COMPLETED, "insert", key);
+        emitOp(&events, EVENT_OPERATION_COMPLETED, "insert", key);
     }
     return inserted;
 }
@@ -109,7 +124,7 @@ TreeNode* BST::findMaxNode(TreeNode* node) const {
     return node;
 }
 
-TreeNode* BST::deleteHelper(TreeNode* node, int key, bool& deleted, EventBatch& events) {
+TreeNode* BST::deleteHelper(TreeNode* node, int key, bool& deleted, EventBatch* events) {
     if (!node) return nullptr;
 
     emitVisitCompare(events, node, key);
@@ -120,17 +135,16 @@ TreeNode* BST::deleteHelper(TreeNode* node, int key, bool& deleted, EventBatch& 
         node->right = deleteHelper(node->right, key, deleted, events);
         if (node->right) node->right->parent = node;
     } else {
-        // Found the node to delete
         deleted = true;
 
-        // UNLINK: nodeId = removed node, otherNodeId = child that replaces it
-        // (-1 for a leaf), oldValue = removed key.
         // Case 1: Leaf node
         if (!node->left && !node->right) {
-            Event e(EVENT_UNLINK, "unlink leaf");
-            e.nodeId = node->id;
-            e.oldValue = node->value;
-            events.append(e);
+            if (events) {
+                Event e(EVENT_UNLINK, "unlink leaf");
+                e.nodeId = node->id;
+                e.oldValue = node->value;
+                events->append(e);
+            }
             delete node;
             nodeCount--;
             return nullptr;
@@ -138,11 +152,13 @@ TreeNode* BST::deleteHelper(TreeNode* node, int key, bool& deleted, EventBatch& 
         // Case 2a: Only right child
         if (!node->left) {
             TreeNode* rightChild = node->right;
-            Event e(EVENT_UNLINK, "unlink one-child");
-            e.nodeId = node->id;
-            e.otherNodeId = rightChild->id;
-            e.oldValue = node->value;
-            events.append(e);
+            if (events) {
+                Event e(EVENT_UNLINK, "unlink one-child");
+                e.nodeId = node->id;
+                e.otherNodeId = rightChild->id;
+                e.oldValue = node->value;
+                events->append(e);
+            }
             rightChild->parent = node->parent;
             delete node;
             nodeCount--;
@@ -151,52 +167,51 @@ TreeNode* BST::deleteHelper(TreeNode* node, int key, bool& deleted, EventBatch& 
         // Case 2b: Only left child
         if (!node->right) {
             TreeNode* leftChild = node->left;
-            Event e(EVENT_UNLINK, "unlink one-child");
-            e.nodeId = node->id;
-            e.otherNodeId = leftChild->id;
-            e.oldValue = node->value;
-            events.append(e);
+            if (events) {
+                Event e(EVENT_UNLINK, "unlink one-child");
+                e.nodeId = node->id;
+                e.otherNodeId = leftChild->id;
+                e.oldValue = node->value;
+                events->append(e);
+            }
             leftChild->parent = node->parent;
             delete node;
             nodeCount--;
             return leftChild;
         }
-        // Case 3: Two children — find inorder successor (min of right subtree),
-        // copy its value, delete the successor node.
+        // Case 3: Two children — copy inorder successor
         TreeNode* succ = findMinNode(node->right);
-        {
-            // SWAP_VALUE: nodeId = node receiving the value, otherNodeId =
-            // successor node, oldValue = key being removed, newValue = successor key.
+        if (events) {
             Event e(EVENT_SWAP_VALUE, "copy successor");
             e.nodeId = node->id;
             e.otherNodeId = succ->id;
             e.oldValue = node->value;
             e.newValue = succ->value;
-            events.append(e);
+            events->append(e);
         }
         node->value = succ->value;
-        node->id = succ->id;  // preserve the successor's id for tracking
+        node->id = succ->id;
         node->right = deleteHelper(node->right, succ->value, deleted, events);
         if (node->right) node->right->parent = node;
-        // `deleted` was already set true above, the recursive call may set it
-        // again but that's fine (idempotent).
         deleted = true;
     }
     return node;
 }
 
 bool BST::deleteKey(int key) {
-    EventBatch tmp;
-    return deleteKey(key, tmp);
+    bool deleted = false;
+    root = deleteHelper(root, key, deleted, nullptr);
+    if (root) root->parent = nullptr;
+    return deleted;
 }
 
 bool BST::deleteKey(int key, EventBatch& events) {
-    emitOp(events, EVENT_OPERATION_STARTED, "delete", key);
+    emitOp(&events, EVENT_OPERATION_STARTED, "delete", key);
     bool deleted = false;
-    root = deleteHelper(root, key, deleted, events);
+    root = deleteHelper(root, key, deleted, &events);
     if (root) root->parent = nullptr;
-    if (deleted) emitOp(events, EVENT_OPERATION_COMPLETED, "delete", key);
-    else         emitOp(events, EVENT_OPERATION_FAILED, "delete: not found", key);
+    if (deleted) emitOp(&events, EVENT_OPERATION_COMPLETED, "delete", key);
+    else         emitOp(&events, EVENT_OPERATION_FAILED, "delete: not found", key);
     return deleted;
 }
 
@@ -209,7 +224,7 @@ TreeNode* BST::searchHelper(TreeNode* node, int key) const {
     return searchHelper(node->right, key);
 }
 
-TreeNode* BST::searchHelper(TreeNode* node, int key, EventBatch& events) const {
+TreeNode* BST::searchHelper(TreeNode* node, int key, EventBatch* events) const {
     if (!node) return nullptr;
     emitVisitCompare(events, node, key);
     if (key == node->value) return node;
@@ -222,10 +237,10 @@ bool BST::search(int key) const {
 }
 
 bool BST::search(int key, EventBatch& events) const {
-    emitOp(events, EVENT_OPERATION_STARTED, "search", key);
-    bool found = searchHelper(root, key, events) != nullptr;
-    if (found) emitOp(events, EVENT_OPERATION_COMPLETED, "search", key);
-    else       emitOp(events, EVENT_OPERATION_FAILED, "search: not found", key);
+    emitOp(&events, EVENT_OPERATION_STARTED, "search", key);
+    bool found = searchHelper(root, key, &events) != nullptr;
+    if (found) emitOp(&events, EVENT_OPERATION_COMPLETED, "search", key);
+    else       emitOp(&events, EVENT_OPERATION_FAILED, "search: not found", key);
     return found;
 }
 
@@ -290,22 +305,22 @@ int BST::predecessor(int key) const {
 // Inorder walk with pruning — skips subtrees entirely outside [lo, hi].
 
 void BST::rangeQueryHelper(TreeNode* node, int lo, int hi, int* out, int& idx,
-                           EventBatch& events) const {
+                           EventBatch* events) const {
     if (!node) return;
-    {
+    if (events) {
         Event v(EVENT_VISIT, "visit");
         v.nodeId = node->id;
         v.newValue = node->value;
-        events.append(v);
+        events->append(v);
     }
     // Prune: if node->value > lo, left subtree may have keys in range
     if (node->value > lo) {
         rangeQueryHelper(node->left, lo, hi, out, idx, events);
-    } else if (node->left) {
+    } else if (node->left && events) {
         Event h(EVENT_HIGHLIGHT_SUBTREE, "pruned subtree");
         h.nodeId = node->left->id;
         h.otherNodeId = node->id;
-        events.append(h);
+        events->append(h);
     }
     // Include this node if in range
     if (node->value >= lo && node->value <= hi)
@@ -313,11 +328,11 @@ void BST::rangeQueryHelper(TreeNode* node, int lo, int hi, int* out, int& idx,
     // Prune: if node->value < hi, right subtree may have keys in range
     if (node->value < hi) {
         rangeQueryHelper(node->right, lo, hi, out, idx, events);
-    } else if (node->right) {
+    } else if (node->right && events) {
         Event h(EVENT_HIGHLIGHT_SUBTREE, "pruned subtree");
         h.nodeId = node->right->id;
         h.otherNodeId = node->id;
-        events.append(h);
+        events->append(h);
     }
 }
 
@@ -327,8 +342,15 @@ int BST::countNodes(TreeNode* node) const {
 }
 
 int* BST::rangeQuery(int lo, int hi, int& count) const {
-    EventBatch tmp;
-    return rangeQuery(lo, hi, count, tmp);
+    count = 0;
+    if (!root) return nullptr;
+    int* result = new int[nodeCount];
+    rangeQueryHelper(root, lo, hi, result, count, nullptr);
+    if (count == 0) {
+        delete[] result;
+        return nullptr;
+    }
+    return result;
 }
 
 int* BST::rangeQuery(int lo, int hi, int& count, EventBatch& events) const {
@@ -346,7 +368,7 @@ int* BST::rangeQuery(int lo, int hi, int& count, EventBatch& events) const {
     // Allocate worst-case (all nodes in range); caller deletes.
     int maxPossible = nodeCount;
     int* result = new int[maxPossible];
-    rangeQueryHelper(root, lo, hi, result, count, events);
+    rangeQueryHelper(root, lo, hi, result, count, &events);
     events.append(Event(EVENT_OPERATION_COMPLETED, "rangeQuery"));
     if (count == 0) {
         delete[] result;
@@ -399,16 +421,24 @@ int BST::lcaBST(int a, int b) const {
 
 // ========================== Validator ========================================
 
-bool BST::validateBST(TreeNode* node, const TreeNode* minNode, const TreeNode* maxNode) const {
+bool BST::validateBST(TreeNode* node, const TreeNode* minNode, const TreeNode* maxNode,
+                      int& visitedCount) const {
     if (!node) return true;
+    visitedCount++;
+    if (visitedCount > nodeCount) return false; // cycle/shared-node guard
     if (minNode && node->value <= minNode->value) return false;
     if (maxNode && node->value >= maxNode->value) return false;
-    return validateBST(node->left, minNode, node)
-        && validateBST(node->right, node, maxNode);
+    if (node->left && node->left->parent != node) return false;
+    if (node->right && node->right->parent != node) return false;
+    return validateBST(node->left, minNode, node, visitedCount)
+        && validateBST(node->right, node, maxNode, visitedCount);
 }
 
 bool BST::isValidBST() const {
-    return validateBST(root, nullptr, nullptr);
+    if (root && root->parent != nullptr) return false;
+    int visitedCount = 0;
+    if (!validateBST(root, nullptr, nullptr, visitedCount)) return false;
+    return visitedCount == nodeCount;
 }
 
 // ========================== Height ===========================================

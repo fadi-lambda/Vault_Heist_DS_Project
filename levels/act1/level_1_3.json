@@ -1,0 +1,13 @@
+{
+  "level_id": 13,
+  "act": 1,
+  "seed": 103,
+  "title": "1.3 Blueprint Reconstruction",
+  "concept": "Tree Reconstruction from Preorder + Inorder",
+  "objective": "Rebuild from Pre {10,5,2,7,15,12,20} & In {2,5,7,10,12,15,20}, then click the reconstructed root!",
+  "optimal_steps": 2,
+  "alarm_capacity": 5,
+  "tree_type": "BinaryTree",
+  "preorder": [10, 5, 2, 7, 15, 12, 20],
+  "inorder": [2, 5, 7, 10, 12, 15, 20]
+}

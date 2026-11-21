@@ -1,0 +1,12 @@
+{
+  "level_id": 23,
+  "act": 2,
+  "seed": 203,
+  "title": "2.3 Infiltration Sweep",
+  "concept": "BST Min, Max, and Search",
+  "objective": "Locate and click the Minimum key, the Maximum key, and target frequency 70 on the BST!",
+  "optimal_steps": 3,
+  "alarm_capacity": 7,
+  "tree_type": "BST",
+  "targets": ["min", "max", 70]
+}

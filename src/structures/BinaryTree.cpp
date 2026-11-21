@@ -20,6 +20,13 @@ BinaryTree::~BinaryTree() {
     destroyRecursive(root);
 }
 
+void BinaryTree::clear() {
+    destroyRecursive(root);
+    root = nullptr;
+    nodeCount = 0;
+    nextId = 1;
+}
+
 void BinaryTree::destroyRecursive(TreeNode* node) {
     if (!node) return;
     destroyRecursive(node->left);
@@ -45,23 +52,25 @@ TreeNode* BinaryTree::addNode(int value, TreeNode* parent, bool asLeft) {
 
 // ========================== Event helpers (file-local functions) =============
 
-static inline void emitNode(EventBatch& events, int type, const TreeNode* node,
+static inline void emitNode(EventBatch* events, int type, const TreeNode* node,
                             const char* label) {
+    if (!events) return;
     Event e(type, label);
     if (node) {
         e.nodeId = node->id;
         e.newValue = node->value;
     }
-    events.append(e);
+    events->append(e);
 }
 
-static inline void emitOp(EventBatch& events, int type, const char* label) {
-    events.append(Event(type, label));
+static inline void emitOp(EventBatch* events, int type, const char* label) {
+    if (!events) return;
+    events->append(Event(type, label));
 }
 
 // ========================== Recursive Traversals =============================
 
-void BinaryTree::preorderHelper(TreeNode* node, int* out, int& idx, EventBatch& events) const {
+void BinaryTree::preorderHelper(TreeNode* node, int* out, int& idx, EventBatch* events) const {
     if (!node) return;
     emitNode(events, EVENT_VISIT, node, "visit");
     out[idx++] = node->value;
@@ -69,7 +78,7 @@ void BinaryTree::preorderHelper(TreeNode* node, int* out, int& idx, EventBatch& 
     preorderHelper(node->right, out, idx, events);
 }
 
-void BinaryTree::inorderHelper(TreeNode* node, int* out, int& idx, EventBatch& events) const {
+void BinaryTree::inorderHelper(TreeNode* node, int* out, int& idx, EventBatch* events) const {
     if (!node) return;
     inorderHelper(node->left, out, idx, events);
     emitNode(events, EVENT_VISIT, node, "visit");
@@ -77,7 +86,7 @@ void BinaryTree::inorderHelper(TreeNode* node, int* out, int& idx, EventBatch& e
     inorderHelper(node->right, out, idx, events);
 }
 
-void BinaryTree::postorderHelper(TreeNode* node, int* out, int& idx, EventBatch& events) const {
+void BinaryTree::postorderHelper(TreeNode* node, int* out, int& idx, EventBatch* events) const {
     if (!node) return;
     postorderHelper(node->left, out, idx, events);
     postorderHelper(node->right, out, idx, events);
@@ -86,59 +95,71 @@ void BinaryTree::postorderHelper(TreeNode* node, int* out, int& idx, EventBatch&
 }
 
 int* BinaryTree::preorderRecursive(int& count) const {
-    EventBatch tmp;
-    return preorderRecursive(count, tmp);
+    count = nodeCount;
+    if (count == 0) return nullptr;
+    int* result = new int[count];
+    int idx = 0;
+    preorderHelper(root, result, idx, nullptr);
+    return result;
 }
 
 int* BinaryTree::inorderRecursive(int& count) const {
-    EventBatch tmp;
-    return inorderRecursive(count, tmp);
+    count = nodeCount;
+    if (count == 0) return nullptr;
+    int* result = new int[count];
+    int idx = 0;
+    inorderHelper(root, result, idx, nullptr);
+    return result;
 }
 
 int* BinaryTree::postorderRecursive(int& count) const {
-    EventBatch tmp;
-    return postorderRecursive(count, tmp);
+    count = nodeCount;
+    if (count == 0) return nullptr;
+    int* result = new int[count];
+    int idx = 0;
+    postorderHelper(root, result, idx, nullptr);
+    return result;
 }
 
 int* BinaryTree::preorderRecursive(int& count, EventBatch& events) const {
-    emitOp(events, EVENT_OPERATION_STARTED, "preorderRecursive");
+    emitOp(&events, EVENT_OPERATION_STARTED, "preorderRecursive");
     count = nodeCount;
     if (count == 0) {
-        emitOp(events, EVENT_OPERATION_COMPLETED, "preorderRecursive");
+        emitOp(&events, EVENT_OPERATION_COMPLETED, "preorderRecursive");
         return nullptr;
     }
     int* result = new int[count];
     int idx = 0;
-    preorderHelper(root, result, idx, events);
-    emitOp(events, EVENT_OPERATION_COMPLETED, "preorderRecursive");
+    preorderHelper(root, result, idx, &events);
+    emitOp(&events, EVENT_OPERATION_COMPLETED, "preorderRecursive");
     return result;
 }
 
 int* BinaryTree::inorderRecursive(int& count, EventBatch& events) const {
-    emitOp(events, EVENT_OPERATION_STARTED, "inorderRecursive");
+    emitOp(&events, EVENT_OPERATION_STARTED, "inorderRecursive");
     count = nodeCount;
     if (count == 0) {
-        emitOp(events, EVENT_OPERATION_COMPLETED, "inorderRecursive");
+        emitOp(&events, EVENT_OPERATION_COMPLETED, "inorderRecursive");
         return nullptr;
     }
     int* result = new int[count];
     int idx = 0;
-    inorderHelper(root, result, idx, events);
-    emitOp(events, EVENT_OPERATION_COMPLETED, "inorderRecursive");
+    inorderHelper(root, result, idx, &events);
+    emitOp(&events, EVENT_OPERATION_COMPLETED, "inorderRecursive");
     return result;
 }
 
 int* BinaryTree::postorderRecursive(int& count, EventBatch& events) const {
-    emitOp(events, EVENT_OPERATION_STARTED, "postorderRecursive");
+    emitOp(&events, EVENT_OPERATION_STARTED, "postorderRecursive");
     count = nodeCount;
     if (count == 0) {
-        emitOp(events, EVENT_OPERATION_COMPLETED, "postorderRecursive");
+        emitOp(&events, EVENT_OPERATION_COMPLETED, "postorderRecursive");
         return nullptr;
     }
     int* result = new int[count];
     int idx = 0;
-    postorderHelper(root, result, idx, events);
-    emitOp(events, EVENT_OPERATION_COMPLETED, "postorderRecursive");
+    postorderHelper(root, result, idx, &events);
+    emitOp(&events, EVENT_OPERATION_COMPLETED, "postorderRecursive");
     return result;
 }
 
@@ -166,10 +187,10 @@ int* BinaryTree::levelOrder(int& count) const {
 }
 
 int* BinaryTree::preorderIterative(int& count, EventBatch& events) const {
-    emitOp(events, EVENT_OPERATION_STARTED, "preorderIterative");
+    emitOp(&events, EVENT_OPERATION_STARTED, "preorderIterative");
     count = nodeCount;
     if (count == 0) {
-        emitOp(events, EVENT_OPERATION_COMPLETED, "preorderIterative");
+        emitOp(&events, EVENT_OPERATION_COMPLETED, "preorderIterative");
         return nullptr;
     }
 
@@ -183,7 +204,7 @@ int* BinaryTree::preorderIterative(int& count, EventBatch& events) const {
     stack[++top] = root;
     while (top >= 0) {
         TreeNode* curr = stack[top--];
-        emitNode(events, EVENT_VISIT, curr, "visit");
+        emitNode(&events, EVENT_VISIT, curr, "visit");
         result[idx++] = curr->value;
         // Push right first so left is processed first
         if (curr->right) stack[++top] = curr->right;
@@ -191,15 +212,15 @@ int* BinaryTree::preorderIterative(int& count, EventBatch& events) const {
     }
 
     delete[] stack;
-    emitOp(events, EVENT_OPERATION_COMPLETED, "preorderIterative");
+    emitOp(&events, EVENT_OPERATION_COMPLETED, "preorderIterative");
     return result;
 }
 
 int* BinaryTree::inorderIterative(int& count, EventBatch& events) const {
-    emitOp(events, EVENT_OPERATION_STARTED, "inorderIterative");
+    emitOp(&events, EVENT_OPERATION_STARTED, "inorderIterative");
     count = nodeCount;
     if (count == 0) {
-        emitOp(events, EVENT_OPERATION_COMPLETED, "inorderIterative");
+        emitOp(&events, EVENT_OPERATION_COMPLETED, "inorderIterative");
         return nullptr;
     }
 
@@ -216,21 +237,21 @@ int* BinaryTree::inorderIterative(int& count, EventBatch& events) const {
             curr = curr->left;
         }
         curr = stack[top--];
-        emitNode(events, EVENT_VISIT, curr, "visit");
+        emitNode(&events, EVENT_VISIT, curr, "visit");
         result[idx++] = curr->value;
         curr = curr->right;
     }
 
     delete[] stack;
-    emitOp(events, EVENT_OPERATION_COMPLETED, "inorderIterative");
+    emitOp(&events, EVENT_OPERATION_COMPLETED, "inorderIterative");
     return result;
 }
 
 int* BinaryTree::postorderIterative(int& count, EventBatch& events) const {
-    emitOp(events, EVENT_OPERATION_STARTED, "postorderIterative");
+    emitOp(&events, EVENT_OPERATION_STARTED, "postorderIterative");
     count = nodeCount;
     if (count == 0) {
-        emitOp(events, EVENT_OPERATION_COMPLETED, "postorderIterative");
+        emitOp(&events, EVENT_OPERATION_COMPLETED, "postorderIterative");
         return nullptr;
     }
 
@@ -249,27 +270,27 @@ int* BinaryTree::postorderIterative(int& count, EventBatch& events) const {
         if (curr->right) stack1[++top1] = curr->right;
     }
 
-    // Nodes are "visited" (output) when popped from stack2 â€” that is the
+    // Nodes are "visited" (output) when popped from stack2 — that is the
     // actual postorder emission order.
     int idx = 0;
     while (top2 >= 0) {
         TreeNode* visited = stack2[top2--];
-        emitNode(events, EVENT_VISIT, visited, "visit");
+        emitNode(&events, EVENT_VISIT, visited, "visit");
         result[idx++] = visited->value;
     }
 
     delete[] stack1;
     delete[] stack2;
-    emitOp(events, EVENT_OPERATION_COMPLETED, "postorderIterative");
+    emitOp(&events, EVENT_OPERATION_COMPLETED, "postorderIterative");
     return result;
 }
 
-// Level-order (BFS) with manual array-based queue â€” no std::queue.
+// Level-order (BFS) with manual array-based queue — no std::queue.
 int* BinaryTree::levelOrder(int& count, EventBatch& events) const {
-    emitOp(events, EVENT_OPERATION_STARTED, "levelOrder");
+    emitOp(&events, EVENT_OPERATION_STARTED, "levelOrder");
     count = nodeCount;
     if (count == 0) {
-        emitOp(events, EVENT_OPERATION_COMPLETED, "levelOrder");
+        emitOp(&events, EVENT_OPERATION_COMPLETED, "levelOrder");
         return nullptr;
     }
 
@@ -283,14 +304,14 @@ int* BinaryTree::levelOrder(int& count, EventBatch& events) const {
     queue[back++] = root;
     while (front < back) {
         TreeNode* curr = queue[front++];
-        emitNode(events, EVENT_VISIT, curr, "visit");
+        emitNode(&events, EVENT_VISIT, curr, "visit");
         result[idx++] = curr->value;
         if (curr->left)  queue[back++] = curr->left;
         if (curr->right) queue[back++] = curr->right;
     }
 
     delete[] queue;
-    emitOp(events, EVENT_OPERATION_COMPLETED, "levelOrder");
+    emitOp(&events, EVENT_OPERATION_COMPLETED, "levelOrder");
     return result;
 }
 
@@ -305,22 +326,24 @@ int BinaryTree::findIndex(const int* arr, int lo, int hi, int value) {
 
 TreeNode* BinaryTree::buildFromPreIn(const int* pre, int preStart, int preEnd,
                                       const int* in, int inStart, int inEnd,
-                                      TreeNode* parent, EventBatch& events) {
+                                      TreeNode* parent, EventBatch* events) {
     if (preStart > preEnd || inStart > inEnd) return nullptr;
 
     int rootVal = pre[preStart];
+    int inIdx = findIndex(in, inStart, inEnd, rootVal);
+    if (inIdx < 0) return nullptr;
+
     TreeNode* node = new TreeNode(nextId++, rootVal);
     node->parent = parent;
     nodeCount++;
-    {
+    if (events) {
         Event e(EVENT_INSERT, "insert");
         e.nodeId = node->id;
         e.otherNodeId = parent ? parent->id : -1;
         e.newValue = rootVal;
-        events.append(e);
+        events->append(e);
     }
 
-    int inIdx = findIndex(in, inStart, inEnd, rootVal);
     int leftSize = inIdx - inStart;
 
     node->left  = buildFromPreIn(pre, preStart + 1, preStart + leftSize,
@@ -332,22 +355,24 @@ TreeNode* BinaryTree::buildFromPreIn(const int* pre, int preStart, int preEnd,
 
 TreeNode* BinaryTree::buildFromPostIn(const int* post, int postStart, int postEnd,
                                        const int* in, int inStart, int inEnd,
-                                       TreeNode* parent, EventBatch& events) {
+                                       TreeNode* parent, EventBatch* events) {
     if (postStart > postEnd || inStart > inEnd) return nullptr;
 
     int rootVal = post[postEnd];
+    int inIdx = findIndex(in, inStart, inEnd, rootVal);
+    if (inIdx < 0) return nullptr;
+
     TreeNode* node = new TreeNode(nextId++, rootVal);
     node->parent = parent;
     nodeCount++;
-    {
+    if (events) {
         Event e(EVENT_INSERT, "insert");
         e.nodeId = node->id;
         e.otherNodeId = parent ? parent->id : -1;
         e.newValue = rootVal;
-        events.append(e);
+        events->append(e);
     }
 
-    int inIdx = findIndex(in, inStart, inEnd, rootVal);
     int leftSize = inIdx - inStart;
 
     node->left  = buildFromPostIn(post, postStart, postStart + leftSize - 1,
@@ -358,41 +383,47 @@ TreeNode* BinaryTree::buildFromPostIn(const int* post, int postStart, int postEn
 }
 
 void BinaryTree::buildFromPreorderInorder(const int* preorder, const int* inorder, int n) {
-    EventBatch tmp;
-    buildFromPreorderInorder(preorder, inorder, n, tmp);
+    destroyRecursive(root);
+    root = nullptr;
+    nodeCount = 0;
+    if (n <= 0) return;
+    root = buildFromPreIn(preorder, 0, n - 1, inorder, 0, n - 1, nullptr, nullptr);
 }
 
 void BinaryTree::buildFromPostorderInorder(const int* postorder, const int* inorder, int n) {
-    EventBatch tmp;
-    buildFromPostorderInorder(postorder, inorder, n, tmp);
+    destroyRecursive(root);
+    root = nullptr;
+    nodeCount = 0;
+    if (n <= 0) return;
+    root = buildFromPostIn(postorder, 0, n - 1, inorder, 0, n - 1, nullptr, nullptr);
 }
 
 void BinaryTree::buildFromPreorderInorder(const int* preorder, const int* inorder, int n,
                                           EventBatch& events) {
-    emitOp(events, EVENT_OPERATION_STARTED, "buildFromPreorderInorder");
+    emitOp(&events, EVENT_OPERATION_STARTED, "buildFromPreorderInorder");
     destroyRecursive(root);
     root = nullptr;
     nodeCount = 0;
     if (n <= 0) {
-        emitOp(events, EVENT_OPERATION_COMPLETED, "buildFromPreorderInorder");
+        emitOp(&events, EVENT_OPERATION_COMPLETED, "buildFromPreorderInorder");
         return;
     }
-    root = buildFromPreIn(preorder, 0, n - 1, inorder, 0, n - 1, nullptr, events);
-    emitOp(events, EVENT_OPERATION_COMPLETED, "buildFromPreorderInorder");
+    root = buildFromPreIn(preorder, 0, n - 1, inorder, 0, n - 1, nullptr, &events);
+    emitOp(&events, EVENT_OPERATION_COMPLETED, "buildFromPreorderInorder");
 }
 
 void BinaryTree::buildFromPostorderInorder(const int* postorder, const int* inorder, int n,
                                            EventBatch& events) {
-    emitOp(events, EVENT_OPERATION_STARTED, "buildFromPostorderInorder");
+    emitOp(&events, EVENT_OPERATION_STARTED, "buildFromPostorderInorder");
     destroyRecursive(root);
     root = nullptr;
     nodeCount = 0;
     if (n <= 0) {
-        emitOp(events, EVENT_OPERATION_COMPLETED, "buildFromPostorderInorder");
+        emitOp(&events, EVENT_OPERATION_COMPLETED, "buildFromPostorderInorder");
         return;
     }
-    root = buildFromPostIn(postorder, 0, n - 1, inorder, 0, n - 1, nullptr, events);
-    emitOp(events, EVENT_OPERATION_COMPLETED, "buildFromPostorderInorder");
+    root = buildFromPostIn(postorder, 0, n - 1, inorder, 0, n - 1, nullptr, &events);
+    emitOp(&events, EVENT_OPERATION_COMPLETED, "buildFromPostorderInorder");
 }
 
 // ========================== Structural Queries ===============================
@@ -473,7 +504,7 @@ int* BinaryTree::pathTo(int target, int& pathLen) const {
 
 // ========================== Transforms =======================================
 
-void BinaryTree::mirrorHelper(TreeNode* node, EventBatch& events) {
+void BinaryTree::mirrorHelper(TreeNode* node, EventBatch* events) {
     if (!node) return;
     emitNode(events, EVENT_VISIT, node, "mirror");
     // Swap children
@@ -485,14 +516,13 @@ void BinaryTree::mirrorHelper(TreeNode* node, EventBatch& events) {
 }
 
 void BinaryTree::mirror() {
-    EventBatch tmp;
-    mirror(tmp);
+    mirrorHelper(root, nullptr);
 }
 
 void BinaryTree::mirror(EventBatch& events) {
-    emitOp(events, EVENT_OPERATION_STARTED, "mirror");
-    mirrorHelper(root, events);
-    emitOp(events, EVENT_OPERATION_COMPLETED, "mirror");
+    emitOp(&events, EVENT_OPERATION_STARTED, "mirror");
+    mirrorHelper(root, &events);
+    emitOp(&events, EVENT_OPERATION_COMPLETED, "mirror");
 }
 
 // ========================== Comparison =======================================

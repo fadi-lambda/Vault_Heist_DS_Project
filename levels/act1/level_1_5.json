@@ -1,0 +1,14 @@
+{
+  "level_id": 15,
+  "act": 1,
+  "seed": 105,
+  "title": "1.5 Boss: The Vault Nexus",
+  "concept": "General Binary Tree LCA & Path-to-Node",
+  "objective": "Find the Lowest Common Ancestor (LCA) of nodes 20 and 40 by clicking the LCA node directly!",
+  "optimal_steps": 1,
+  "alarm_capacity": 4,
+  "tree_type": "BinaryTree",
+  "query_a": 20,
+  "query_b": 40,
+  "expected_lca": 30
+}

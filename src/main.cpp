@@ -8,6 +8,8 @@
 #include "structures/BinaryTree.h"
 #include "structures/BST.h"
 #include "structures/TreeNode.h"
+#include "structures/Validator.h"
+#include "game/SaveManager.h"
 #include "gui/LayoutEngine.h"
 #include "gui/Renderer.h"
 #include "gui/AnimationController.h"
@@ -17,6 +19,7 @@
 #include "gui/Ui.h"
 #include <optional>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <cstring>
 #include <cmath>
@@ -47,6 +50,7 @@ static const int SCREEN_ACT1_DEMO     = 6;
 static const int SCREEN_ACT2_DEMO     = 7;
 static const int SCREEN_LEADERBOARD   = 8;
 static const int SCREEN_SETTINGS      = 9;
+static const int SCREEN_ENDLESS       = 10;
 
 // Level ID Constants (no enum allowed)
 static const int LEVEL_1_1 = 11;  // Traversals Protocol
@@ -312,14 +316,71 @@ struct LevelInfo {
     std::string title;
     std::string objective;
     std::string controls;
+    int optimalSteps;
     int alarmCapacity;
     bool unlocked;
     int stars;
 
-    LevelInfo() : id(0), act(0), alarmCapacity(20), unlocked(false), stars(0) {}
-    LevelInfo(int i, int a, std::string t, std::string o, std::string c, int cap, bool u, int s)
-        : id(i), act(a), title(t), objective(o), controls(c), alarmCapacity(cap), unlocked(u), stars(s) {}
+    LevelInfo() : id(0), act(0), optimalSteps(8), alarmCapacity(14), unlocked(false), stars(0) {}
+    LevelInfo(int i, int a, std::string t, std::string o, std::string c, int opt, bool u, int s)
+        : id(i), act(a), title(t), objective(o), controls(c), optimalSteps(opt),
+          alarmCapacity(static_cast<int>(std::ceil(1.5 * opt)) + 2), unlocked(u), stars(s) {}
 };
+
+// Lightweight JSON metadata loader (no STL containers, no external JSON lib)
+static bool extractJsonString(const std::string& json, const std::string& key, std::string& out) {
+    std::string pat = "\"" + key + "\"";
+    std::size_t pos = json.find(pat);
+    if (pos == std::string::npos) return false;
+    pos = json.find(':', pos + pat.size());
+    if (pos == std::string::npos) return false;
+    pos = json.find('"', pos + 1);
+    if (pos == std::string::npos) return false;
+    std::size_t end = json.find('"', pos + 1);
+    if (end == std::string::npos) return false;
+    out = json.substr(pos + 1, end - pos - 1);
+    return true;
+}
+
+static bool extractJsonInt(const std::string& json, const std::string& key, int& out) {
+    std::string pat = "\"" + key + "\"";
+    std::size_t pos = json.find(pat);
+    if (pos == std::string::npos) return false;
+    pos = json.find(':', pos + pat.size());
+    if (pos == std::string::npos) return false;
+    pos++;
+    while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t')) pos++;
+    if (pos >= json.size() || (json[pos] != '-' && (json[pos] < '0' || json[pos] > '9'))) return false;
+    out = std::stoi(json.substr(pos));
+    return true;
+}
+
+static void loadLevelMetadataFromJson(LevelInfo* levels, int totalLevels) {
+    const char* prefixes[3] = { "levels/", "../../levels/", "../../../levels/" };
+    for (int i = 0; i < totalLevels; ++i) {
+        int act = levels[i].act;
+        int sub = (i % 5) + 1;
+        std::string rel = "act" + std::to_string(act) + "/level_" + std::to_string(act) + "_" + std::to_string(sub) + ".json";
+        std::string content;
+        for (int p = 0; p < 3; ++p) {
+            std::ifstream ifs(std::string(prefixes[p]) + rel);
+            if (ifs.is_open()) {
+                std::string line;
+                while (std::getline(ifs, line)) content += line + "\n";
+                break;
+            }
+        }
+        if (content.empty()) continue;
+        std::string t, o;
+        int opt = 0;
+        if (extractJsonString(content, "title", t)) levels[i].title = t;
+        if (extractJsonString(content, "objective", o)) levels[i].objective = o;
+        if (extractJsonInt(content, "optimal_steps", opt) && opt > 0) {
+            levels[i].optimalSteps = opt;
+            levels[i].alarmCapacity = static_cast<int>(std::ceil(1.5 * opt)) + 2;
+        }
+    }
+}
 
 static void drawTreeWatermark(sf::RenderWindow& window, float rootX, float rootY) {
     sf::Color branchColor(24, 40, 64, 130);
@@ -472,12 +533,22 @@ int main(int argc, char** argv) {
 
     // Initial unlock: ONLY LEVEL 1.1 IS UNLOCKED AT THE START!
     levels[0].unlocked = true;
+    loadLevelMetadataFromJson(levels, TOTAL_LEVELS);
 
     // Real configurable settings (Item 4)
     bool soundEnabled   = true;
     bool showNodeBadges = true;
     bool showBgGrid     = true;
     bool autoPlayEvents = true;
+
+    // Spec scoring & Endless Mode state
+    int penaltyCount = 0;
+    int penaltyPoints = 0;
+    int endlessWave = 1;
+    int endlessScore = 0;
+    unsigned int endlessSeed = 2026u;
+    int endlessTargetKey = 50;
+    int endlessPhase = 0; // 0 = AVL Insert/Search target, 1 = MaxHeap Extract Max
 
     // Puzzle tracking state
     bool act1Reconstructed = false;
@@ -547,7 +618,7 @@ int main(int argc, char** argv) {
     int act1Hl1 = -9999, act1Hl2 = -9999;
     std::string act1TraversalStr = "";
     auto resetAct1 = [&]() {
-        act1Tree = BinaryTree();
+        act1Tree.clear();
         auto n50 = act1Tree.addNode(50, nullptr, true);
         auto n30 = act1Tree.addNode(30, n50, true);
         auto n70 = act1Tree.addNode(70, n50, false);
@@ -646,7 +717,7 @@ int main(int argc, char** argv) {
     };
 
     auto resetAct2 = [&]() {
-        act2Bst = BST();
+        act2Bst.clear();
         int keys[] = { 50, 30, 70, 20, 40, 60, 80 };
         for (int k : keys) act2Bst.insert(k);
         act2Hl1 = -9999;
@@ -663,7 +734,9 @@ int main(int argc, char** argv) {
 
     auto raiseAlarm = [&](int pts, const std::string& msg) {
         alarmSteps += pts;
-        score = maxInt(0, score - pts * 25);
+        penaltyCount++;
+        penaltyPoints += 50;
+        score = maxInt(0, 1000 - 10 * alarmSteps - penaltyPoints);
         status = msg;
         toastQueue.push("+" + std::to_string(pts) + " Alarm: " + msg, TOAST_KIND_PENALTY);
         if (currentScreen == SCREEN_LEVEL_PLAY && currentLevelIdx >= 0 &&
@@ -679,6 +752,7 @@ int main(int argc, char** argv) {
     auto finishLevelWin = [&](int starsAwarded, const std::string& msg) {
         if (currentLevelIdx < 0) return;
         pendingWin = false;
+        score = maxInt(0, 1000 - 10 * alarmSteps - penaltyPoints);
         levels[currentLevelIdx].stars = maxInt(levels[currentLevelIdx].stars, starsAwarded);
         if (currentLevelIdx + 1 < TOTAL_LEVELS) levels[currentLevelIdx + 1].unlocked = true;
         status = msg;
@@ -698,6 +772,8 @@ int main(int argc, char** argv) {
         currentLevelIdx = idx;
         currentScreen = SCREEN_LEVEL_PLAY;
         alarmSteps = 0;
+        penaltyCount = 0;
+        penaltyPoints = 0;
         score = 1000;
         sortedCount = 0;
         hlIndex1 = -1;
@@ -737,7 +813,7 @@ int main(int argc, char** argv) {
             resetAct1();
             status = "Step 1: Click [Mirror Tree [M]] or root node 50 to mirror branches.";
         } else if (lid == LEVEL_1_3) {
-            act1Tree = BinaryTree();
+            act1Tree.clear();
             act1Hl1 = -9999; act1Hl2 = -9999;
             status = "Blueprint shredded! Click [Reconstruct Pre+In [R]], then click the reconstructed root!";
         } else if (lid == LEVEL_1_4) {
@@ -791,13 +867,13 @@ int main(int argc, char** argv) {
             updateManualMetadata(manualTree);
             status = "Puzzle 1/2 (LR): Step 1 - Click child pivot 10 to left-rotate first!";
         } else if (lid == LEVEL_3_4) {
-            avl = AVLTree();
+            avl.clear();
             avl.insert(40);
             avl.insert(20);
             avlQueuePos = 2;
             status = "Incoming key 10! Click the rotation pivot node on the AVL tree to insert!";
         } else if (lid == LEVEL_3_5) {
-            avl = AVLTree();
+            avl.clear();
             int bKeys[] = { 40, 20, 60, 10, 30, 50, 70, 25 };
             for (int k : bKeys) avl.insert(k);
             bossQueryIdx = 1;
@@ -900,8 +976,11 @@ int main(int argc, char** argv) {
     auto completePendingWin = [&]() {
         if (!pendingWin || currentScreen != SCREEN_LEVEL_PLAY || currentLevelIdx < 0) return;
         int lid = levels[currentLevelIdx].id;
-        int stars = (lid == LEVEL_4_4 && alarmSteps > 14) ? 2 : 3;
-        if (alarmSteps >= 6 && stars == 3) stars = 2;
+        int opt = levels[currentLevelIdx].optimalSteps;
+        int twoStarCap = static_cast<int>(std::ceil(1.25 * opt));
+        int stars = 1;
+        if (alarmSteps <= opt && penaltyCount == 0) stars = 3;
+        else if (alarmSteps <= twoStarCap && penaltyCount <= 1) stars = 2;
         if (lid == LEVEL_1_1) finishLevelWin(stars, "Inorder sequence decoded the blueprint protocol!");
         else if (lid == LEVEL_1_4) finishLevelWin(stars, "Tree Diameter = 5 nodes verified across opposite leaves!");
         else if (lid == LEVEL_2_2) finishLevelWin(stars, "All 3 BST deletion cases executed cleanly!");
@@ -1555,7 +1634,7 @@ int main(int argc, char** argv) {
             act1Hl1 = a; act1Hl2 = b;
             status = "LCA(" + std::to_string(a) + ", " + std::to_string(b) + ") = " + std::to_string(lcaVal);
         } else if (actionCode == 6) {
-            act1Tree = BinaryTree();
+            act1Tree.clear();
             auto r1 = act1Tree.addNode(1, nullptr, true);
             auto r2L = act1Tree.addNode(2, r1, true);
             auto r2R = act1Tree.addNode(2, r1, false);
@@ -1655,7 +1734,7 @@ int main(int argc, char** argv) {
             status = "kthSmallest(k=" + std::to_string(k) + ") = " + std::to_string(ans);
             k++;
         } else if (actionCode == 8) {
-            act2Bst = BST();
+            act2Bst.clear();
             for (int i = 1; i <= 7; ++i) act2Bst.insert(i * 10);
             act2Hl1 = -9999; act2Hl2 = -9999;
             animCtrl.clearCurrent();
@@ -1739,13 +1818,86 @@ int main(int argc, char** argv) {
         return false;
     };
 
+    // Save / Load (SaveManager) & Endless Mode
+    auto saveGameState = [&]() {
+        SaveData sd;
+        sd.endlessWave = endlessWave;
+        sd.endlessScore = endlessScore;
+        sd.seed = endlessSeed;
+        for (int i = 0; i < TOTAL_LEVELS; ++i) {
+            sd.unlocked[i] = levels[i].unlocked;
+            sd.stars[i] = levels[i].stars;
+        }
+        int tmpHeap[64];
+        int hSz = minInt(act4Heap.getSize(), 64);
+        for (int i = 0; i < hSz; ++i) tmpHeap[i] = act4Heap.getElementAt(i);
+        if (SaveManager::saveToFile("savegame.dat", sd, act1Tree, act2Bst, avl, tmpHeap, hSz, sortedArr, sortedCount)) {
+            status = "Game saved to savegame.dat!";
+            toastQueue.push("Game Saved (savegame.dat)", TOAST_KIND_SUCCESS);
+        } else {
+            toastQueue.push("Save failed!", TOAST_KIND_PENALTY);
+        }
+    };
+
+    auto loadGameState = [&]() {
+        SaveData sd;
+        if (SaveManager::loadFromFile("savegame.dat", sd, act1Tree, act2Bst, avl)) {
+            for (int i = 0; i < TOTAL_LEVELS; ++i) {
+                levels[i].unlocked = sd.unlocked[i];
+                levels[i].stars = sd.stars[i];
+            }
+            endlessWave = sd.endlessWave;
+            endlessScore = sd.endlessScore;
+            endlessSeed = sd.seed;
+            if (sd.activeHeapSize > 0) act4Heap.buildMaxHeap(sd.heapArray, sd.activeHeapSize);
+            else act4Heap.clear();
+            sortedCount = minInt(sd.sortedCount, 30);
+            for (int i = 0; i < sortedCount; ++i) sortedArr[i] = sd.sortedArray[i];
+            layoutDirty = true;
+            status = "Save loaded & validated (Wave " + std::to_string(endlessWave) + ")!";
+            toastQueue.push("Save Loaded & Validated", TOAST_KIND_SUCCESS);
+        } else {
+            toastQueue.push("No valid savegame.dat found", TOAST_KIND_WARNING);
+        }
+    };
+
+    auto setupEndlessWave = [&]() {
+        std::srand(endlessSeed + static_cast<unsigned int>(endlessWave * 37));
+        avl.clear();
+        act4Heap.clear();
+        sortedCount = 0;
+        int nKeys = minInt(12, 5 + endlessWave);
+        int hArr[16];
+        for (int i = 0; i < nKeys; ++i) {
+            int k = 10 + (std::rand() % 85);
+            avl.insert(k);
+            hArr[i] = k;
+        }
+        act4Heap.buildMaxHeap(hArr, nKeys);
+        endlessTargetKey = 10 + (std::rand() % 85);
+        endlessPhase = 0;
+        layoutDirty = true;
+    };
+
+    auto enterEndless = [&]() {
+        currentScreen = SCREEN_ENDLESS;
+        sbAvlCam.reset();
+        sbHeapCam.reset();
+        endlessWave = 1;
+        endlessScore = 0;
+        animCtrl.clearCurrent();
+        undoStack.clear();
+        setupEndlessWave();
+        status = "ENDLESS WAVE 1: Insert [" + std::to_string(endlessTargetKey) + "] into AVL (or [E] Extract Max)!";
+    };
+
     // Sandbox actions
     auto enterSandbox = [&]() {
         currentScreen = SCREEN_SANDBOX;
         sbAvlCam.reset();
         sbHeapCam.reset();
         layoutDirty = true;
-        avl = AVLTree();
+        avl.clear();
         int init[] = { 40, 20, 60, 10, 30, 50, 70 };
         for (int v : init) avl.insert(v);
         int hInit[] = { 90, 75, 80, 60, 50, 40, 70 };
@@ -1915,15 +2067,16 @@ int main(int argc, char** argv) {
             uLine.setFillColor(Ui::cyan());
             window.draw(uLine);
 
-            float btnW = 440.f, btnH = 54.f, btnX = W * 0.5f - btnW * 0.5f, startY = 270.f, gap = 68.f;
-            Ui::button(window, font, "CAMPAIGN // HEIST WINGS", btnX, startY + 0 * gap, btnW, btnH, BTN_PRIMARY, in, 17, &uiCache);
-            Ui::button(window, font, "SANDBOX SIMULATOR",        btnX, startY + 1 * gap, btnW, btnH, BTN_SECONDARY, in, 17, &uiCache);
-            Ui::button(window, font, "OPERATOR LEADERBOARD",     btnX, startY + 2 * gap, btnW, btnH, BTN_SECONDARY, in, 17, &uiCache);
-            Ui::button(window, font, "SYSTEM SETTINGS",          btnX, startY + 3 * gap, btnW, btnH, BTN_GHOST, in, 17, &uiCache);
-            Ui::button(window, font, "QUIT TERMINAL",            btnX, startY + 4 * gap, btnW, btnH, BTN_DANGER, in, 17, &uiCache);
+            float btnW = 440.f, btnH = 48.f, btnX = W * 0.5f - btnW * 0.5f, startY = 250.f, gap = 60.f;
+            Ui::button(window, font, "CAMPAIGN // HEIST WINGS",   btnX, startY + 0 * gap, btnW, btnH, BTN_PRIMARY, in, 16, &uiCache);
+            Ui::button(window, font, "ENDLESS // SURVIVAL HEIST",  btnX, startY + 1 * gap, btnW, btnH, BTN_SECONDARY, in, 16, &uiCache);
+            Ui::button(window, font, "SANDBOX SIMULATOR",          btnX, startY + 2 * gap, btnW, btnH, BTN_SECONDARY, in, 16, &uiCache);
+            Ui::button(window, font, "OPERATOR LEADERBOARD",       btnX, startY + 3 * gap, btnW, btnH, BTN_SECONDARY, in, 16, &uiCache);
+            Ui::button(window, font, "SYSTEM SETTINGS",            btnX, startY + 4 * gap, btnW, btnH, BTN_GHOST, in, 16, &uiCache);
+            Ui::button(window, font, "QUIT TERMINAL",              btnX, startY + 5 * gap, btnW, btnH, BTN_DANGER, in, 16, &uiCache);
 
             Ui::textCenter(window, font, status, TXT_BODY, Ui::amber(), W * 0.5f, 650.f, false, &uiCache);
-            Ui::textCenter(window, font, "[Click buttons or press 1-5]  |  [Esc] Quit", TXT_HINT, Ui::textMuted(), W * 0.5f, 700.f, false, &uiCache);
+            Ui::textCenter(window, font, "[Click buttons or press 1-6]  |  [F5] Save  |  [F9] Load  |  [Esc] Quit", TXT_HINT, Ui::textMuted(), W * 0.5f, 700.f, false, &uiCache);
         }
 
         // 2. CAMPAIGN MAP
@@ -2339,6 +2492,40 @@ int main(int argc, char** argv) {
 
             Ui::textFit(window, font, status, TXT_BODY, Ui::gold(), 54.f, 746.f, 1480.f, false, &uiCache);
             Ui::textFit(window, font, "Shortcuts: [I] Insert AVL  |  [D] Delete AVL  |  [K] kth  |  [E] Extract Heap  |  [Z] Undo  |  [Space] Play/Pause  |  [Right] Step",
+                        TXT_HINT, Ui::textMuted(), 54.f, 820.f, 1480.f, false, &uiCache);
+        }
+
+        // 5B. ENDLESS / SURVIVAL MODE
+        if (currentScreen == SCREEN_ENDLESS) {
+            std::string endSub = "Wave " + std::to_string(endlessWave) +
+                                 "  |  Score: " + std::to_string(endlessScore) +
+                                 "  |  Target AVL Key: " + std::to_string(endlessTargetKey);
+            Ui::screenHeader(window, font, "ENDLESS // SURVIVAL HEIST", endSub, &uiCache);
+            Ui::button(window, font, "Back to Menu [Esc]", 1370.f, 26.f, 190.f, 38.f, BTN_GHOST, in, 13, &uiCache);
+
+            Ui::panel(window, 30.f,  95.f, 760.f, 540.f, Ui::cyan(), 248, &uiCache);
+            Ui::panel(window, 805.f, 95.f, 765.f, 540.f, Ui::gold(), 248, &uiCache);
+
+            if (needLayout) {
+                layoutAvlForScreen(30.f, 95.f, 760.f, 540.f);
+                layoutHeapForScreen(true, 805.f, 95.f, 765.f, 540.f);
+                layoutDirty = false;
+            }
+            RenderHighlightState eAvlHl, eHeapHl;
+            eAvlHl.showBadges = showNodeBadges;
+            eHeapHl.showBadges = showNodeBadges;
+            guiRenderer.drawTreeLayout(window, font, avlLayout, eAvlHl, true, false);
+            guiRenderer.drawHeapLayout(window, font, heapLayout, eHeapHl, 819.f, 555.f);
+
+            Ui::panel(window, 30.f, 650.f, 1540.f, 220.f, sf::Color(60, 85, 125), 235, &uiCache);
+            Ui::button(window, font, "[I] Insert Target (" + std::to_string(endlessTargetKey) + ")", 54.f,  674.f, 230.f, 46.f, BTN_PRIMARY, in, 14, &uiCache);
+            Ui::button(window, font, "[E] Extract Heap Max", 304.f, 674.f, 230.f, 46.f, BTN_SECONDARY, in, 14, &uiCache);
+            Ui::button(window, font, "[N] Next Wave",        554.f, 674.f, 210.f, 46.f, BTN_SECONDARY, in, 14, &uiCache);
+            Ui::button(window, font, "[F5] Save Game",       784.f, 674.f, 180.f, 46.f, BTN_GHOST, in, 14, &uiCache);
+            Ui::button(window, font, "[F9] Load Game",       984.f, 674.f, 180.f, 46.f, BTN_GHOST, in, 14, &uiCache);
+
+            Ui::textFit(window, font, status, TXT_BODY, Ui::gold(), 54.f, 746.f, 1480.f, false, &uiCache);
+            Ui::textFit(window, font, "Endless Controls: [I] Insert Target  |  [E] Extract Max  |  [N] Next Wave  |  [F5] Save  |  [F9] Load  |  [Esc] Menu",
                         TXT_HINT, Ui::textMuted(), 54.f, 820.f, 1480.f, false, &uiCache);
         }
 
@@ -2826,6 +3013,7 @@ int main(int argc, char** argv) {
                         currentScreen = SCREEN_CAMPAIGN_MAP;
                         status = "Returned to Campaign Map";
                     } else if (currentScreen == SCREEN_CAMPAIGN_MAP || currentScreen == SCREEN_SANDBOX ||
+                               currentScreen == SCREEN_ENDLESS ||
                                currentScreen == SCREEN_ACT1_DEMO || currentScreen == SCREEN_ACT2_DEMO ||
                                currentScreen == SCREEN_LEADERBOARD || currentScreen == SCREEN_SETTINGS) {
                         currentScreen = SCREEN_MAIN_MENU;
@@ -2835,6 +3023,8 @@ int main(int argc, char** argv) {
                     }
                     continue;
                 }
+                if (kp->code == sf::Keyboard::Key::F5) { saveGameState(); continue; }
+                if (kp->code == sf::Keyboard::Key::F9) { loadGameState(); continue; }
 
                 if (currentScreen == SCREEN_LEVEL_PLAY && currentLevelIdx >= 0) {
                     if (showingBriefing) {
@@ -2866,10 +3056,33 @@ int main(int argc, char** argv) {
                     }
                 } else if (currentScreen == SCREEN_MAIN_MENU) {
                     if (kp->code == sf::Keyboard::Key::Num1) { currentScreen = SCREEN_CAMPAIGN_MAP; status = "Heist Wings Overview"; }
-                    if (kp->code == sf::Keyboard::Key::Num2) enterSandbox();
-                    if (kp->code == sf::Keyboard::Key::Num3) currentScreen = SCREEN_LEADERBOARD;
-                    if (kp->code == sf::Keyboard::Key::Num4) currentScreen = SCREEN_SETTINGS;
-                    if (kp->code == sf::Keyboard::Key::Num5) window.close();
+                    if (kp->code == sf::Keyboard::Key::Num2) enterEndless();
+                    if (kp->code == sf::Keyboard::Key::Num3) enterSandbox();
+                    if (kp->code == sf::Keyboard::Key::Num4) currentScreen = SCREEN_LEADERBOARD;
+                    if (kp->code == sf::Keyboard::Key::Num5) currentScreen = SCREEN_SETTINGS;
+                    if (kp->code == sf::Keyboard::Key::Num6) window.close();
+                } else if (currentScreen == SCREEN_ENDLESS) {
+                    if (kp->code == sf::Keyboard::Key::I) {
+                        EventBatch batch;
+                        avl.insert(endlessTargetKey, batch);
+                        endlessScore += 100;
+                        endlessWave++;
+                        setupEndlessWave();
+                        status = "Wave " + std::to_string(endlessWave) + ": AVL Valid=" + (Validator::validateAVL(avl) ? "OK" : "ERR") + " | Score: " + std::to_string(endlessScore);
+                    }
+                    if (kp->code == sf::Keyboard::Key::E && !act4Heap.isEmpty()) {
+                        int mxVal = act4Heap.extractMax();
+                        if (sortedCount < 30) sortedArr[sortedCount++] = mxVal;
+                        endlessScore += 50;
+                        if (act4Heap.isEmpty()) { endlessWave++; setupEndlessWave(); }
+                        layoutDirty = true;
+                        status = "Extracted " + std::to_string(mxVal) + " | Wave " + std::to_string(endlessWave) + " | Score: " + std::to_string(endlessScore);
+                    }
+                    if (kp->code == sf::Keyboard::Key::N) {
+                        endlessWave++;
+                        setupEndlessWave();
+                        status = "Advanced to Endless Wave " + std::to_string(endlessWave);
+                    }
                 } else if (currentScreen == SCREEN_SANDBOX) {
                     if (kp->code == sf::Keyboard::Key::Right) { animCtrl.setPlaying(false); stepAnimForward(); }
                     if (kp->code == sf::Keyboard::Key::Space) animCtrl.togglePlayPause();
@@ -2938,19 +3151,46 @@ int main(int argc, char** argv) {
                 }
                 else if (currentScreen == SCREEN_MAIN_MENU) {
                     if (Ui::inside(mx, my, W - 180.f, 24.f, 140.f, 36.f)) soundEnabled = !soundEnabled;
-                    float btnW = 440.f, btnH = 54.f, btnX = W * 0.5f - btnW * 0.5f, startY = 270.f, gap = 68.f;
+                    float btnW = 440.f, btnH = 48.f, btnX = W * 0.5f - btnW * 0.5f, startY = 250.f, gap = 60.f;
                     if (Ui::inside(mx, my, btnX, startY + 0 * gap, btnW, btnH)) {
                         currentScreen = SCREEN_CAMPAIGN_MAP;
                         status = "Heist Wings Overview";
                     } else if (Ui::inside(mx, my, btnX, startY + 1 * gap, btnW, btnH)) {
-                        enterSandbox();
+                        enterEndless();
                     } else if (Ui::inside(mx, my, btnX, startY + 2 * gap, btnW, btnH)) {
-                        currentScreen = SCREEN_LEADERBOARD;
+                        enterSandbox();
                     } else if (Ui::inside(mx, my, btnX, startY + 3 * gap, btnW, btnH)) {
-                        currentScreen = SCREEN_SETTINGS;
+                        currentScreen = SCREEN_LEADERBOARD;
                     } else if (Ui::inside(mx, my, btnX, startY + 4 * gap, btnW, btnH)) {
+                        currentScreen = SCREEN_SETTINGS;
+                    } else if (Ui::inside(mx, my, btnX, startY + 5 * gap, btnW, btnH)) {
                         window.close();
                     }
+                }
+                else if (currentScreen == SCREEN_ENDLESS) {
+                    if (Ui::inside(mx, my, 1370.f, 26.f, 190.f, 38.f)) { currentScreen = SCREEN_MAIN_MENU; status = "Main Menu"; }
+                    if (Ui::inside(mx, my, 54.f, 674.f, 230.f, 46.f)) {
+                        avl.insert(endlessTargetKey);
+                        endlessScore += 100;
+                        endlessWave++;
+                        setupEndlessWave();
+                        status = "Inserted target! Wave " + std::to_string(endlessWave) + " | Score: " + std::to_string(endlessScore);
+                    }
+                    if (Ui::inside(mx, my, 304.f, 674.f, 230.f, 46.f) && !act4Heap.isEmpty()) {
+                        int mxVal = act4Heap.extractMax();
+                        if (sortedCount < 30) sortedArr[sortedCount++] = mxVal;
+                        endlessScore += 50;
+                        if (act4Heap.isEmpty()) { endlessWave++; setupEndlessWave(); }
+                        layoutDirty = true;
+                        status = "Extracted " + std::to_string(mxVal) + " | Score: " + std::to_string(endlessScore);
+                    }
+                    if (Ui::inside(mx, my, 554.f, 674.f, 210.f, 46.f)) {
+                        endlessWave++;
+                        setupEndlessWave();
+                        status = "Wave " + std::to_string(endlessWave);
+                    }
+                    if (Ui::inside(mx, my, 784.f, 674.f, 180.f, 46.f)) saveGameState();
+                    if (Ui::inside(mx, my, 984.f, 674.f, 180.f, 46.f)) loadGameState();
                 }
                 else if (currentScreen == SCREEN_CAMPAIGN_MAP) {
                     if (Ui::inside(mx, my, 1000.f, 26.f, 170.f, 38.f)) { currentScreen = SCREEN_ACT1_DEMO; demoCam.reset(); animCtrl.clearCurrent(); layoutDirty = true; }

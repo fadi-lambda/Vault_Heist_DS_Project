@@ -1,0 +1,12 @@
+{
+  "level_id": 24,
+  "act": 2,
+  "seed": 204,
+  "title": "2.4 Key Recovery (Succ & Pred)",
+  "concept": "Inorder Predecessor & Successor via Parent Pointers",
+  "objective": "Node 40 is compromised! Click both its Inorder Predecessor and Inorder Successor on the BST!",
+  "optimal_steps": 2,
+  "alarm_capacity": 5,
+  "tree_type": "BST",
+  "pivot_key": 40
+}

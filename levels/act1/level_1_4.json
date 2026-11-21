@@ -1,0 +1,12 @@
+{
+  "level_id": 14,
+  "act": 1,
+  "seed": 104,
+  "title": "1.4 Structural Analysis",
+  "concept": "Tree Height & Diameter",
+  "objective": "Click two deepest leaves on opposite wings to trace the longest transmission path (Diameter = 5)!",
+  "optimal_steps": 2,
+  "alarm_capacity": 5,
+  "tree_type": "BinaryTree",
+  "expected_diameter": 5
+}

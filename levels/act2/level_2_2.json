@@ -1,0 +1,12 @@
+{
+  "level_id": 22,
+  "act": 2,
+  "seed": 202,
+  "title": "2.2 Firewall Disarm (3 Cases)",
+  "concept": "BST Deletion (Leaf, 1-Child, 2-Child Successor)",
+  "objective": "Disarm 3 firewall nodes in order by clicking them: Leaf (80) -> 1-Child (20) -> 2-Child (30)!",
+  "optimal_steps": 3,
+  "alarm_capacity": 7,
+  "tree_type": "BST",
+  "delete_sequence": [80, 20, 30]
+}

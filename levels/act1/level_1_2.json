@@ -1,0 +1,12 @@
+{
+  "level_id": 12,
+  "act": 1,
+  "seed": 102,
+  "title": "1.2 Security Laser Mirror",
+  "concept": "Binary Tree Mirror Transform",
+  "objective": "Mirror the binary tree branches, then click the root node (50) to confirm laser alignment!",
+  "optimal_steps": 2,
+  "alarm_capacity": 5,
+  "tree_type": "BinaryTree",
+  "preorder": [50, 30, 10, 40, 70, 60, 80]
+}

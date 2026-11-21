@@ -19,8 +19,15 @@ private:
     // Resize array if it runs out of capacity
     void resize(int newCapacity);
 
-    // Swap two elements in the array (emits EVENT_HEAP_SWAP)
-    void swap(int i, int j, EventBatch& events);
+    // Swap two elements in the array (emits EVENT_HEAP_SWAP if events != nullptr)
+    void swap(int i, int j, EventBatch* events);
+
+    void siftUpImpl(int index, EventBatch* events);
+    void siftDownImpl(int index, int heapSize, EventBatch* events);
+    void insertImpl(int value, EventBatch* events);
+    int extractMaxImpl(EventBatch* events);
+    void buildMaxHeapImpl(const int* arr, int n, EventBatch* events);
+    void heapSortImpl(int* arr, int n, EventBatch* events);
 
 public:
     // Constructor: creates an empty heap with initial capacity
@@ -28,6 +35,10 @@ public:
 
     // Destructor: frees allocated memory
     ~MaxHeap();
+    MaxHeap(const MaxHeap&) = delete;
+    MaxHeap& operator=(const MaxHeap&) = delete;
+
+    void clear() { size = 0; }
 
     // Core Heap Operations
     void siftUp(int index);
