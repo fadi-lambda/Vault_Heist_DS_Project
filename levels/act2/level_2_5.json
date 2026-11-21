@@ -1,14 +1,15 @@
 {
   "level_id": 25,
   "act": 2,
-  "seed": 205,
-  "title": "2.5 Boss: Range Vault Heist",
-  "concept": "BST Range Query Pruning & kth-Smallest",
-  "objective": "Click all 5 keys inside Range [25..75], then click the 4th-smallest key to breach Wing 3!",
-  "optimal_steps": 6,
-  "alarm_capacity": 11,
-  "tree_type": "BST",
-  "range_lo": 25,
-  "range_hi": 75,
-  "k": 4
+  "title": "2.5 Boss: The Lazy Architect",
+  "concept": "BST degeneration on sorted input (O(n) height)",
+  "objective": "Insert sorted deliveries {20, 30, 40, 50} from root 10 as the chain degenerates and alarm capacity shrinks, then search for 50!",
+  "controls": "[< Go Left (1/L)]  |  [= Found (2/F)]  |  [Go Right > (3/D)]",
+  "start_status": "Sorted Delivery 1/4 (Key 20): Start at root 10 and use [< Go Left] / [Go Right >] to insert into the growing chain!",
+  "initial_keys": [10],
+  "target_keys": [20, 30, 40, 50],
+  "k_queries": [50],
+  "hints": [
+    "Sorted keys always compare larger than every existing room, marching down the right spine in O(n) steps - trace the chain carefully before the tightened alarm fills."
+  ]
 }

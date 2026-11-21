@@ -87,8 +87,8 @@ void Renderer::drawCanvasGrid(sf::RenderWindow& window, const sf::View& canvasVi
     m_gridVertices.clear();
     m_gridVertices.setPrimitiveType(sf::PrimitiveType::Lines);
 
-    sf::Color minorCol(22, 36, 60, 145);
-    sf::Color majorCol(38, 62, 98, 200);
+    sf::Color minorCol(10, 36, 18, 145);
+    sf::Color majorCol(18, 66, 32, 195);
 
     float startX = std::floor(left / step) * step;
     for (float x = startX; x <= right + 0.5f; x += step) {
@@ -123,7 +123,7 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
     for (int i = 0; i < layout.edgeCount; ++i) {
         const EdgeLayout& e = layout.edges[i];
         sf::Color edgeColor = e.isViolation ? sf::Color(220, 70, 70)
-                                            : sf::Color(90, 135, 185);
+                                            : sf::Color(0, 210, 65);
         m_edgeVertices.append(sf::Vertex({e.x1, e.y1}, edgeColor));
         m_edgeVertices.append(sf::Vertex({e.x2, e.y2}, edgeColor));
     }
@@ -158,58 +158,66 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
         int markOrder = 0;
         bool isMarked   = hl.isMarked(n.id, markOrder);
 
-        sf::Color fill(30, 50, 80, alpha);
-        sf::Color outline(90, 160, 240, alpha);
+        sf::Color fill(70, 60, 8, alpha);
+        sf::Color outline(255, 210, 40, alpha);
         float thickness = 2.4f;
 
         if (n.isViolation) {
             fill = sf::Color(80, 25, 25, alpha);
             outline = sf::Color(240, 80, 80, alpha);
         } else if (layout.structureType == STRUCT_MAX_HEAP && n.isRoot) {
-            fill = sf::Color(200, 160, 30, alpha);
-            outline = sf::Color(255, 235, 120, alpha);
+            fill = sf::Color(16, 68, 28, alpha);
+            outline = sf::Color(0, 255, 65, alpha);
         }
 
         if (isPruned) {
-            fill = sf::Color(24, 58, 72, alpha);
-            outline = sf::Color(56, 200, 220, alpha);
+            fill = sf::Color(40, 40, 40, alpha);
+            outline = sf::Color(140, 140, 140, alpha);
             thickness = 3.2f;
         }
         if (isSecond) {
-            fill = sf::Color(40, 75, 115, alpha);
-            outline = sf::Color(110, 210, 255, alpha);
+            fill = sf::Color(12, 54, 24, alpha);
+            outline = sf::Color(80, 255, 120, alpha);
             thickness = 3.2f;
         }
         if (isMarked && !isPrimary) {
-            fill = sf::Color(28, 74, 54, alpha);
-            outline = sf::Color(70, 220, 130, alpha);
+            fill = sf::Color(16, 82, 34, alpha);
+            outline = sf::Color(0, 255, 65, alpha);
             thickness = 3.0f;
         }
         if (isPrimary) {
             thickness = 3.8f;
             if (hl.primaryStyle == HL_INSERT || hl.primaryStyle == HL_SUCCESS) {
-                fill = sf::Color(24, 85, 52, alpha);
-                outline = sf::Color(80, 230, 130, alpha);
+                fill = sf::Color(16, 82, 34, alpha);
+                outline = sf::Color(0, 255, 65, alpha);
             } else if (hl.primaryStyle == HL_DELETE) {
                 fill = sf::Color(115, 32, 32, alpha);
                 outline = sf::Color(255, 95, 95, alpha);
             } else if (hl.primaryStyle == HL_COMPARE) {
-                fill = sf::Color(110, 82, 20, alpha);
-                outline = sf::Color(255, 210, 60, alpha);
+                fill = sf::Color(18, 72, 30, alpha);
+                outline = sf::Color(120, 255, 140, alpha);
             } else if (hl.primaryStyle == HL_SWAP) {
-                fill = sf::Color(95, 50, 120, alpha);
-                outline = sf::Color(210, 130, 255, alpha);
+                fill = sf::Color(24, 78, 42, alpha);
+                outline = sf::Color(0, 255, 110, alpha);
+            } else if (hl.primaryStyle == HL_VISIT) {
+                fill = sf::Color(16, 40, 80, alpha);
+                outline = sf::Color(70, 150, 255, alpha);
             } else {
-                fill = sf::Color(110, 75, 20, alpha);
-                outline = sf::Color(255, 220, 50, alpha);
+                fill = sf::Color(16, 82, 34, alpha);
+                outline = sf::Color(0, 255, 65, alpha);
             }
         }
         if (isHovered) {
             r *= 1.12f;
             if (!isPrimary) {
-                outline = sf::Color(160, 220, 255, alpha);
+                outline = sf::Color(120, 255, 145, alpha);
                 thickness = 3.2f;
             }
+        }
+        if (n.id == hl.errorFlashNodeId) {
+            fill = sf::Color(115, 32, 32, alpha);
+            outline = sf::Color(255, 95, 95, alpha);
+            thickness = 3.6f;
         }
 
         vis[i].r = r;
@@ -219,12 +227,20 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
         vis[i].markOrder = markOrder;
 
         if (isSelected || isMarked) {
-            sf::Color selCol = isSelected ? sf::Color(255, 215, 40, alpha) : sf::Color(70, 220, 130, alpha);
+            sf::Color selCol = isSelected ? sf::Color(0, 255, 65, alpha) : sf::Color(70, 220, 130, alpha);
             appendRing(m_shapeVertices, n.x, n.y, r + 5.f, r + 7.6f, selCol, cosT, sinT);
         }
 
+        // Layered soft glow ring behind/around node circle
+        std::uint8_t glowA = clampByte((static_cast<int>(alpha) * ((isSelected || isPrimary || isHovered) ? 95 : 55)) / 255);
+        sf::Color glowCol(outline.r, outline.g, outline.b, glowA);
+        appendRing(m_shapeVertices, n.x, n.y, r + thickness, r + thickness + 4.5f, glowCol, cosT, sinT);
+
         appendDisc(m_shapeVertices, n.x, n.y, r, fill, cosT, sinT);
         appendRing(m_shapeVertices, n.x, n.y, r, r + thickness, outline, cosT, sinT);
+        if (n.id == hl.targetNodeId) {
+            appendRing(m_shapeVertices, n.x, n.y, r + thickness + 2.f, r + thickness + 5.5f, sf::Color(245, 185, 40, alpha), cosT, sinT);
+        }
 
         if (isMarked) {
             float mx = n.x - r * 0.85f, my = n.y - r * 0.85f;
@@ -250,8 +266,8 @@ void Renderer::drawTreeLayout(sf::RenderWindow& window, const sf::Font& font,
         std::uint8_t alpha = vis[i].alpha;
 
         int len = std::snprintf(buf, sizeof(buf), "%d", n.key);
-        bool darkText = (layout.structureType == STRUCT_MAX_HEAP && n.isRoot && !vis[i].isPrimary && !n.isViolation);
-        sf::Color keyCol = darkText ? sf::Color(15, 20, 30, alpha) : sf::Color(255, 255, 255, alpha);
+        bool darkText = false;
+        sf::Color keyCol = sf::Color(255, 255, 255, alpha);
         if (len > 0) {
             Ui::drawPooledText(window, &m_ui, font, std::string_view(buf, static_cast<size_t>(len)),
                                14, false, TEXT_ALIGN_CENTER_XY, keyCol, n.x, n.y);
@@ -331,21 +347,23 @@ void Renderer::drawHeapLayout(sf::RenderWindow& window, const sf::Font& font,
         const ArrayCellLayout& c = layout.cells[i];
         sf::Color fill, edge;
         if (c.isSorted) {
-            fill = sf::Color(20, 50, 35);
-            edge = sf::Color(60, 200, 100);
+            fill = sf::Color(12, 46, 22);
+            edge = sf::Color(0, 255, 65);
         } else {
             bool isHl = (c.index == hl.arrayHl1 || c.index == hl.arrayHl2);
             if (isHl) {
-                fill = sf::Color(95, 65, 22);
-                edge = sf::Color(255, 220, 60);
+                fill = sf::Color(18, 72, 32);
+                edge = sf::Color(120, 255, 140);
             } else if (c.isRoot) {
-                fill = sf::Color(60, 50, 20);
-                edge = sf::Color(240, 190, 40);
+                fill = sf::Color(14, 54, 24);
+                edge = sf::Color(0, 255, 65);
             } else {
-                fill = sf::Color(25, 40, 65);
-                edge = sf::Color(70, 140, 220);
+                fill = sf::Color(6, 22, 10);
+                edge = sf::Color(0, 210, 65);
             }
         }
+        appendOutlinedRect(m_shapeVertices, c.x - 2.f, c.y - 2.f, c.w + 4.f, c.h + 4.f, 2.5f,
+                           sf::Color(0, 0, 0, 0), sf::Color(edge.r, edge.g, edge.b, 55));
         appendOutlinedRect(m_shapeVertices, c.x, c.y, c.w, c.h, 2.f, fill, edge);
     }
     if (m_shapeVertices.getVertexCount() > 0) window.draw(m_shapeVertices);
@@ -389,13 +407,15 @@ void Renderer::drawEventLogPanel(sf::RenderWindow& window, const sf::Font& font,
 
     m_shapeVertices.clear();
     m_shapeVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
-    appendOutlinedRect(m_shapeVertices, x, y, w, h, 1.5f, sf::Color(15, 22, 36, 235), sf::Color(60, 95, 145));
-    appendQuad(m_shapeVertices, x + 10.f, y + 28.f, w - 20.f, 1.f, sf::Color(55, 80, 120));
+    appendOutlinedRect(m_shapeVertices, x - 2.f, y - 2.f, w + 4.f, h + 4.f, 3.f,
+                       sf::Color(0, 0, 0, 0), sf::Color(0, 255, 65, 55));
+    appendOutlinedRect(m_shapeVertices, x, y, w, h, 1.5f, sf::Color(5, 13, 8, 235), sf::Color(0, 255, 65, 210));
+    appendQuad(m_shapeVertices, x + 10.f, y + 28.f, w - 20.f, 1.f, sf::Color(255, 210, 40, 140));
 
     if (total > 0 && cursor >= startIdx && cursor < startIdx + visibleRows && cursor < total) {
         float rowY = y + 34.f + static_cast<float>(cursor - startIdx) * 24.f;
         appendOutlinedRect(m_shapeVertices, x + 8.f, rowY, w - 16.f, 22.f, 1.f,
-                           sf::Color(40, 65, 100), sf::Color(245, 185, 40));
+                           sf::Color(12, 48, 22), sf::Color(0, 255, 65));
     }
     window.draw(m_shapeVertices);
 
@@ -405,15 +425,19 @@ void Renderer::drawEventLogPanel(sf::RenderWindow& window, const sf::Font& font,
         m_cachedHdrBatches = totalBatchesLogged;
         m_cachedLogHeader = "EVENT LOG  [" +
             std::to_string(total > 0 && cursor >= 0 ? (cursor + 1) : 0) +
-            "/" + std::to_string(total) + "]  Ops:" + std::to_string(totalBatchesLogged);
+            "/" + std::to_string(total) + "]";
+        m_cachedLogOps = "  Ops:" + std::to_string(totalBatchesLogged);
+        m_cachedLogHeaderW = Ui::textWidth(font, m_cachedLogHeader, 12, true);
     }
 
     Ui::drawPooledText(window, &m_ui, font, m_cachedLogHeader, 12, true, TEXT_ALIGN_TOP_LEFT,
-                       sf::Color(245, 185, 40), x + 10.f, y + 8.f);
+                       sf::Color(255, 210, 40), x + 10.f, y + 8.f);
+    Ui::drawPooledText(window, &m_ui, font, m_cachedLogOps, 12, true, TEXT_ALIGN_TOP_LEFT,
+                       sf::Color::White, x + 10.f + m_cachedLogHeaderW, y + 8.f);
 
     if (total == 0) {
         Ui::textWrap(window, font, "No operation events yet. Trigger an action or click a node on the canvas.", 12,
-                     Ui::textMuted(), x + 12.f, y + 40.f, w - 24.f, false, &m_ui);
+                     sf::Color::White, x + 12.f, y + 40.f, w - 24.f, false, &m_ui);
         return;
     }
 
@@ -442,9 +466,9 @@ void Renderer::drawEventLogPanel(sf::RenderWindow& window, const sf::Font& font,
     for (int r = 0; r < visibleRows && (startIdx + r) < total; ++r) {
         int idx = startIdx + r;
         float rowY = y + 34.f + static_cast<float>(r) * 24.f;
-        sf::Color rowCol = (idx == cursor) ? sf::Color(255, 225, 110)
-                         : (idx < cursor)  ? sf::Color(175, 205, 235)
-                                           : sf::Color(105, 125, 155);
+        sf::Color rowCol = (idx == cursor) ? sf::Color(0, 255, 65)
+                         : (idx < cursor)  ? sf::Color(195, 240, 205)
+                                           : sf::Color(90, 145, 100);
         if (idx < MAX_LOG_LINE_CACHE) {
             Ui::drawPooledText(window, &m_ui, font, m_cachedLogLines[idx], 12, false, TEXT_ALIGN_TOP_LEFT,
                                rowCol, x + 12.f, rowY + 3.f);
@@ -465,7 +489,7 @@ void Renderer::drawPlaybackControls(sf::RenderWindow& window, const sf::Font& fo
     float row1Y = panelY + panelH - 64.f;
     float row2Y = panelY + panelH - 30.f;
 
-    Ui::button(window, font, "Replay", panelX + 8.f, row0Y, 72.f, 24.f, BTN_SECONDARY, in, 12, &m_ui);
+    Ui::button(window, font, "Replay", panelX + 8.f, row0Y, 72.f, 24.f, BTN_ACCENT, in, 12, &m_ui);
     float scrubX = panelX + 90.f;
     float scrubW = panelW - 104.f;
     if (scrubW < 40.f) scrubW = 40.f;
@@ -483,17 +507,22 @@ void Renderer::drawPlaybackControls(sf::RenderWindow& window, const sf::Font& fo
     float btnW = (panelW - 32.f) / 3.f;
     if (btnW > 116.f) btnW = 116.f;
     Ui::button(window, font, isPlaying ? "Pause [Spc]" : "Play [Spc]", panelX + 8.f, row1Y, btnW, 25.f,
-               isPlaying ? BTN_PRIMARY : BTN_SECONDARY, in, 12, &m_ui);
+               BTN_ACCENT, in, 12, &m_ui);
     Ui::button(window, font, "Step [>]", panelX + 16.f + btnW, row1Y, btnW, 25.f, BTN_SECONDARY, in, 12, &m_ui);
     Ui::button(window, font, "Skip [>>]", panelX + 24.f + 2.f * btnW, row1Y, btnW, 25.f, BTN_GHOST, in, 12, &m_ui);
 
     int tenths = static_cast<int>(speedMultiplier * 10.f + 0.5f);
     if (m_cachedSpeedTenths != tenths) {
         m_cachedSpeedTenths = tenths;
-        m_cachedSpeedStr = "Speed " + std::to_string(tenths / 10) + "." + std::to_string(tenths % 10) + "x";
+        m_cachedSpeedStr = std::to_string(tenths / 10) + "." + std::to_string(tenths % 10) + "x";
     }
+    if (m_cachedSpeedLabelW < 0.f) {
+        m_cachedSpeedLabelW = Ui::textWidth(font, "Speed: ", 12, false);
+    }
+    Ui::drawPooledText(window, &m_ui, font, "Speed: ", 12, false, TEXT_ALIGN_TOP_LEFT,
+                       sf::Color::White, panelX + 10.f, row2Y + 2.f);
     Ui::drawPooledText(window, &m_ui, font, m_cachedSpeedStr, 12, false, TEXT_ALIGN_TOP_LEFT,
-                       sf::Color(195, 215, 240), panelX + 10.f, row2Y + 2.f);
+                       sf::Color(0, 255, 65), panelX + 10.f + m_cachedSpeedLabelW, row2Y + 2.f);
 
     float trackX = panelX + 94.f;
     float trackW = panelW - 108.f;
@@ -509,14 +538,14 @@ void Renderer::drawPlaybackControls(sf::RenderWindow& window, const sf::Font& fo
 
     m_shapeVertices.clear();
     m_shapeVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
-    appendQuad(m_shapeVertices, scrubX, scrubY, scrubW, 5.f, sf::Color(40, 55, 80));
-    if (scrubNorm > 0.f) appendQuad(m_shapeVertices, scrubX, scrubY, scrubW * scrubNorm, 5.f, sf::Color(168, 85, 247));
-    appendDisc(m_shapeVertices, scrubX + scrubW * scrubNorm, scrubY + 2.5f, 6.f, sf::Color(245, 185, 40), cosT, sinT);
+    appendQuad(m_shapeVertices, scrubX, scrubY, scrubW, 5.f, sf::Color(20, 40, 28));
+    if (scrubNorm > 0.f) appendQuad(m_shapeVertices, scrubX, scrubY, scrubW * scrubNorm, 5.f, sf::Color(255, 210, 40));
+    appendDisc(m_shapeVertices, scrubX + scrubW * scrubNorm, scrubY + 2.5f, 6.f, sf::Color(255, 210, 40), cosT, sinT);
     appendRing(m_shapeVertices, scrubX + scrubW * scrubNorm, scrubY + 2.5f, 6.f, 7.4f, sf::Color::White, cosT, sinT);
 
-    appendQuad(m_shapeVertices, trackX, trackY, trackW, 5.f, sf::Color(40, 55, 80));
-    if (norm > 0.f) appendQuad(m_shapeVertices, trackX, trackY, trackW * norm, 5.f, sf::Color(56, 189, 248));
-    appendDisc(m_shapeVertices, trackX + trackW * norm, trackY + 2.5f, 7.f, sf::Color(245, 185, 40), cosT, sinT);
+    appendQuad(m_shapeVertices, trackX, trackY, trackW, 5.f, sf::Color(20, 40, 28));
+    if (norm > 0.f) appendQuad(m_shapeVertices, trackX, trackY, trackW * norm, 5.f, sf::Color(0, 255, 65));
+    appendDisc(m_shapeVertices, trackX + trackW * norm, trackY + 2.5f, 7.f, sf::Color(0, 255, 65), cosT, sinT);
     appendRing(m_shapeVertices, trackX + trackW * norm, trackY + 2.5f, 7.f, 8.5f, sf::Color::White, cosT, sinT);
 
     window.draw(m_shapeVertices);
@@ -564,13 +593,15 @@ void Renderer::drawNodeTooltip(sf::RenderWindow& window, const sf::Font& font,
 
     m_shapeVertices.clear();
     m_shapeVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
-    appendOutlinedRect(m_shapeVertices, tx, ty, tw, th, 1.4f, sf::Color(12, 18, 32, 240), sf::Color(245, 185, 40));
+    appendOutlinedRect(m_shapeVertices, tx - 2.f, ty - 2.f, tw + 4.f, th + 4.f, 2.5f,
+                       sf::Color(0, 0, 0, 0), sf::Color(0, 255, 65, 55));
+    appendOutlinedRect(m_shapeVertices, tx, ty, tw, th, 1.5f, sf::Color(5, 13, 8, 230), sf::Color(0, 255, 65));
     window.draw(m_shapeVertices);
 
     Ui::drawPooledText(window, &m_ui, font, m_cachedTipLine1, 11, false, TEXT_ALIGN_TOP_LEFT,
-                       sf::Color(255, 225, 110), tx + 8.f, ty + 5.f);
+                       sf::Color(0, 255, 65), tx + 8.f, ty + 5.f);
     Ui::drawPooledText(window, &m_ui, font, m_cachedTipLine2, 10, false, TEXT_ALIGN_TOP_LEFT,
-                       sf::Color(195, 220, 250), tx + 8.f, ty + 23.f);
+                       sf::Color::White, tx + 8.f, ty + 23.f);
 }
 
 } // namespace VaultHeist

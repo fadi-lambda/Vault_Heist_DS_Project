@@ -20,9 +20,12 @@ private:
     int nextId;    // monotonic node-id counter (class-scoped, not global)
     int nodeCount;
 
-    // --- Recursive helpers ---
-    TreeNode* insertHelper(TreeNode* node, TreeNode* parent, int key, bool& inserted,
-                           EventBatch* events);
+    // Benchmark-only instrumentation counters (reset before each measured run)
+    static long long s_comparisons;
+
+    // --- Helpers ---
+    bool insertImpl(int key, EventBatch* events);
+    bool deleteImpl(int key, EventBatch* events);
     TreeNode* deleteHelper(TreeNode* node, int key, bool& deleted, EventBatch* events);
     TreeNode* searchHelper(TreeNode* node, int key) const;
     TreeNode* searchHelper(TreeNode* node, int key, EventBatch* events) const;
@@ -34,14 +37,13 @@ private:
 
     // Inorder helper for rangeQuery
     void rangeQueryHelper(TreeNode* node, int lo, int hi, int* out, int& idx,
-                          EventBatch* events) const;
+                          EventBatch& events) const;
 
     // Inorder counter for kthSmallest
     void kthHelper(TreeNode* node, int& count, int k, int& result) const;
 
-    // Validator (also checks parent pointers and counts visited nodes)
-    bool validateBST(TreeNode* node, const TreeNode* minNode, const TreeNode* maxNode,
-                     int& visitedCount) const;
+    // Validator
+    bool validateBST(TreeNode* node, const TreeNode* minNode, const TreeNode* maxNode) const;
 
     // Cleanup
     void destroyRecursive(TreeNode* node);
@@ -55,10 +57,10 @@ private:
 public:
     BST();
     ~BST();
-    BST(const BST&) = delete;
-    BST& operator=(const BST&) = delete;
 
-    void clear();
+    // --- Benchmark-only Counter API ---
+    static void resetCounters();
+    static long long getComparisons();
 
     // --- Core Operations (§5.3) ---
     // Event overloads (PLAN.md §6.4):

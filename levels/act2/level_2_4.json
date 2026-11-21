@@ -1,12 +1,15 @@
 {
   "level_id": 24,
   "act": 2,
-  "seed": 204,
-  "title": "2.4 Key Recovery (Succ & Pred)",
-  "concept": "Inorder Predecessor & Successor via Parent Pointers",
-  "objective": "Node 40 is compromised! Click both its Inorder Predecessor and Inorder Successor on the BST!",
-  "optimal_steps": 2,
-  "alarm_capacity": 5,
-  "tree_type": "BST",
-  "pivot_key": 40
+  "title": "2.4 Range Raid",
+  "concept": "BST range query [lo, hi] with subtree pruning",
+  "objective": "Walk the BST for Range [30..70]: [Report Room] when in range, and [Prune Left] or [Prune Right] to grey-out subtrees outside [30..70] for bonus points!",
+  "controls": "[Report Room (1/R)]  |  [Prune Left (2/L)]  |  [Prune Right (3/P)]",
+  "start_status": "Range Raid [30..70] at root 50: decide whether to [Report Room], [Prune Left], or [Prune Right]!",
+  "initial_keys": [50, 20, 80, 10, 35, 65, 90],
+  "range_lo": 30,
+  "range_hi": 70,
+  "hints": [
+    "If a room's key is <= lo, its left subtree is all < lo (Prune Left); if >= hi, its right subtree is all > hi (Prune Right); if lo <= key <= hi, Report it."
+  ]
 }

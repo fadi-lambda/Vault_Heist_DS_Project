@@ -1,13 +1,24 @@
 {
   "level_id": 11,
   "act": 1,
-  "seed": 101,
   "title": "1.1 Traversals Protocol",
-  "concept": "Inorder Traversal (Left -> Root -> Right)",
-  "objective": "Click the 7 tree nodes in exact Inorder sequence (Left -> Root -> Right)!",
-  "optimal_steps": 7,
-  "alarm_capacity": 13,
-  "tree_type": "BinaryTree",
-  "preorder": [10, 5, 2, 7, 15, 12, 20],
-  "inorder": [2, 5, 7, 10, 12, 15, 20]
+  "concept": "Preorder, Inorder, Postorder, and Level-Order tree traversals",
+  "objective": "Visit all 7 rooms in the exact order required by the active traversal protocol!",
+  "controls": "Click nodes in the active traversal sequence  |  [C] Cycle Traversal  |  Hover for stats",
+  "start_status": "Follow the active traversal sequence shown above and click each room in order.",
+  "nodes": [
+    { "key": 50, "left": 30, "right": 70 },
+    { "key": 30, "left": 20, "right": 40 },
+    { "key": 70, "left": 60, "right": 80 },
+    { "key": 20, "left": null, "right": null },
+    { "key": 40, "left": null, "right": null },
+    { "key": 60, "left": null, "right": null },
+    { "key": 80, "left": null, "right": null }
+  ],
+  "hints": [
+    "Preorder (Root -> Left -> Right): visit a room the moment you reach it, then finish its left wing before its right wing.",
+    "Inorder (Left -> Root -> Right): finish a room's entire left subtree first, then visit the room itself, then its right subtree.",
+    "Postorder (Left -> Right -> Root): visit both children's subtrees completely before clicking their parent room.",
+    "Level-Order (Breadth-First): sweep level by level from top to bottom, and left to right within each depth."
+  ]
 }

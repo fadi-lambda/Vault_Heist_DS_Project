@@ -1,12 +1,14 @@
 {
   "level_id": 21,
   "act": 2,
-  "seed": 201,
-  "title": "2.1 Duplicate Rejection Gateway",
-  "concept": "BST Ordering & Duplicate Rejection",
-  "objective": "Click node 50 to test duplicate rejection, click parent 20 to insert 25, then click new node 25!",
-  "optimal_steps": 3,
-  "alarm_capacity": 7,
-  "tree_type": "BST",
-  "initial_keys": [50, 30, 70, 20, 40, 60, 80]
+  "title": "2.1 Search Heist",
+  "concept": "BST search via root-to-target comparisons",
+  "objective": "Search for target key 40 starting from root 50: compare at each room and click [< Go Left], [= Found], or [Go Right >]!",
+  "controls": "[< Go Left (1/L)]  |  [= Found (2/F)]  |  [Go Right > (3/D)]",
+  "start_status": "Search Target: 40. Start at root 50 - compare 40 vs 50 and choose [< Go Left], [= Found], or [Go Right >]!",
+  "initial_keys": [50, 30, 70, 20, 40, 60, 80],
+  "target_keys": [40],
+  "hints": [
+    "Compare the target key with the current room: go Left if smaller, go Right if larger, and confirm Found when equal."
+  ]
 }

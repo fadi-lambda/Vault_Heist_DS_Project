@@ -1,14 +1,21 @@
 {
   "level_id": 15,
   "act": 1,
-  "seed": 105,
-  "title": "1.5 Boss: The Vault Nexus",
-  "concept": "General Binary Tree LCA & Path-to-Node",
-  "objective": "Find the Lowest Common Ancestor (LCA) of nodes 20 and 40 by clicking the LCA node directly!",
-  "optimal_steps": 1,
-  "alarm_capacity": 4,
-  "tree_type": "BinaryTree",
-  "query_a": 20,
-  "query_b": 40,
-  "expected_lca": 30
+  "title": "1.5 Mirror the Vault",
+  "concept": "Bottom-up binary tree inversion (mirroring)",
+  "objective": "Invert the tree by clicking rooms bottom-up to swap their children, OR press [Auto Mirror] to self-repair!",
+  "controls": "Click nodes bottom-up (children before parents) to swap children  |  Or click [Auto Mirror [A]]",
+  "start_status": "Click rooms bottom-up (lowest subtrees before their parents) to swap left/right children, or press [Auto Mirror [A]]!",
+  "nodes": [
+    { "key": 50, "left": 30, "right": 70 },
+    { "key": 30, "left": 20, "right": 40 },
+    { "key": 70, "left": 60, "right": 80 },
+    { "key": 20, "left": null, "right": null },
+    { "key": 40, "left": null, "right": null },
+    { "key": 60, "left": null, "right": null },
+    { "key": 80, "left": null, "right": null }
+  ],
+  "hints": [
+    "Bottom-up inversion swaps left and right children at lower subtrees before swapping at their parent room (or use Auto Mirror)."
+  ]
 }

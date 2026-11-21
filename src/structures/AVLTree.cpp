@@ -4,19 +4,30 @@
 
 namespace VaultHeist {
 
+// Benchmark-only instrumentation counters
+long long AVLTree::s_comparisons = 0;
+long long AVLTree::s_rotations = 0;
+
+void AVLTree::resetCounters() {
+    s_comparisons = 0;
+    s_rotations = 0;
+}
+
+long long AVLTree::getComparisons() {
+    return s_comparisons;
+}
+
+long long AVLTree::getRotations() {
+    return s_rotations;
+}
+
 // Constructor
-AVLTree::AVLTree() : root(nullptr), nextId(1) {}
+AVLTree::AVLTree() : root(nullptr) {}
 
 // Destructor: recursively frees all nodes to prevent memory leaks
 AVLTree::~AVLTree() {
     destroyRecursive(root);
     root = nullptr;
-}
-
-void AVLTree::clear() {
-    destroyRecursive(root);
-    root = nullptr;
-    nextId = 1;
 }
 
 void AVLTree::destroyRecursive(AVLNode* node) {
@@ -34,7 +45,7 @@ int AVLTree::getBalanceFactor(AVLNode* node) const {
 }
 
 // Updates height and subtreeSize based on children
-void AVLTree::updateHeightAndSize(AVLNode* node, EventBatch* events) {
+void AVLTree::updateHeightAndSizeImpl(AVLNode* node, EventBatch* events) {
     if (!node) return;
 
     int oldH = node->height;   // event bookkeeping only
@@ -66,7 +77,19 @@ void AVLTree::updateHeightAndSize(AVLNode* node, EventBatch* events) {
     }
 }
 
-AVLNode* AVLTree::rotateRight(AVLNode* y, EventBatch* events, int rotationCase) {
+void AVLTree::updateHeightAndSize(AVLNode* node, EventBatch& events) {
+    updateHeightAndSizeImpl(node, &events);
+}
+
+// LL Case: Single Right Rotation
+//
+//        y                              x
+//       / \                            / \
+//      x   T3     rotateRight(y)     T1   y
+//     / \        -------------->         / \
+//    T1  T2                             T2  T3
+AVLNode* AVLTree::rotateRightImpl(AVLNode* y, EventBatch* events, int rotationCase) {
+    s_rotations++;
     AVLNode* x = y->left;
     AVLNode* T2 = x->right;
 
@@ -90,13 +113,25 @@ AVLNode* AVLTree::rotateRight(AVLNode* y, EventBatch* events, int rotationCase) 
     }
 
     // Update heights and subtree sizes (child y first, then new parent x)
-    updateHeightAndSize(y, events);
-    updateHeightAndSize(x, events);
+    updateHeightAndSizeImpl(y, events);
+    updateHeightAndSizeImpl(x, events);
 
     return x; // New root of this subtree
 }
 
-AVLNode* AVLTree::rotateLeft(AVLNode* x, EventBatch* events, int rotationCase) {
+AVLNode* AVLTree::rotateRight(AVLNode* y, EventBatch& events, int rotationCase) {
+    return rotateRightImpl(y, &events, rotationCase);
+}
+
+// RR Case: Single Left Rotation
+//
+//       x                              y
+//      / \                            / \
+//     T1  y       rotateLeft(x)      x   T3
+//        / \     ------------->     / \
+//       T2  T3                     T1  T2
+AVLNode* AVLTree::rotateLeftImpl(AVLNode* x, EventBatch* events, int rotationCase) {
+    s_rotations++;
     AVLNode* y = x->right;
     AVLNode* T2 = y->left;
 
@@ -120,17 +155,21 @@ AVLNode* AVLTree::rotateLeft(AVLNode* x, EventBatch* events, int rotationCase) {
     }
 
     // Update heights and subtree sizes (child x first, then new parent y)
-    updateHeightAndSize(x, events);
-    updateHeightAndSize(y, events);
+    updateHeightAndSizeImpl(x, events);
+    updateHeightAndSizeImpl(y, events);
 
     return y; // New root of this subtree
 }
 
+AVLNode* AVLTree::rotateLeft(AVLNode* x, EventBatch& events, int rotationCase) {
+    return rotateLeftImpl(x, &events, rotationCase);
+}
+
 // Rebalances a node by checking its balance factor and selecting LL, RR, LR, or RL
-AVLNode* AVLTree::rebalance(AVLNode* node, EventBatch* events) {
+AVLNode* AVLTree::rebalanceImpl(AVLNode* node, EventBatch* events) {
     if (!node) return nullptr;
 
-    updateHeightAndSize(node, events);
+    updateHeightAndSizeImpl(node, events);
     int bf = getBalanceFactor(node);
 
     if (events && (bf > 1 || bf < -1)) {
@@ -142,45 +181,53 @@ AVLNode* AVLTree::rebalance(AVLNode* node, EventBatch* events) {
 
     // Left Heavy (BF > 1)
     if (bf > 1) {
+        // Event tag only: LR if the left child is right-heavy, else LL
         int rotationCase = (getBalanceFactor(node->left) < 0) ? ROTATION_LR : ROTATION_LL;
+        // LR Case: Left child is right-heavy -> rotate left on left child first
         if (getBalanceFactor(node->left) < 0) {
-            node->left = rotateLeft(node->left, events, rotationCase);
+            node->left = rotateLeftImpl(node->left, events, rotationCase);
         }
-        return rotateRight(node, events, rotationCase);
+        // LL Case: Single right rotation
+        return rotateRightImpl(node, events, rotationCase);
     }
 
     // Right Heavy (BF < -1)
     if (bf < -1) {
+        // Event tag only: RL if the right child is left-heavy, else RR
         int rotationCase = (getBalanceFactor(node->right) > 0) ? ROTATION_RL : ROTATION_RR;
+        // RL Case: Right child is left-heavy -> rotate right on right child first
         if (getBalanceFactor(node->right) > 0) {
-            node->right = rotateRight(node->right, events, rotationCase);
+            node->right = rotateRightImpl(node->right, events, rotationCase);
         }
-        return rotateLeft(node, events, rotationCase);
+        // RR Case: Single left rotation
+        return rotateLeftImpl(node, events, rotationCase);
     }
 
-    return node;
+    return node; // Node is already balanced (BF is -1, 0, or 1)
+}
+
+AVLNode* AVLTree::rebalance(AVLNode* node, EventBatch& events) {
+    return rebalanceImpl(node, &events);
 }
 
 // VISIT + COMPARE for one node checked against `key` (file-local helper).
-static inline void emitVisitCompare(EventBatch* events, const AVLNode* node, int key) {
-    if (!events) return;
+static inline void emitVisitCompare(EventBatch& events, const AVLNode* node, int key) {
     Event v(EVENT_VISIT, "visit");
     v.nodeId = node->key;
     v.newValue = node->key;
-    events->append(v);
+    events.append(v);
 
     Event c(EVENT_COMPARE, "compare");
     c.nodeId = node->key;
     c.oldValue = node->key;
     c.newValue = key;
-    events->append(c);
+    events.append(c);
 }
 
-static inline void emitOp(EventBatch* events, int type, const char* label, int key) {
-    if (!events) return;
+static inline void emitOp(EventBatch& events, int type, const char* label, int key) {
     Event e(type, label);
     e.newValue = key;
-    events->append(e);
+    events.append(e);
 }
 
 // Insert Helper: standard BST insert with duplicate rejection, then rebalances up
@@ -188,7 +235,7 @@ AVLNode* AVLTree::insertHelper(AVLNode* node, AVLNode* parent, int key, bool& in
                                EventBatch* events) {
     if (!node) {
         inserted = true;
-        AVLNode* newNode = new AVLNode(key, nextId++);
+        AVLNode* newNode = new AVLNode(key);
         newNode->parent = parent;
         if (events) {
             Event e(EVENT_INSERT, "insert");
@@ -200,7 +247,8 @@ AVLNode* AVLTree::insertHelper(AVLNode* node, AVLNode* parent, int key, bool& in
         return newNode;
     }
 
-    emitVisitCompare(events, node, key);
+    if (events) emitVisitCompare(*events, node, key);
+    s_comparisons++;
     if (key < node->key) {
         node->left = insertHelper(node->left, node, key, inserted, events);
     } else if (key > node->key) {
@@ -212,28 +260,29 @@ AVLNode* AVLTree::insertHelper(AVLNode* node, AVLNode* parent, int key, bool& in
         return node;
     }
 
-    return rebalance(node, events);
+    return rebalanceImpl(node, events);
+}
+
+bool AVLTree::insertImpl(int key, EventBatch* events) {
+    if (events) emitOp(*events, EVENT_OPERATION_STARTED, "insert", key);
+    bool inserted = false;
+    root = insertHelper(root, nullptr, key, inserted, events);
+    if (root) {
+        root->parent = nullptr;
+    }
+    if (events) {
+        if (inserted) emitOp(*events, EVENT_OPERATION_COMPLETED, "insert", key);
+        else          emitOp(*events, EVENT_OPERATION_FAILED, "insert: duplicate", key);
+    }
+    return inserted;
 }
 
 bool AVLTree::insert(int key) {
-    bool inserted = false;
-    root = insertHelper(root, nullptr, key, inserted, nullptr);
-    if (root) {
-        root->parent = nullptr;
-    }
-    return inserted;
+    return insertImpl(key, nullptr);
 }
 
 bool AVLTree::insert(int key, EventBatch& events) {
-    emitOp(&events, EVENT_OPERATION_STARTED, "insert", key);
-    bool inserted = false;
-    root = insertHelper(root, nullptr, key, inserted, &events);
-    if (root) {
-        root->parent = nullptr;
-    }
-    if (inserted) emitOp(&events, EVENT_OPERATION_COMPLETED, "insert", key);
-    else          emitOp(&events, EVENT_OPERATION_FAILED, "insert: duplicate", key);
-    return inserted;
+    return insertImpl(key, &events);
 }
 
 // Find minimum node in a subtree (leftmost node)
@@ -274,7 +323,8 @@ AVLNode* AVLTree::deleteHelper(AVLNode* node, int key, bool& deleted, EventBatch
         return nullptr;
     }
 
-    emitVisitCompare(events, node, key);
+    if (events) emitVisitCompare(*events, node, key);
+    s_comparisons++;
     if (key < node->key) {
         node->left = deleteHelper(node->left, key, deleted, events);
     } else if (key > node->key) {
@@ -322,45 +372,48 @@ AVLNode* AVLTree::deleteHelper(AVLNode* node, int key, bool& deleted, EventBatch
             events->append(e);
         }
         node->key = successor->key;
-        node->id = successor->id; // preserve unique node id across value swap
         // Delete successor from right subtree
         node->right = deleteHelper(node->right, successor->key, deleted, events);
     }
 
-    return rebalance(node, events);
+    return rebalanceImpl(node, events);
+}
+
+bool AVLTree::deleteImpl(int key, EventBatch* events) {
+    if (events) emitOp(*events, EVENT_OPERATION_STARTED, "delete", key);
+    bool deleted = false;
+    root = deleteHelper(root, key, deleted, events);
+    if (root) {
+        root->parent = nullptr;
+    }
+    if (events) {
+        if (deleted) emitOp(*events, EVENT_OPERATION_COMPLETED, "delete", key);
+        else         emitOp(*events, EVENT_OPERATION_FAILED, "delete: not found", key);
+    }
+    return deleted;
 }
 
 bool AVLTree::deleteKey(int key) {
-    bool deleted = false;
-    root = deleteHelper(root, key, deleted, nullptr);
-    if (root) {
-        root->parent = nullptr;
-    }
-    return deleted;
+    return deleteImpl(key, nullptr);
 }
 
 bool AVLTree::deleteKey(int key, EventBatch& events) {
-    emitOp(&events, EVENT_OPERATION_STARTED, "delete", key);
-    bool deleted = false;
-    root = deleteHelper(root, key, deleted, &events);
-    if (root) {
-        root->parent = nullptr;
-    }
-    if (deleted) emitOp(&events, EVENT_OPERATION_COMPLETED, "delete", key);
-    else         emitOp(&events, EVENT_OPERATION_FAILED, "delete: not found", key);
-    return deleted;
+    return deleteImpl(key, &events);
 }
 
 // Search
 AVLNode* AVLTree::searchHelper(AVLNode* node, int key) const {
-    if (!node || node->key == key) return node;
+    if (!node) return nullptr;
+    s_comparisons++;
+    if (node->key == key) return node;
     if (key < node->key) return searchHelper(node->left, key);
     return searchHelper(node->right, key);
 }
 
-AVLNode* AVLTree::searchHelper(AVLNode* node, int key, EventBatch* events) const {
+AVLNode* AVLTree::searchHelper(AVLNode* node, int key, EventBatch& events) const {
     if (!node) return node;
     emitVisitCompare(events, node, key);
+    s_comparisons++;
     if (node->key == key) return node;
     if (key < node->key) return searchHelper(node->left, key, events);
     return searchHelper(node->right, key, events);
@@ -371,10 +424,10 @@ bool AVLTree::search(int key) const {
 }
 
 bool AVLTree::search(int key, EventBatch& events) const {
-    emitOp(&events, EVENT_OPERATION_STARTED, "search", key);
-    bool found = searchHelper(root, key, &events) != nullptr;
-    if (found) emitOp(&events, EVENT_OPERATION_COMPLETED, "search", key);
-    else       emitOp(&events, EVENT_OPERATION_FAILED, "search: not found", key);
+    emitOp(events, EVENT_OPERATION_STARTED, "search", key);
+    bool found = searchHelper(root, key, events) != nullptr;
+    if (found) emitOp(events, EVENT_OPERATION_COMPLETED, "search", key);
+    else       emitOp(events, EVENT_OPERATION_FAILED, "search: not found", key);
     return found;
 }
 
@@ -383,6 +436,7 @@ bool AVLTree::search(int key, EventBatch& events) const {
 int AVLTree::kthHelper(AVLNode* node, int k) const {
     if (!node) return -1;
 
+    s_comparisons++;
     int leftSize = getNodeSize(node->left);
 
     if (k == leftSize + 1) {
@@ -406,6 +460,7 @@ int AVLTree::kth(int k) const {
 int AVLTree::rankHelper(AVLNode* node, int key) const {
     if (!node) return 0;
 
+    s_comparisons++;
     int leftSize = getNodeSize(node->left);
 
     if (key == node->key) {
@@ -424,20 +479,15 @@ int AVLTree::rank(int key) const {
 // Count keys in range [lo, hi]: rank(hi) - rank(lo - 1)
 int AVLTree::countInRange(int lo, int hi) const {
     if (lo > hi) return 0;
-    if (lo == INT_MIN) return rank(hi);
     return rank(hi) - rank(lo - 1);
 }
 
 // Invariant Validation (Section 5.6)
-bool AVLTree::validateInvariants(AVLNode* node, const AVLNode* minNode, const AVLNode* maxNode,
-                                 int& visitedCount) const {
+bool AVLTree::validateInvariants(AVLNode* node, int minVal, int maxVal) const {
     if (!node) return true;
-    visitedCount++;
-    if (root && visitedCount > root->size) return false; // cycle/shared-node guard
 
-    // 1. Check BST ordering (handles full int range including INT_MIN / INT_MAX)
-    if (minNode && node->key <= minNode->key) return false;
-    if (maxNode && node->key >= maxNode->key) return false;
+    // 1. Check BST ordering
+    if (node->key <= minVal || node->key >= maxVal) return false;
 
     // 2. Check balance factor constraint: |BF| <= 1
     int bf = getBalanceFactor(node);
@@ -458,8 +508,8 @@ bool AVLTree::validateInvariants(AVLNode* node, const AVLNode* minNode, const AV
     if (node->left && node->left->parent != node) return false;
     if (node->right && node->right->parent != node) return false;
 
-    return validateInvariants(node->left, minNode, node, visitedCount) &&
-           validateInvariants(node->right, node, maxNode, visitedCount);
+    return validateInvariants(node->left, minVal, node->key) &&
+           validateInvariants(node->right, node->key, maxVal);
 }
 
 bool AVLTree::isBalanced() const {
@@ -467,10 +517,7 @@ bool AVLTree::isBalanced() const {
 }
 
 bool AVLTree::isValidAVL() const {
-    if (root && root->parent != nullptr) return false;
-    int visitedCount = 0;
-    if (!validateInvariants(root, nullptr, nullptr, visitedCount)) return false;
-    return visitedCount == getSize();
+    return validateInvariants(root, INT_MIN, INT_MAX);
 }
 
 // Inorder traversal display

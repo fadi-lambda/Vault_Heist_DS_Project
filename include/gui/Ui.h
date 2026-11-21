@@ -18,6 +18,7 @@ static const int BTN_SECONDARY = 1;
 static const int BTN_DANGER    = 2;
 static const int BTN_GHOST     = 3;
 static const int BTN_DISABLED  = 4;
+static const int BTN_ACCENT    = 5;
 
 // Text alignment modes for pooled sf::Text cache (no enum allowed)
 static const int TEXT_ALIGN_TOP_LEFT  = 0;
@@ -29,8 +30,8 @@ static const int TEXT_ALIGN_BOTTOM_X  = 3;
 static const unsigned int TXT_TITLE = 46;
 static const unsigned int TXT_H1    = 28;
 static const unsigned int TXT_H2    = 20;
-static const unsigned int TXT_BODY  = 15;
-static const unsigned int TXT_HINT  = 13;
+static const unsigned int TXT_BODY  = 17;
+static const unsigned int TXT_HINT  = 15;
 
 struct UiInput {
     float mx;
@@ -113,7 +114,7 @@ inline sf::Color bgNavy()    { return sf::Color(10, 16, 28); }
 inline sf::Color panelFill() { return sf::Color(16, 24, 42); }
 inline sf::Color textBody()  { return sf::Color(214, 226, 244); }
 inline sf::Color textMuted() { return sf::Color(128, 148, 178); }
-inline sf::Color green()     { return sf::Color(70, 220, 130); }
+inline sf::Color green()     { return sf::Color(0, 255, 65); }
 inline sf::Color red()       { return sf::Color(240, 90, 90); }
 inline sf::Color amber()     { return sf::Color(250, 200, 70); }
 

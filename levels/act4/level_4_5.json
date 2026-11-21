@@ -3,9 +3,13 @@
   "act": 4,
   "title": "4.5 Final Vault Boss",
   "concept": "Complete in-place Heap Sort workflow: Build Heap + Repeated Extraction",
-  "objective": "Sort an entirely new unsorted treasure array in ascending order to unlock the Final Vault.",
-  "alarm_capacity": 30,
-  "optimal_steps": 16,
+  "objective": "Build Max Heap first, then click root [0] repeatedly to heap-sort all 8 treasures!",
+  "controls": "Click [Build Max Heap] -> Click root [0] until sorted",
+  "start_status": "Phase 1: Click [Build Max Heap [B]] (or the highlighted node) to heapify the array!",
   "initial_array": [25, 80, 15, 95, 60, 40, 70, 30],
-  "expected_sorted_result": [15, 25, 30, 40, 60, 70, 80, 95]
+  "expected_sorted_result": [15, 25, 30, 40, 60, 70, 80, 95],
+  "hints": [
+    "Heapify first: press Build Max Heap.",
+    "Phase 2: the maximum is always at the root - click index 0 until the heap is empty."
+  ]
 }

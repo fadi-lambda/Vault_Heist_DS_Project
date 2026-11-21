@@ -11,6 +11,10 @@ private:
     int capacity;      // Maximum allocated capacity
     int size;          // Current number of elements in the active heap
 
+    // Benchmark-only instrumentation counters (reset before each measured run)
+    static long long s_comparisons;
+    static long long s_swaps;
+
     // Helper functions for parent and children indices
     int parentIndex(int i) const { return (i - 1) / 2; }
     int leftChildIndex(int i) const { return 2 * i + 1; }
@@ -19,9 +23,10 @@ private:
     // Resize array if it runs out of capacity
     void resize(int newCapacity);
 
-    // Swap two elements in the array (emits EVENT_HEAP_SWAP if events != nullptr)
+    // Swap two elements in the array (emits EVENT_HEAP_SWAP when events != nullptr)
     void swap(int i, int j, EventBatch* events);
 
+    // Internal implementations (nullptr skips event recording)
     void siftUpImpl(int index, EventBatch* events);
     void siftDownImpl(int index, int heapSize, EventBatch* events);
     void insertImpl(int value, EventBatch* events);
@@ -35,10 +40,11 @@ public:
 
     // Destructor: frees allocated memory
     ~MaxHeap();
-    MaxHeap(const MaxHeap&) = delete;
-    MaxHeap& operator=(const MaxHeap&) = delete;
 
-    void clear() { size = 0; }
+    // Benchmark-only Counter API
+    static void resetCounters();
+    static long long getComparisons();
+    static long long getSwaps();
 
     // Core Heap Operations
     void siftUp(int index);

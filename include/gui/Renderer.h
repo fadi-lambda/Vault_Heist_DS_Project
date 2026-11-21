@@ -23,6 +23,8 @@ struct RenderHighlightState {
     int selectedNodeId;
     int hoveredNodeId;
     int prunedSubtreeId;
+    int errorFlashNodeId;
+    int targetNodeId;
     int primaryStyle;
     int arrayHl1;
     int arrayHl2;
@@ -32,7 +34,7 @@ struct RenderHighlightState {
 
     RenderHighlightState()
         : primaryNodeId(-1), secondaryNodeId(-1), selectedNodeId(-1),
-          hoveredNodeId(-1), prunedSubtreeId(-1), primaryStyle(HL_NONE),
+          hoveredNodeId(-1), prunedSubtreeId(-1), errorFlashNodeId(-1), targetNodeId(-1), primaryStyle(HL_NONE),
           arrayHl1(-1), arrayHl2(-1), showBadges(true), markedCount(0) {
         for (int i = 0; i < 16; ++i) markedNodeIds[i] = -1;
     }
@@ -78,6 +80,8 @@ private:
     mutable int m_cachedHdrCursor;
     mutable int m_cachedHdrBatches;
     mutable std::string m_cachedLogHeader;
+    mutable std::string m_cachedLogOps;
+    mutable float m_cachedLogHeaderW;
 
     // Heap / speed / tooltip string caches
     mutable int m_cachedHeapActive;
@@ -86,6 +90,7 @@ private:
 
     mutable int m_cachedSpeedTenths;
     mutable std::string m_cachedSpeedStr;
+    mutable float m_cachedSpeedLabelW;
 
     mutable int m_cachedTipId;
     mutable int m_cachedTipKey;
@@ -108,8 +113,10 @@ public:
           m_cachedLogLastType(-1), m_cachedLogLastKey(-999999),
           m_cachedLogW(-1.f),
           m_cachedHdrTotal(-1), m_cachedHdrCursor(-2), m_cachedHdrBatches(-1),
+          m_cachedLogHeaderW(0.f),
           m_cachedHeapActive(-1), m_cachedHeapSorted(-1),
           m_cachedSpeedTenths(-1),
+          m_cachedSpeedLabelW(-1.f),
           m_cachedTipId(-2), m_cachedTipKey(0), m_cachedTipType(-1),
           m_cachedTipH(0), m_cachedTipBf(0), m_cachedTipSz(0),
           m_cachedTipD(0), m_cachedTipViol(false) {}

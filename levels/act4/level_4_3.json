@@ -3,9 +3,12 @@
   "act": 4,
   "title": "4.3 Extract the Greatest Treasure",
   "concept": "Root-max extraction, array partitioning, and sift-down re-heapification",
-  "objective": "Repeatedly extract root max to sorted region and heapify remaining active heap.",
-  "alarm_capacity": 25,
-  "optimal_steps": 14,
-  "initial_heap": [95, 80, 75, 60, 40, 70, 50],
-  "expected_sorted_result": [40, 50, 60, 70, 75, 80, 95]
+  "objective": "Click root [0] on the tree or array view repeatedly to extract all treasures into the sorted region!",
+  "controls": "Click root [0] to extract max & heapify remainder",
+  "start_status": "Click root [0] (tree node or array cell) to extract the maximum!",
+  "initial_array": [95, 80, 75, 60, 40, 70, 50],
+  "expected_sorted_result": [40, 50, 60, 70, 75, 80, 95],
+  "hints": [
+    "In a Max Heap the largest value always sits at the root - index 0."
+  ]
 }

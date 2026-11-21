@@ -13,7 +13,6 @@ namespace VaultHeist {
  * - parent: pointer to parent node (simplifies rotations and traversals)
  */
 struct AVLNode {
-    int id;
     int key;
     int height;
     int size;
@@ -21,37 +20,38 @@ struct AVLNode {
     AVLNode* right;
     AVLNode* parent;
 
-    AVLNode(int k, int nodeId = 0)
-        : id(nodeId), key(k), height(1), size(1), left(nullptr), right(nullptr), parent(nullptr) {}
+    AVLNode(int k)
+        : key(k), height(1), size(1), left(nullptr), right(nullptr), parent(nullptr) {}
 };
 
 class AVLTree {
 private:
     AVLNode* root;
-    int nextId;
+
+    // Benchmark-only instrumentation counters (reset before each measured run)
+    static long long s_comparisons;
+    static long long s_rotations;
 
     // Helper utilities for height, size, and balance factor
     int getNodeHeight(AVLNode* node) const { return node ? node->height : 0; }
     int getNodeSize(AVLNode* node) const { return node ? node->size : 0; }
     int getBalanceFactor(AVLNode* node) const;
 
-    // Updates height/size; appends EVENT_UPDATE_HEIGHT / EVENT_UPDATE_SIZE
-    // (old/new values) only when the stored value actually changes.
-    void updateHeightAndSize(AVLNode* node, EventBatch* events);
-
-    // Rotations (LL, RR, LR, RL). Each emits one EVENT_ROTATE tagged with the
-    // overall case (a double rotation LR/RL emits two ROTATE events, both tagged).
-    AVLNode* rotateRight(AVLNode* y, EventBatch* events, int rotationCase); // LL Case (Single Right Rotation)
-    AVLNode* rotateLeft(AVLNode* x, EventBatch* events, int rotationCase);  // RR Case (Single Left Rotation)
-    AVLNode* rebalance(AVLNode* node, EventBatch* events);
+    // Internal pointer-based event helpers (nullptr skips event recording)
+    void updateHeightAndSizeImpl(AVLNode* node, EventBatch* events);
+    AVLNode* rotateRightImpl(AVLNode* y, EventBatch* events, int rotationCase);
+    AVLNode* rotateLeftImpl(AVLNode* x, EventBatch* events, int rotationCase);
+    AVLNode* rebalanceImpl(AVLNode* node, EventBatch* events);
 
     // Recursive helpers
     AVLNode* insertHelper(AVLNode* node, AVLNode* parent, int key, bool& inserted, EventBatch* events);
     AVLNode* deleteHelper(AVLNode* node, int key, bool& deleted, EventBatch* events);
+    bool insertImpl(int key, EventBatch* events);
+    bool deleteImpl(int key, EventBatch* events);
     AVLNode* findMinNode(AVLNode* node) const;
     AVLNode* findMaxNode(AVLNode* node) const;
     AVLNode* searchHelper(AVLNode* node, int key) const;
-    AVLNode* searchHelper(AVLNode* node, int key, EventBatch* events) const;
+    AVLNode* searchHelper(AVLNode* node, int key, EventBatch& events) const;
 
     // Order statistics helpers (Boss Level 3.5)
     int kthHelper(AVLNode* node, int k) const;
@@ -59,16 +59,25 @@ private:
 
     // Validation & cleanup helpers
     void destroyRecursive(AVLNode* node);
-    bool validateInvariants(AVLNode* node, const AVLNode* minNode, const AVLNode* maxNode, int& visitedCount) const;
+    bool validateInvariants(AVLNode* node, int minVal, int maxVal) const;
     void inorderPrint(AVLNode* node) const;
 
 public:
     AVLTree();
     ~AVLTree();
-    AVLTree(const AVLTree&) = delete;
-    AVLTree& operator=(const AVLTree&) = delete;
 
-    void clear();
+    // Benchmark-only Counter API
+    static void resetCounters();
+    static long long getComparisons();
+    static long long getRotations();
+
+    // Direct manual rotation & subtree metadata entry points (Act 3 interactive puzzles)
+    void updateHeightAndSize(AVLNode* node, EventBatch& events);
+    AVLNode* rotateRight(AVLNode* y, EventBatch& events, int rotationCase); // LL Case (Single Right Rotation)
+    AVLNode* rotateLeft(AVLNode* x, EventBatch& events, int rotationCase);  // RR Case (Single Left Rotation)
+    AVLNode* rebalance(AVLNode* node, EventBatch& events);
+    void setRoot(AVLNode* newRoot) { root = newRoot; if (root) root->parent = nullptr; }
+    void clear() { destroyRecursive(root); root = nullptr; }
 
     // Core Operations (Section 5.4)
     bool insert(int key);

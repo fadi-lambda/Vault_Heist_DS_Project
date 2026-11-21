@@ -61,6 +61,7 @@ void ToastQueue::draw(sf::RenderTarget& target, const sf::Font& font, float wind
         sf::Color fill, edge;
         if (t.kind == TOAST_KIND_SUCCESS)      { fill = sf::Color(16, 64, 40);  edge = Ui::green(); }
         else if (t.kind == TOAST_KIND_PENALTY) { fill = sf::Color(80, 22, 28);  edge = Ui::red(); }
+        else if (t.kind == TOAST_KIND_INFO)    { fill = sf::Color(10, 40, 24);  edge = sf::Color(0, 200, 90); }
         else                                   { fill = sf::Color(78, 60, 14);  edge = Ui::amber(); }
 
         std::uint8_t fa = static_cast<std::uint8_t>(a * 248.f);

@@ -1,11 +1,11 @@
 {
   "level_id": 32,
   "act": 3,
-  "title": "3.2 Manual Repair - Single Rotations",
+  "title": "3.2 Single Rotations (LL / RR)",
   "concept": "Single LL and RR Rotations",
-  "objective": "Perform LL and RR single rotations to balance the tree.",
-  "alarm_capacity": 20,
-  "optimal_steps": 2,
+  "objective": "For each puzzle, click the unbalanced pivot node (|BF| > 1), then choose [LL: Rotate Right] or [RR: Rotate Left] to repair it!",
+  "controls": "Step 1: Click unbalanced pivot node -> Step 2: Click [LL (1/L)] or [RR (2/R)]",
+  "start_status": "Puzzle 1/2: Click the unbalanced pivot node (|BF| > 1) on the AVL tree, then pick [LL] or [RR]!",
   "puzzles": [
     {
       "case": "LL",
@@ -23,5 +23,9 @@
       "correct_rotation": "LEFT",
       "new_root": 20
     }
+  ],
+  "hints": [
+    "Find the node whose |BF| is 2: if its left subtree is taller (BF = +2), use LL (Rotate Right); if its right subtree is taller (BF = -2), use RR (Rotate Left).",
+    "Now the subtree leans right (BF = -2 at the pivot): select the pivot and pick RR (Rotate Left)."
   ]
 }

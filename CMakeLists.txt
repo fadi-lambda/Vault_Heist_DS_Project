@@ -2,9 +2,9 @@
 
 if(POLICY CMP0141)
     cmake_policy(SET CMP0141 NEW)
-    if(MSVC)
-        set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
-    endif()
+    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
+        "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    )
 endif()
 
 project(Vault_Heist LANGUAGES CXX)
@@ -15,13 +15,19 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 enable_testing()
 
-find_package(SFML CONFIG REQUIRED COMPONENTS Graphics)
+find_package(SFML CONFIG REQUIRED COMPONENTS Graphics Audio)
 find_package(GTest CONFIG REQUIRED)
 
 # Main application
 add_executable(Vault_Heist
     src/main.cpp
+    src/benchmark/Benchmark.cpp
     src/events/EventLog.cpp
+    src/game/Json.cpp
+    src/game/LevelLoader.cpp
+    src/game/Scoring.cpp
+    src/game/HintSystem.cpp
+    src/game/EndlessMode.cpp
     src/gui/LayoutEngine.cpp
     src/gui/Renderer.cpp
     src/gui/AnimationController.cpp
@@ -29,7 +35,8 @@ add_executable(Vault_Heist
     src/gui/ToastQueue.cpp
     src/gui/Ui.cpp
     src/gui/ScoreLog.cpp
-    src/game/SaveManager.cpp
+    src/gui/DragDrop.cpp
+    src/gui/DragDropView.cpp
     src/structures/MaxHeap.cpp
     src/structures/AVLTree.cpp
     src/structures/BinaryTree.cpp
@@ -41,12 +48,21 @@ target_include_directories(Vault_Heist
 )
 
 if(MSVC)
-    target_compile_options(Vault_Heist PRIVATE /EHsc)
+    target_compile_options(Vault_Heist PRIVATE /Z7 /EHsc)
 endif()
 
 target_link_libraries(Vault_Heist
-    PRIVATE SFML::Graphics
+    PRIVATE SFML::Graphics SFML::Audio
 )
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
+    add_custom_command(TARGET Vault_Heist POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/assets"
+            "${CMAKE_BINARY_DIR}/assets"
+        COMMENT "Copying assets/ to ${CMAKE_BINARY_DIR}/assets/"
+    )
+endif()
 
 # Benchmarks (Section 10)
 add_executable(Vault_Heist_Benchmarks
@@ -60,7 +76,7 @@ target_include_directories(Vault_Heist_Benchmarks
 )
 
 if(MSVC)
-    target_compile_options(Vault_Heist_Benchmarks PRIVATE /EHsc)
+    target_compile_options(Vault_Heist_Benchmarks PRIVATE /Z7 /EHsc)
 endif()
 
 # Tests

@@ -3,9 +3,12 @@
   "act": 4,
   "title": "4.4 Race Against the Guards",
   "concept": "Heap Sort operational complexity and step budget under strict alarm limits",
-  "objective": "Complete full extraction cycle under tight alarm capacity constraint.",
-  "alarm_capacity": 20,
-  "optimal_steps": 12,
-  "initial_heap": [90, 70, 80, 40, 50, 60, 30],
-  "expected_sorted_result": [30, 40, 50, 60, 70, 80, 90]
+  "objective": "Extract all 7 treasures by clicking root [0] before the alarm capacity fills!",
+  "controls": "Click root [0] rapidly to extract & sift down",
+  "start_status": "RACE! Click root [0] rapidly to extract all treasures before the alarm fills!",
+  "initial_array": [90, 70, 80, 40, 50, 60, 30],
+  "expected_sorted_result": [30, 40, 50, 60, 70, 80, 90],
+  "hints": [
+    "Every extraction is one click on the root. Any other click only raises the alarm."
+  ]
 }

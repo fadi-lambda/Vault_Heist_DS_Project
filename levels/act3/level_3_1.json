@@ -3,10 +3,9 @@
   "act": 3,
   "title": "3.1 Read the Badges",
   "concept": "Balance Factor (|BF| <= 1 for balanced nodes)",
-  "objective": "Identify every unbalanced node by clicking nodes whose |BF| > 1.",
-  "alarm_capacity": 15,
-  "optimal_steps": 2,
-  "tree_type": "AVL_Unbalanced",
+  "objective": "Click EVERY unbalanced node with a RED violation badge (|BF| > 1) directly on the tree!",
+  "controls": "Click unbalanced nodes (|BF| > 1)  |  Hover for BF & height",
+  "start_status": "Click BOTH nodes with RED violation badges (|BF| > 1)!",
   "nodes": [
     { "key": 50, "left": 30, "right": 70 },
     { "key": 30, "left": 20, "right": null },
@@ -18,5 +17,7 @@
     { "key": 80, "left": null, "right": 90 },
     { "key": 90, "left": null, "right": null }
   ],
-  "expected_violation_keys": [30, 20]
+  "hints": [
+    "Balance factor = left height minus right height. Look for unbalanced subtrees whose |BF| exceeds 1."
+  ]
 }

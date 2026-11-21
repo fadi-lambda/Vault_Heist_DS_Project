@@ -1,12 +1,14 @@
 {
   "level_id": 23,
   "act": 2,
-  "seed": 203,
-  "title": "2.3 Infiltration Sweep",
-  "concept": "BST Min, Max, and Search",
-  "objective": "Locate and click the Minimum key, the Maximum key, and target frequency 70 on the BST!",
-  "optimal_steps": 3,
-  "alarm_capacity": 7,
-  "tree_type": "BST",
-  "targets": ["min", "max", 70]
+  "title": "2.3 Steal and Collapse",
+  "concept": "BST deletion: leaf, one-child, and two-children cases",
+  "objective": "For each target key (80 -> 70 -> 30), classify its BST deletion case ([Leaf], [One-Child], or [Two-Children]) and watch the collapse!",
+  "controls": "[Leaf (1)]  |  [One-Child (2)]  |  [Two-Children (3)]",
+  "start_status": "Target 1/3: Room 80 highlighted. Classify its deletion case: [Leaf], [One-Child], or [Two-Children]!",
+  "initial_keys": [50, 30, 70, 20, 40, 60, 80],
+  "delete_sequence": [80, 70, 30],
+  "hints": [
+    "Count the highlighted target room's current children (0 = Leaf, 1 = One-Child, 2 = Two-Children replaced by its inorder successor)."
+  ]
 }
