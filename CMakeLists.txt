@@ -15,7 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 enable_testing()
 
-find_package(SFML CONFIG REQUIRED COMPONENTS Graphics)
+find_package(SFML CONFIG REQUIRED COMPONENTS Graphics Audio)
 find_package(GTest CONFIG REQUIRED)
 
 # Main application
@@ -52,7 +52,7 @@ if(MSVC)
 endif()
 
 target_link_libraries(Vault_Heist
-    PRIVATE SFML::Graphics
+    PRIVATE SFML::Graphics SFML::Audio
 )
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/assets")

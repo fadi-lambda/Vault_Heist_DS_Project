@@ -3,6 +3,7 @@
 // =============================================================================
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include "structures/MaxHeap.h"
 #include "structures/AVLTree.h"
 #include "structures/BinaryTree.h"
@@ -768,6 +769,52 @@ int main(int argc, char** argv) {
         }
     }
 
+    sf::SoundBuffer successBuf, errorBuf, levelCompleteBuf, levelFailBuf, missionStartBuf, menuClickBuf, campaignClickBuf;
+    bool successLoaded = successBuf.loadFromFile("assets/sounds/Success_correct-action.wav") ||
+                         successBuf.loadFromFile("../../assets/sounds/Success_correct-action.wav") ||
+                         successBuf.loadFromFile("out/build/x64-debug/assets/sounds/Success_correct-action.wav") ||
+                         successBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/Success_correct-action.wav");
+    bool errorLoaded = errorBuf.loadFromFile("assets/sounds/Wrong_error-action.wav") ||
+                       errorBuf.loadFromFile("../../assets/sounds/Wrong_error-action.wav") ||
+                       errorBuf.loadFromFile("out/build/x64-debug/assets/sounds/Wrong_error-action.wav") ||
+                       errorBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/Wrong_error-action.wav");
+    bool levelCompleteLoaded = levelCompleteBuf.loadFromFile("assets/sounds/Level_complete_victory.mp3") ||
+                               levelCompleteBuf.loadFromFile("../../assets/sounds/Level_complete_victory.mp3") ||
+                               levelCompleteBuf.loadFromFile("out/build/x64-debug/assets/sounds/Level_complete_victory.mp3") ||
+                               levelCompleteBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/Level_complete_victory.mp3");
+    bool levelFailLoaded = levelFailBuf.loadFromFile("assets/sounds/Level_fail_alarm.wav") ||
+                           levelFailBuf.loadFromFile("../../assets/sounds/Level_fail_alarm.wav") ||
+                           levelFailBuf.loadFromFile("out/build/x64-debug/assets/sounds/Level_fail_alarm.wav") ||
+                           levelFailBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/Level_fail_alarm.wav");
+    bool missionStartLoaded = missionStartBuf.loadFromFile("assets/sounds/starting_new_mission.wav") ||
+                              missionStartBuf.loadFromFile("../../assets/sounds/starting_new_mission.wav") ||
+                              missionStartBuf.loadFromFile("out/build/x64-debug/assets/sounds/starting_new_mission.wav") ||
+                              missionStartBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/starting_new_mission.wav");
+    bool menuClickLoaded = menuClickBuf.loadFromFile("assets/sounds/click_hover_sound_for_main_menu.mp3") ||
+                           menuClickBuf.loadFromFile("../../assets/sounds/click_hover_sound_for_main_menu.mp3") ||
+                           menuClickBuf.loadFromFile("out/build/x64-debug/assets/sounds/click_hover_sound_for_main_menu.mp3") ||
+                           menuClickBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/click_hover_sound_for_main_menu.mp3");
+    bool campaignClickLoaded = campaignClickBuf.loadFromFile("assets/sounds/click_hover_sound_in_acts_menu_and_levels.mp3") ||
+                               campaignClickBuf.loadFromFile("../../assets/sounds/click_hover_sound_in_acts_menu_and_levels.mp3") ||
+                               campaignClickBuf.loadFromFile("out/build/x64-debug/assets/sounds/click_hover_sound_in_acts_menu_and_levels.mp3") ||
+                               campaignClickBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/click_hover_sound_in_acts_menu_and_levels.mp3");
+
+    std::optional<sf::Sound> successSnd, errorSnd, levelCompleteSnd, levelFailSnd, missionStartSnd, menuClickSnd, campaignClickSnd;
+    if (successLoaded) successSnd.emplace(successBuf);
+    if (errorLoaded) errorSnd.emplace(errorBuf);
+    if (levelCompleteLoaded) levelCompleteSnd.emplace(levelCompleteBuf);
+    if (levelFailLoaded) levelFailSnd.emplace(levelFailBuf);
+    if (missionStartLoaded) missionStartSnd.emplace(missionStartBuf);
+    if (menuClickLoaded) menuClickSnd.emplace(menuClickBuf);
+    if (campaignClickLoaded) campaignClickSnd.emplace(campaignClickBuf);
+
+    sf::Music bgm;
+    bool bgmLoaded = bgm.openFromFile("assets/sounds/BGM.mp3") ||
+                     bgm.openFromFile("../../assets/sounds/BGM.mp3") ||
+                     bgm.openFromFile("out/build/x64-debug/assets/sounds/BGM.mp3") ||
+                     bgm.openFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/BGM.mp3");
+    if (bgmLoaded) { bgm.setLooping(true); bgm.setVolume(35.f); bgm.play(); }
+
     // Persistent score logs (Campaign scores.txt & Endless endless_leaderboard.txt)
     ScoreLog scoreLog;
     scoreLog.load("scores.txt");
@@ -803,6 +850,10 @@ int main(int argc, char** argv) {
     bool showNodeBadges = true;
     bool showBgGrid     = true;
     bool autoPlayEvents = true;
+
+    auto playSfx = [&](std::optional<sf::Sound>& snd) {
+        if (soundEnabled && snd.has_value()) { snd->play(); }
+    };
 
     // Puzzle tracking state
     bool act1Reconstructed = false;
@@ -855,6 +906,8 @@ int main(int argc, char** argv) {
     // Game state & shared Phase 7 foundation systems
     int currentScreen = SCREEN_SPLASH;
     int menuSelectedIdx = 0;
+    int mainMenuHoveredIdx = -1;
+    int campaignHoveredId = -1;
     int selectedActIdx = 0;
     int selectedLevelInAct = 0;
     int currentLevelIdx = -1;
@@ -918,6 +971,11 @@ int main(int argc, char** argv) {
     AnimationController animCtrl;
     UndoStack undoStack;
     ToastQueue toastQueue;
+    auto pushToast = [&](const std::string& msg, int kind) {
+        if (kind == TOAST_KIND_SUCCESS) playSfx(successSnd);
+        else if (kind == TOAST_KIND_PENALTY) playSfx(errorSnd);
+        toastQueue.push(msg, kind);
+    };
     UiCache uiCache;
     UiCache menuUiCache;
     int cachedLayoutScreen = -1;
@@ -949,7 +1007,7 @@ int main(int argc, char** argv) {
                     campCachedLabels[i].clear();
                 }
                 demoAllUnlocked = true;
-                toastQueue.push("[DEMO] All levels unlocked", TOAST_KIND_SUCCESS);
+                pushToast("[DEMO] All levels unlocked", TOAST_KIND_SUCCESS);
             } else {
                 levels[0].unlocked = true;
                 campCachedUnl[0] = false;
@@ -960,10 +1018,10 @@ int main(int argc, char** argv) {
                     campCachedLabels[i].clear();
                 }
                 demoAllUnlocked = false;
-                toastQueue.push("[DEMO] Levels locked", TOAST_KIND_WARNING);
+                pushToast("[DEMO] Levels locked", TOAST_KIND_WARNING);
             }
         } else {
-            toastQueue.push("Wrong password", TOAST_KIND_INFO);
+            pushToast("Wrong password", TOAST_KIND_INFO);
         }
         demoPromptOpen = false;
         demoPasswordLen = 0;
@@ -1066,12 +1124,13 @@ int main(int argc, char** argv) {
     };
 
     auto triggerAlarmFullFail = [&]() {
+        playSfx(levelFailSnd);
         if (currentScreen == SCREEN_LEVEL_PLAY && currentLevelIdx >= 0) {
             levels[currentLevelIdx].stars = 0;
             pendingWin = false;
             currentScreen = SCREEN_RESULT;
             status = "ALARM FULL! Guards arrived. Level failed! Click Retry.";
-            toastQueue.push("ALARM FULL! Guards arrived!", TOAST_KIND_PENALTY);
+            pushToast("ALARM FULL! Guards arrived!", TOAST_KIND_PENALTY);
         }
     };
 
@@ -1091,11 +1150,12 @@ int main(int argc, char** argv) {
             toastMsg += ", -" + std::to_string(SCORE_ROTATION_PENALTY) + " pts";
         }
         toastMsg += ": " + msg;
-        toastQueue.push(toastMsg, TOAST_KIND_PENALTY);
+        pushToast(toastMsg, TOAST_KIND_PENALTY);
         if (scoring.isAlarmFull()) triggerAlarmFullFail();
     };
 
     auto finishLevelWin = [&](int starsAwarded, const std::string& msg) {
+        playSfx(levelCompleteSnd);
         if (currentLevelIdx < 0) return;
         pendingWin = false;
         levels[currentLevelIdx].stars = maxInt(levels[currentLevelIdx].stars, starsAwarded);
@@ -1110,7 +1170,7 @@ int main(int argc, char** argv) {
         scoreLog.append(se);
 
         currentScreen = SCREEN_RESULT;
-        toastQueue.push("Level Complete! +" + std::to_string(score) + " pts", TOAST_KIND_SUCCESS);
+        pushToast("Level Complete! +" + std::to_string(score) + " pts", TOAST_KIND_SUCCESS);
     };
 
     auto currentHintStage = [&]() -> int {
@@ -1145,19 +1205,20 @@ int main(int argc, char** argv) {
     auto useHint = [&]() {
         if (currentScreen != SCREEN_LEVEL_PLAY || currentLevelIdx < 0 || showingBriefing) return;
         if (!hintSys.isAvailable()) {
-            toastQueue.push("Hint already used on this level!", TOAST_KIND_INFO);
+            pushToast("Hint already used on this level!", TOAST_KIND_INFO);
             return;
         }
         int stage = currentHintStage();
         if (hintSys.use(scoring, levelData[currentLevelIdx], stage)) {
             status = "HINT (-1 star cap): " + hintSys.shownText();
-            toastQueue.push("Hint used (max 2 stars this level)", TOAST_KIND_INFO);
+            pushToast("Hint used (max 2 stars this level)", TOAST_KIND_INFO);
         }
     };
 
     auto startLevel = [&](int idx) {
         currentLevelIdx = idx;
         currentScreen = SCREEN_LEVEL_PLAY;
+        playSfx(missionStartSnd);
         const LevelData& d = levelData[idx];
         int opt = computeOptimalSteps(d);
         scoring.begin(opt);
@@ -1376,7 +1437,7 @@ int main(int argc, char** argv) {
         GameSnapshot snap;
         if (!undoStack.pop(snap)) {
             status = "Nothing to undo!";
-            toastQueue.push("Nothing to undo", TOAST_KIND_WARNING);
+            pushToast("Nothing to undo", TOAST_KIND_WARNING);
             return;
         }
         UndoStack::restoreStructures(snap, act1Tree, act2Bst, avl, act4Heap,
@@ -1450,14 +1511,14 @@ int main(int argc, char** argv) {
         animCtrl.clearCurrent();
         layoutDirty = true;
         status = "Restored previous state (" + std::to_string(undoStack.getCount()) + " snapshots left).";
-        toastQueue.push("Undo restored previous state", TOAST_KIND_WARNING);
+        pushToast("Undo restored previous state", TOAST_KIND_WARNING);
     };
 
     auto startAct2TwoChildPhase2 = [&]() {
         if (!act2TwoChildPhase2Pending) return;
         act2TwoChildPhase2Pending = false;
         animCtrl.loadOperation(act2Phase2Batch, act2MidLayout, bstLayout, true, autoPlayEvents);
-        toastQueue.push("Phase 2: Unlinking inorder successor node!", TOAST_KIND_SUCCESS);
+        pushToast("Phase 2: Unlinking inorder successor node!", TOAST_KIND_SUCCESS);
         if (currentLevelIdx >= 0 && act2DelStage >= levelData[currentLevelIdx].deleteSequenceCount) {
             pendingWin = true;
             status = "Unlinking successor node! Completing Steal & Collapse...";
@@ -1490,7 +1551,7 @@ int main(int argc, char** argv) {
                 status = "Puzzle " + std::to_string(manualSubPuzzle) + "/" + std::to_string(curD.puzzleCount) +
                          ": Identify the zig-zag case ([Case: LR] or [Case: RL])!";
             }
-            toastQueue.push("Loaded Puzzle " + std::to_string(manualSubPuzzle) + "/" + std::to_string(curD.puzzleCount),
+            pushToast("Loaded Puzzle " + std::to_string(manualSubPuzzle) + "/" + std::to_string(curD.puzzleCount),
                             TOAST_KIND_SUCCESS);
         }
     };
@@ -1511,9 +1572,9 @@ int main(int argc, char** argv) {
         else if (lid == LEVEL_2_4) finishLevelWin(stars, "Range Raid complete! Reported {" + act2ReportedStr + "} (+" + std::to_string(scoring.bonusPoints()) + " prune bonus)!");
         else if (lid == LEVEL_2_5) {
             int h = act2Bst.getHeight();
-            toastQueue.push("ACT 2 CLEARED: Sorted keys caused O(n) degeneration (Height=" +
+            pushToast("ACT 2 CLEARED: Sorted keys caused O(n) degeneration (Height=" +
                             std::to_string(h) + ")!", TOAST_KIND_WARNING);
-            toastQueue.push("Wing 3 Unlocked: AVL rotations prevent Lazy Architect O(n) chains!", TOAST_KIND_SUCCESS);
+            pushToast("Wing 3 Unlocked: AVL rotations prevent Lazy Architect O(n) chains!", TOAST_KIND_SUCCESS);
             finishLevelWin(stars,
                            "LAZY ARCHITECT EXPOSED! Sorted keys built a Height=" + std::to_string(h) +
                            " degenerate chain, turning searches into O(n) walks under a shrinking alarm. "
@@ -1571,7 +1632,7 @@ int main(int argc, char** argv) {
         const LevelData& d = levelData[currentLevelIdx];
         if (d.id != LEVEL_3_2) return;
         if (!act3PivotPicked || act3PivotKey < 0) {
-            toastQueue.push("Click the unbalanced pivot node (|BF| > 1) first!", TOAST_KIND_WARNING);
+            pushToast("Click the unbalanced pivot node (|BF| > 1) first!", TOAST_KIND_WARNING);
             status = "Step 1/2: Click the unbalanced pivot node (RED |BF| > 1) on the tree first!";
             return;
         }
@@ -1629,7 +1690,7 @@ int main(int argc, char** argv) {
         act3PivotKey = -1;
         selectedNodeId = -1;
 
-        toastQueue.push(std::string(choice == 1 ? "LL (Rotate Right)" : "RR (Rotate Left)") +
+        pushToast(std::string(choice == 1 ? "LL (Rotate Right)" : "RR (Rotate Left)") +
                         " repaired puzzle " + std::to_string(manualSubPuzzle) + "!", TOAST_KIND_SUCCESS);
         if (scoring.isAlarmFull()) {
             triggerAlarmFullFail();
@@ -1648,7 +1709,7 @@ int main(int argc, char** argv) {
         const LevelData& d = levelData[currentLevelIdx];
         if (d.id != LEVEL_3_3) return;
         if (manualDoubleStep != 0) {
-            toastQueue.push("Case already identified! Click the pivot node on the tree.", TOAST_KIND_WARNING);
+            pushToast("Case already identified! Click the pivot node on the tree.", TOAST_KIND_WARNING);
             return;
         }
         AVLNode* r = avl.getRoot();
@@ -1663,7 +1724,7 @@ int main(int argc, char** argv) {
         manualDoubleStep = 1;
         int childKey = (expectedCase == 1 && r->left) ? r->left->key
                      : ((expectedCase == 2 && r->right) ? r->right->key : -1);
-        toastQueue.push(std::string("Identified ") + (expectedCase == 1 ? "LR" : "RL") +
+        pushToast(std::string("Identified ") + (expectedCase == 1 ? "LR" : "RL") +
                         " case! Now click child pivot " + std::to_string(childKey), TOAST_KIND_SUCCESS);
         status = std::string(expectedCase == 1 ? "LR" : "RL") +
                  " case confirmed! Step 2/3: Click child pivot node " + std::to_string(childKey) + " first!";
@@ -1700,7 +1761,7 @@ int main(int argc, char** argv) {
         scoring.addStep(1);
         scoring.addBonus(50);
         syncScoringHud();
-        toastQueue.push("Correct (" + expectedRot + ")! Inserted & balanced key " + std::to_string(incoming),
+        pushToast("Correct (" + expectedRot + ")! Inserted & balanced key " + std::to_string(incoming),
                         TOAST_KIND_SUCCESS);
 
         avlQueuePos++;
@@ -1774,7 +1835,7 @@ int main(int argc, char** argv) {
 
                 act2CurKey = nextNode->value;
                 act2Hl1 = act2CurKey;
-                toastQueue.push("Compared " + std::to_string(key) + (choice == 1 ? " < " : " > ") +
+                pushToast("Compared " + std::to_string(key) + (choice == 1 ? " < " : " > ") +
                                 std::to_string(curNode->value) + " -> room " + std::to_string(act2CurKey),
                                 TOAST_KIND_SUCCESS);
                 status = "At room " + std::to_string(act2CurKey) + ": compare target " + std::to_string(key) +
@@ -1798,18 +1859,18 @@ int main(int argc, char** argv) {
                         clearMarked();
                         act2CurKey = act2Bst.getRoot() ? act2Bst.getRoot()->value : -9999;
                         act2Hl1 = act2CurKey;
-                        toastQueue.push("Found target " + std::to_string(key) + "!", TOAST_KIND_SUCCESS);
+                        pushToast("Found target " + std::to_string(key) + "!", TOAST_KIND_SUCCESS);
                         status = "Found " + std::to_string(key) + "! Next target: " +
                                  std::to_string(d.targetKeys[act2TargetIdx]) + ". Start at root " +
                                  std::to_string(act2CurKey) + "!";
                     } else {
                         pendingWin = true;
-                        toastQueue.push("Found target key " + std::to_string(key) + "!", TOAST_KIND_SUCCESS);
+                        pushToast("Found target key " + std::to_string(key) + "!", TOAST_KIND_SUCCESS);
                         status = "Target " + std::to_string(key) + " located! Playing BST search events...";
                     }
                 } else {
                     pendingWin = true;
-                    toastQueue.push("Located " + std::to_string(key) + " on degenerate chain!", TOAST_KIND_SUCCESS);
+                    pushToast("Located " + std::to_string(key) + " on degenerate chain!", TOAST_KIND_SUCCESS);
                     status = "Found key " + std::to_string(key) + " on height-" +
                              std::to_string(act2Bst.getHeight()) + " degenerate chain! Finishing boss...";
                 }
@@ -1830,7 +1891,7 @@ int main(int argc, char** argv) {
             act2Bst.insert(key, batch); // rejects duplicate and emits EVENT_OPERATION_FAILED
             layoutBstForScreen(false);
             animCtrl.loadOperation(batch, before, bstLayout, true, autoPlayEvents);
-            toastQueue.push("Duplicate key " + std::to_string(key) + " REJECTED (no duplicates in BST)!",
+            pushToast("Duplicate key " + std::to_string(key) + " REJECTED (no duplicates in BST)!",
                             TOAST_KIND_WARNING);
 
             act2TargetIdx++;
@@ -1870,7 +1931,7 @@ int main(int argc, char** argv) {
 
             act2CurKey = nextNode->value;
             act2Hl1 = act2CurKey;
-            toastQueue.push("Compared " + std::to_string(key) + (choice == 1 ? " < " : " > ") +
+            pushToast("Compared " + std::to_string(key) + (choice == 1 ? " < " : " > ") +
                             std::to_string(curNode->value) + " -> room " + std::to_string(act2CurKey),
                             TOAST_KIND_SUCCESS);
             status = "At room " + std::to_string(act2CurKey) + ": guide incoming key " + std::to_string(key) + "!";
@@ -1889,10 +1950,10 @@ int main(int argc, char** argv) {
                 int newCap = act2BossCapacityFor(scoring.optimal(), h);
                 scoring.setCapacity(newCap);
                 levels[currentLevelIdx].alarmCapacity = scoring.capacity();
-                toastQueue.push("Inserted " + std::to_string(key) + " (Height=" + std::to_string(h) +
+                pushToast("Inserted " + std::to_string(key) + " (Height=" + std::to_string(h) +
                                 ")! Alarm cap shrank to " + std::to_string(newCap) + "!", TOAST_KIND_WARNING);
             } else {
-                toastQueue.push("Inserted key " + std::to_string(key) + " under room " +
+                pushToast("Inserted key " + std::to_string(key) + " under room " +
                                 std::to_string(curNode->value) + "!", TOAST_KIND_SUCCESS);
             }
             syncScoringHud();
@@ -1961,7 +2022,7 @@ int main(int argc, char** argv) {
             act2DelStage++;
             if (act2DelStage < d.deleteSequenceCount) {
                 act2Hl1 = d.deleteSequence[act2DelStage];
-                toastQueue.push("Deleted " + std::to_string(targetKey) + " (" +
+                pushToast("Deleted " + std::to_string(targetKey) + " (" +
                                 (trueCase == 1 ? "Leaf" : "One-Child") + " case)!", TOAST_KIND_SUCCESS);
                 status = "Deleted " + std::to_string(targetKey) + "! Target " +
                          std::to_string(act2DelStage + 1) + "/" + std::to_string(d.deleteSequenceCount) +
@@ -1969,7 +2030,7 @@ int main(int argc, char** argv) {
             } else {
                 act2Hl1 = -9999;
                 pendingWin = true;
-                toastQueue.push("Deleted final room " + std::to_string(targetKey) + "!", TOAST_KIND_SUCCESS);
+                pushToast("Deleted final room " + std::to_string(targetKey) + "!", TOAST_KIND_SUCCESS);
                 status = "Deleted final room " + std::to_string(targetKey) + "! Playing deletion animation...";
             }
             if (scoring.isAlarmFull()) triggerAlarmFullFail();
@@ -2035,7 +2096,7 @@ int main(int argc, char** argv) {
             act2Hl1 = (act2DelStage < d.deleteSequenceCount) ? d.deleteSequence[act2DelStage] : -9999;
             act2TwoChildPhase2Pending = true;
             animCtrl.loadOperation(batchPhase1, before, act2MidLayout, true, autoPlayEvents);
-            toastQueue.push("Phase 1: Highlighting inorder successor " + std::to_string(succVal) +
+            pushToast("Phase 1: Highlighting inorder successor " + std::to_string(succVal) +
                             " and swapping value into " + std::to_string(targetKey) + "!", TOAST_KIND_SUCCESS);
             status = "Two-Children Case: Phase 1 highlights successor " + std::to_string(succVal) +
                      " & swaps value; Phase 2 will unlink the successor node!";
@@ -2076,7 +2137,7 @@ int main(int argc, char** argv) {
             batch.append(v);
             layoutBstForScreen(false);
             animCtrl.loadOperation(batch, bstLayout, bstLayout, true, autoPlayEvents);
-            toastQueue.push("Reported in-range key " + std::to_string(step.nodeKey) + "!", TOAST_KIND_SUCCESS);
+            pushToast("Reported in-range key " + std::to_string(step.nodeKey) + "!", TOAST_KIND_SUCCESS);
         } else {
             const TreeNode* subRoot = findTreeNodeConst(act2Bst.getRoot(), step.subtreeRootKey);
             collectSubtreeKeys(subRoot, act2PrunedKeys, act2PrunedCount, 32);
@@ -2091,7 +2152,7 @@ int main(int argc, char** argv) {
             batch.append(p);
             layoutBstForScreen(false);
             animCtrl.loadOperation(batch, bstLayout, bstLayout, true, autoPlayEvents);
-            toastQueue.push("Pruned subtree " + std::to_string(step.subtreeRootKey) +
+            pushToast("Pruned subtree " + std::to_string(step.subtreeRootKey) +
                             " outside [" + std::to_string(d.rangeLo) + ".." + std::to_string(d.rangeHi) +
                             "]! +50 bonus", TOAST_KIND_SUCCESS);
         }
@@ -2118,12 +2179,12 @@ int main(int argc, char** argv) {
         if (currentScreen != SCREEN_LEVEL_PLAY || currentLevelIdx < 0) return;
         if (levelData[currentLevelIdx].id != LEVEL_1_1) return;
         if (act1SeqIdx > 0 || pendingWin) {
-            toastQueue.push("Cannot switch traversal mid-sequence", TOAST_KIND_WARNING);
+            pushToast("Cannot switch traversal mid-sequence", TOAST_KIND_WARNING);
             return;
         }
         act1TravMode = (act1TravMode + 1) % 4;
         status = std::string(traversalModeName(act1TravMode)) + " - click all rooms in exact order!";
-        toastQueue.push(std::string("Protocol: ") + traversalModeShort(act1TravMode), TOAST_KIND_SUCCESS);
+        pushToast(std::string("Protocol: ") + traversalModeShort(act1TravMode), TOAST_KIND_SUCCESS);
     };
 
     auto submitAct1HeightOrDiameter = [&]() {
@@ -2149,7 +2210,7 @@ int main(int argc, char** argv) {
                 } else if (act1PostIdx < postCnt) {
                     act1Hl1 = postSeq[act1PostIdx];
                     act1StepperVal = 1;
-                    toastQueue.push("Height(" + std::to_string(targetKey) + ") = " + std::to_string(trueH) + " verified!",
+                    pushToast("Height(" + std::to_string(targetKey) + ") = " + std::to_string(trueH) + " verified!",
                                     TOAST_KIND_SUCCESS);
                     status = "Room " + std::to_string(targetKey) + " height = " + std::to_string(trueH) +
                              ". Now enter height of room " + std::to_string(act1Hl1) + " [" +
@@ -2157,7 +2218,7 @@ int main(int argc, char** argv) {
                 } else {
                     act1Hl1 = act1Tree.getRoot() ? act1Tree.getRoot()->value : -9999;
                     act1StepperVal = 1;
-                    toastQueue.push("All room heights verified! Now enter Diameter.", TOAST_KIND_SUCCESS);
+                    pushToast("All room heights verified! Now enter Diameter.", TOAST_KIND_SUCCESS);
                     status = "All room heights verified! Final step: enter the tree's Diameter (longest path in nodes) and press Submit!";
                 }
             } else {
@@ -2255,7 +2316,7 @@ int main(int argc, char** argv) {
             syncScoringHud();
             pendingWin = true;
             status = "Auto Mirror triggered! Playing vault inversion events...";
-            toastQueue.push("Auto Mirror running!", TOAST_KIND_SUCCESS);
+            pushToast("Auto Mirror running!", TOAST_KIND_SUCCESS);
             if (scoring.isAlarmFull()) triggerAlarmFullFail();
         } else if (lid == LEVEL_4_5 && code == 1 && !act4Built) {
             LayoutResult before;
@@ -2271,7 +2332,7 @@ int main(int argc, char** argv) {
             scoring.addStep(1);
             syncScoringHud();
             status = "Max Heap built! Phase 2: Click root [0] repeatedly to extract all treasures!";
-            toastQueue.push("Max Heap built! Now click root [0] to extract", TOAST_KIND_SUCCESS);
+            pushToast("Max Heap built! Now click root [0] to extract", TOAST_KIND_SUCCESS);
             if (scoring.isAlarmFull()) triggerAlarmFullFail();
         }
     };
@@ -2293,7 +2354,7 @@ int main(int argc, char** argv) {
                     act1SeqIdx++;
                     scoring.addStep(1);
                     syncScoringHud();
-                    toastQueue.push(std::string(traversalModeShort(act1TravMode)) + " [" +
+                    pushToast(std::string(traversalModeShort(act1TravMode)) + " [" +
                                     std::to_string(act1SeqIdx) + "/" + std::to_string(cnt) +
                                     "]: Visited " + std::to_string(clickedKey), TOAST_KIND_SUCCESS);
                     if (act1SeqIdx == cnt) {
@@ -2343,12 +2404,12 @@ int main(int argc, char** argv) {
                 act1LcaStage = 1;
                 scoring.addStep(1);
                 syncScoringHud();
-                toastQueue.push("Selected Room A: " + std::to_string(act1LcaA), TOAST_KIND_SUCCESS);
+                pushToast("Selected Room A: " + std::to_string(act1LcaA), TOAST_KIND_SUCCESS);
                 status = "Room A = " + std::to_string(act1LcaA) + " selected. Now click a second room (Room B)!";
                 if (scoring.isAlarmFull()) triggerAlarmFullFail();
             } else if (act1LcaStage == 1) {
                 if (clickedKey == act1LcaA) {
-                    toastQueue.push("Pick a different second room!", TOAST_KIND_WARNING);
+                    pushToast("Pick a different second room!", TOAST_KIND_WARNING);
                 } else {
                     act1LcaB = clickedKey;
                     act1Hl2 = clickedKey;
@@ -2356,7 +2417,7 @@ int main(int argc, char** argv) {
                     act1LcaStage = 2;
                     scoring.addStep(1);
                     syncScoringHud();
-                    toastQueue.push("Selected Room B: " + std::to_string(act1LcaB), TOAST_KIND_SUCCESS);
+                    pushToast("Selected Room B: " + std::to_string(act1LcaB), TOAST_KIND_SUCCESS);
                     status = "Rooms " + std::to_string(act1LcaA) + " and " + std::to_string(act1LcaB) +
                              " selected! Step 2/3: Click their Lowest Common Ancestor (LCA)!";
                     if (scoring.isAlarmFull()) triggerAlarmFullFail();
@@ -2369,7 +2430,7 @@ int main(int argc, char** argv) {
                     clearMarked();
                     scoring.addStep(1);
                     syncScoringHud();
-                    toastQueue.push("LCA(" + std::to_string(act1LcaA) + ", " + std::to_string(act1LcaB) +
+                    pushToast("LCA(" + std::to_string(act1LcaA) + ", " + std::to_string(act1LcaB) +
                                     ") = " + std::to_string(expectedLca) + "!", TOAST_KIND_SUCCESS);
                     status = "LCA = " + std::to_string(expectedLca) + " verified! Step 3/3: Trace the path from " +
                              std::to_string(act1LcaA) + " to " + std::to_string(act1LcaB) +
@@ -2400,7 +2461,7 @@ int main(int argc, char** argv) {
                                        std::to_string(act1LcaB) + " through LCA " +
                                        std::to_string(act1Tree.lca(act1LcaA, act1LcaB)) + "!");
                     } else {
-                        toastQueue.push("Path [" + std::to_string(act1RouteIdx) + "/" +
+                        pushToast("Path [" + std::to_string(act1RouteIdx) + "/" +
                                         std::to_string(act1RouteLen) + "]: " + std::to_string(clickedKey),
                                         TOAST_KIND_SUCCESS);
                         status = "Path step " + std::to_string(act1RouteIdx) + "/" + std::to_string(act1RouteLen) +
@@ -2420,18 +2481,18 @@ int main(int argc, char** argv) {
                 if (!u) return;
                 if (!u->left && !u->right) {
                     if (containsInt(markedIds, markedCount, clickedId)) {
-                        toastQueue.push("Leaf " + std::to_string(clickedKey) + " already checked", TOAST_KIND_WARNING);
+                        pushToast("Leaf " + std::to_string(clickedKey) + " already checked", TOAST_KIND_WARNING);
                     } else {
                         addMarkedId(clickedId);
                         scoring.addStep(1);
                         syncScoringHud();
-                        toastQueue.push("Leaf " + std::to_string(clickedKey) + " checked (no children to swap)",
+                        pushToast("Leaf " + std::to_string(clickedKey) + " checked (no children to swap)",
                                         TOAST_KIND_SUCCESS);
                         status = "Leaf " + std::to_string(clickedKey) + " checked. Click internal nodes bottom-up to swap children!";
                         if (scoring.isAlarmFull()) triggerAlarmFullFail();
                     }
                 } else if (containsInt(act1SwappedKeys, act1SwappedCount, clickedKey)) {
-                    toastQueue.push("Room " + std::to_string(clickedKey) + " already swapped!", TOAST_KIND_WARNING);
+                    pushToast("Room " + std::to_string(clickedKey) + " already swapped!", TOAST_KIND_WARNING);
                 } else if (!allInternalDescendantsSwapped(u, act1SwappedKeys, act1SwappedCount)) {
                     triggerWrongFlash(clickedId);
                     raisePenalty(PENALTY_WRONG_TRAVERSAL,
@@ -2460,10 +2521,10 @@ int main(int argc, char** argv) {
                     if (allInternalNodesSwapped(act1Tree.getRoot(), act1SwappedKeys, act1SwappedCount)) {
                         act1Mirrored = true;
                         pendingWin = true;
-                        toastQueue.push("All subtrees inverted bottom-up!", TOAST_KIND_SUCCESS);
+                        pushToast("All subtrees inverted bottom-up!", TOAST_KIND_SUCCESS);
                         status = "All subtrees inverted bottom-up! Vault mirror complete...";
                     } else {
-                        toastQueue.push("Swapped children of " + std::to_string(clickedKey) + "!", TOAST_KIND_SUCCESS);
+                        pushToast("Swapped children of " + std::to_string(clickedKey) + "!", TOAST_KIND_SUCCESS);
                         status = "Inverted subtree at " + std::to_string(clickedKey) +
                                  "! Continue swapping upward toward the root (or press Auto Mirror).";
                     }
@@ -2474,18 +2535,18 @@ int main(int argc, char** argv) {
         else if (lid == LEVEL_2_1 || lid == LEVEL_2_2 || lid == LEVEL_2_5) {
             bool isSearchMode = (lid == LEVEL_2_1) || (lid == LEVEL_2_5 && act2BossStage == 1);
             const char* midAct = isSearchMode ? "= Found" : "= Reject Dup";
-            toastQueue.push(std::string("At room ") + std::to_string(act2CurKey) + ": use [< Go Left], [" +
+            pushToast(std::string("At room ") + std::to_string(act2CurKey) + ": use [< Go Left], [" +
                             midAct + "], or [Go Right >]!", TOAST_KIND_WARNING);
             status = "Current room is " + std::to_string(act2CurKey) +
                      " - use bottom comparison buttons ([< Go Left], [" + midAct + "], [Go Right >])!";
         }
         else if (lid == LEVEL_2_3) {
             int delK = (act2DelStage < d.deleteSequenceCount) ? d.deleteSequence[act2DelStage] : -1;
-            toastQueue.push("Classify room " + std::to_string(delK) +
+            pushToast("Classify room " + std::to_string(delK) +
                             " via [Leaf], [One-Child], or [Two-Children]!", TOAST_KIND_WARNING);
         }
         else if (lid == LEVEL_2_4) {
-            toastQueue.push("Decide at room " + std::to_string(act2Hl1) +
+            pushToast("Decide at room " + std::to_string(act2Hl1) +
                             ": [Report Room], [Prune Left], or [Prune Right]!", TOAST_KIND_WARNING);
         }
         else if (lid == LEVEL_3_1) {
@@ -2499,13 +2560,13 @@ int main(int argc, char** argv) {
             if (matchIdx >= 0) {
                 int bit = (1 << matchIdx);
                 if (clicked31Mask & bit) {
-                    toastQueue.push("Node " + std::to_string(clickedKey) + " already flagged!", TOAST_KIND_WARNING);
+                    pushToast("Node " + std::to_string(clickedKey) + " already flagged!", TOAST_KIND_WARNING);
                 } else {
                     addMarkedId(clickedId);
                     clicked31Mask |= bit;
                     scoring.addStep(1);
                     syncScoringHud();
-                    toastQueue.push("Flagged unbalanced node " + std::to_string(clickedKey), TOAST_KIND_SUCCESS);
+                    pushToast("Flagged unbalanced node " + std::to_string(clickedKey), TOAST_KIND_SUCCESS);
                     if (scoring.isAlarmFull()) triggerAlarmFullFail();
                     else if (clicked31Mask == fullMask) {
                         finishLevelWin(scoring.stars(), "All |BF| > 1 violations identified!");
@@ -2528,7 +2589,7 @@ int main(int argc, char** argv) {
                         act3PivotPicked = true;
                         act3PivotKey = clickedKey;
                         selectedNodeId = clickedId;
-                        toastQueue.push("Selected unbalanced pivot " + std::to_string(clickedKey) +
+                        pushToast("Selected unbalanced pivot " + std::to_string(clickedKey) +
                                         " (BF=" + std::to_string(bf) + ")! Pick [LL] or [RR].",
                                         TOAST_KIND_SUCCESS);
                         status = "Pivot " + std::to_string(clickedKey) + " (BF=" + std::to_string(bf) +
@@ -2546,7 +2607,7 @@ int main(int argc, char** argv) {
             int pIdx = manualSubPuzzle - 1;
             if (pIdx >= 0 && pIdx < d.puzzleCount) {
                 if (manualDoubleStep == 0) {
-                    toastQueue.push("First identify the zig-zag case: click [Case: LR] or [Case: RL]!",
+                    pushToast("First identify the zig-zag case: click [Case: LR] or [Case: RL]!",
                                     TOAST_KIND_WARNING);
                     status = "Puzzle " + std::to_string(manualSubPuzzle) + "/" + std::to_string(d.puzzleCount) +
                              ": Pick [Case: LR (1)] or [Case: RL (2)] before rotating pivots!";
@@ -2590,7 +2651,7 @@ int main(int argc, char** argv) {
                         selectedNodeId = -1;
                         scoring.addStep(1);
                         syncScoringHud();
-                        toastQueue.push("Step 1/2 rotated child " + std::to_string(clickedKey) +
+                        pushToast("Step 1/2 rotated child " + std::to_string(clickedKey) +
                                         "! Now click root " + std::to_string(rootNode->key),
                                         TOAST_KIND_SUCCESS);
                         status = std::string(isLR ? "LR" : "RL") + " Step 3/3: Now click root pivot " +
@@ -2635,7 +2696,7 @@ int main(int argc, char** argv) {
                             triggerAlarmFullFail();
                         } else if (manualSubPuzzle < d.puzzleCount) {
                             act3NextPuzzlePending = true;
-                            toastQueue.push("Double Rotation complete! Advancing to Puzzle " +
+                            pushToast("Double Rotation complete! Advancing to Puzzle " +
                                             std::to_string(manualSubPuzzle + 1), TOAST_KIND_SUCCESS);
                             status = "Double rotation animated! Loading next zig-zag puzzle...";
                         } else {
@@ -2655,7 +2716,7 @@ int main(int argc, char** argv) {
         else if (lid == LEVEL_3_4) {
             if (avlQueuePos < d.insertCount) {
                 int incoming = d.inserts[avlQueuePos].key;
-                toastQueue.push("Predict the rotation for key " + std::to_string(incoming) +
+                pushToast("Predict the rotation for key " + std::to_string(incoming) +
                                 " using [LL], [RR], [LR], [RL], or [None]!", TOAST_KIND_WARNING);
                 status = "Use the bottom prediction buttons [LL] [RR] [LR] [RL] [None] for incoming key " +
                          std::to_string(incoming) + "!";
@@ -2692,7 +2753,7 @@ int main(int argc, char** argv) {
                         kthLargestAvl(avl, k, dummyC, &qBatch);
                         layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
                         animCtrl.loadOperation(qBatch, sameLayout, avlLayout, true, autoPlayEvents);
-                        toastQueue.push("Stole #" + std::to_string(k) + " largest=" + std::to_string(expectedKey) +
+                        pushToast("Stole #" + std::to_string(k) + " largest=" + std::to_string(expectedKey) +
                                         " in " + std::to_string(comps) + " comps <= H=" +
                                         std::to_string(hBefore) + " (sz OK)!", TOAST_KIND_SUCCESS);
                         pendingWin = true;
@@ -2719,7 +2780,7 @@ int main(int argc, char** argv) {
                         }
                         layoutAvlForScreen(CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
                         animCtrl.loadOperation(rotBatch, before, avlLayout, true, autoPlayEvents);
-                        toastQueue.push("Stole #" + std::to_string(k) + " largest=" + std::to_string(expectedKey) +
+                        pushToast("Stole #" + std::to_string(k) + " largest=" + std::to_string(expectedKey) +
                                         " (" + std::to_string(comps) + " comps <= H=" +
                                         std::to_string(hBefore) + ")! Security inserted 22 + rotated (sz OK)!",
                                         TOAST_KIND_SUCCESS);
@@ -2752,13 +2813,13 @@ int main(int argc, char** argv) {
                     scoring.addStep(1);
                     syncScoringHud();
                     if (buildStepIdx >= 0) {
-                        toastQueue.push("Sifted down [" + std::to_string(doneIdx) + "]!", TOAST_KIND_SUCCESS);
+                        pushToast("Sifted down [" + std::to_string(doneIdx) + "]!", TOAST_KIND_SUCCESS);
                         status = "Next: Click node [" + std::to_string(buildStepIdx) + "] (val " +
                                  std::to_string(heapArr[buildStepIdx]) + ") or [" + std::to_string(hlIndex2) +
                                  "] (val " + std::to_string(heapArr[hlIndex2]) + ") to sift down!";
                     } else {
                         pendingWin = true;
-                        toastQueue.push("Root sifted down! Valid Max Heap built", TOAST_KIND_SUCCESS);
+                        pushToast("Root sifted down! Valid Max Heap built", TOAST_KIND_SUCCESS);
                         status = "Bottom-up build complete! Playing final swaps...";
                     }
                     layoutHeapForScreen(false, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H);
@@ -2788,7 +2849,7 @@ int main(int argc, char** argv) {
                     pendingWin = true;
                     buildStepIdx = -1;
                     hlIndex1 = -1; hlIndex2 = -1;
-                    toastQueue.push("Sabotaged node sifted down! Heap valid", TOAST_KIND_SUCCESS);
+                    pushToast("Sabotaged node sifted down! Heap valid", TOAST_KIND_SUCCESS);
                     status = "Sabotaged node sifted down! Playing repair animation...";
                     if (scoring.isAlarmFull()) triggerAlarmFullFail();
                 } else {
@@ -2820,7 +2881,7 @@ int main(int argc, char** argv) {
                             raisePenalty(PENALTY_ACT4_INVALID, "Sorted region does not match expected ascending order!");
                             status = "ERROR: Sorted array mismatch against expected_sorted_result!";
                         } else {
-                            toastQueue.push("Extracted max " + std::to_string(maxVal) + " (ascending order verified)!",
+                            pushToast("Extracted max " + std::to_string(maxVal) + " (ascending order verified)!",
                                             TOAST_KIND_SUCCESS);
                             pendingWin = true;
                             if (lid == LEVEL_4_4) {
@@ -2832,7 +2893,7 @@ int main(int argc, char** argv) {
                             }
                         }
                     } else {
-                        toastQueue.push("Extracted max " + std::to_string(maxVal) + " to sorted tail!", TOAST_KIND_SUCCESS);
+                        pushToast("Extracted max " + std::to_string(maxVal) + " to sorted tail!", TOAST_KIND_SUCCESS);
                         if (lid == LEVEL_4_4) {
                             status = "Extracted " + std::to_string(maxVal) + " | Steps: " +
                                      std::to_string(scoring.steps()) + "/" + std::to_string(optS) +
@@ -2854,7 +2915,7 @@ int main(int argc, char** argv) {
             int buildStart = (activeHeapSize >= 2) ? (activeHeapSize / 2 - 1) : 0;
             if (!act4Built) {
                 if (clickedId == buildStart) triggerStructuralAction(1);
-                else toastQueue.push("Click [Build Max Heap [B]] or node [" + std::to_string(buildStart) + "] first",
+                else pushToast("Click [Build Max Heap [B]] or node [" + std::to_string(buildStart) + "] first",
                                      TOAST_KIND_WARNING);
             } else if (!act4Heap.isEmpty()) {
                 if (clickedId == 0) {
@@ -2875,12 +2936,12 @@ int main(int argc, char** argv) {
                             raisePenalty(PENALTY_ACT4_INVALID, "Sorted region does not match expected ascending order!");
                             status = "ERROR: Sorted array mismatch against expected_sorted_result!";
                         } else {
-                            toastQueue.push("In-place ascending Heap Sort verified!", TOAST_KIND_SUCCESS);
+                            pushToast("In-place ascending Heap Sort verified!", TOAST_KIND_SUCCESS);
                             pendingWin = true;
                             status = "All treasures heap-sorted ascending! Unlocking final vault...";
                         }
                     } else {
-                        toastQueue.push("Extracted " + std::to_string(maxVal) + " to ascending tail", TOAST_KIND_SUCCESS);
+                        pushToast("Extracted " + std::to_string(maxVal) + " to ascending tail", TOAST_KIND_SUCCESS);
                         status = "Extracted " + std::to_string(maxVal) + ". Click root [0] (" +
                                  std::to_string(act4Heap.getMax()) + ") next!";
                     }
@@ -3173,7 +3234,7 @@ int main(int argc, char** argv) {
             animCtrl.loadOperation(batch, before, avlLayout, true, autoPlayEvents);
             status = ok ? ("Sandbox AVL Insert(" + std::to_string(key) + ")! Height=" + std::to_string(avl.getHeight()))
                         : ("Sandbox AVL Duplicate(" + std::to_string(key) + ") rejected!");
-            toastQueue.push(status, ok ? TOAST_KIND_SUCCESS : TOAST_KIND_WARNING);
+            pushToast(status, ok ? TOAST_KIND_SUCCESS : TOAST_KIND_WARNING);
         } else if (code == 2 && !avl.isEmpty()) {
             int key = avl.findMin();
             pushUndoSnapshot(true);
@@ -3184,13 +3245,13 @@ int main(int argc, char** argv) {
             layoutAvlForScreen(30.f, 95.f, 560.f, 540.f);
             animCtrl.loadOperation(batch, before, avlLayout, true, autoPlayEvents);
             status = "Sandbox AVL Deleted min key " + std::to_string(key) + "!";
-            toastQueue.push(status, TOAST_KIND_SUCCESS);
+            pushToast(status, TOAST_KIND_SUCCESS);
         } else if (code == 3 && !avl.isEmpty()) {
             static int sbK = 1;
             if (sbK > avl.getSize()) sbK = 1;
             int val = avl.kth(sbK);
             status = "Sandbox AVL kth(" + std::to_string(sbK) + ") = " + std::to_string(val);
-            toastQueue.push(status, TOAST_KIND_SUCCESS);
+            pushToast(status, TOAST_KIND_SUCCESS);
             sbK++;
         } else if (code == 4 && !act4Heap.isEmpty()) {
             pushUndoSnapshot(true);
@@ -3202,10 +3263,10 @@ int main(int argc, char** argv) {
             layoutHeapForScreen(true, 605.f, 95.f, 565.f, 540.f);
             animCtrl.loadOperation(batch, before, heapLayout, true, autoPlayEvents);
             status = "Sandbox Heap Extracted max=" + std::to_string(mxVal) + "!";
-            toastQueue.push(status, TOAST_KIND_SUCCESS);
+            pushToast(status, TOAST_KIND_SUCCESS);
         } else if (code == 5) {
             enterSandbox();
-            toastQueue.push("Sandbox reset!", TOAST_KIND_WARNING);
+            pushToast("Sandbox reset!", TOAST_KIND_WARNING);
         }
     };
 
@@ -3232,7 +3293,7 @@ int main(int argc, char** argv) {
                  " started! Click [Execute] to apply " +
                  std::string(op.type == ENDLESS_OP_INSERT ? "INSERT " : "DELETE ") +
                  std::to_string(op.key) + " before the deadline expires!";
-        toastQueue.push("Endless Mode active! Execute ops before deadline shrinks", TOAST_KIND_SUCCESS);
+        pushToast("Endless Mode active! Execute ops before deadline shrinks", TOAST_KIND_SUCCESS);
     };
     auto finishEndlessGameOver = [&]() {
         endlessSession.stop();
@@ -3249,7 +3310,7 @@ int main(int argc, char** argv) {
         currentScreen = SCREEN_ENDLESS_LEADERBOARD;
         status = endlessLastReason + " Survived " + EndlessLeaderboard::formatTimeMs(rec.survivalMs) +
                  " (" + std::to_string(rec.opsCompleted) + " ops).";
-        toastQueue.push("Game Over! Survived " + EndlessLeaderboard::formatTimeMs(rec.survivalMs),
+        pushToast("Game Over! Survived " + EndlessLeaderboard::formatTimeMs(rec.survivalMs),
                         TOAST_KIND_WARNING);
     };
     auto triggerEndlessExecute = [&]() {
@@ -3265,7 +3326,7 @@ int main(int argc, char** argv) {
         layoutDirty = false;
         animCtrl.loadOperation(batch, before, avlLayout, true, autoPlayEvents);
         if (!ok || !szOk) {
-            toastQueue.push("AVL invariant check failed!", TOAST_KIND_PENALTY);
+            pushToast("AVL invariant check failed!", TOAST_KIND_PENALTY);
             finishEndlessGameOver();
             return;
         }
@@ -3275,7 +3336,7 @@ int main(int argc, char** argv) {
         status = "Executed " + doneWord + std::to_string(applied.key) +
                  " (AVL valid, H=" + std::to_string(avl.getHeight()) +
                  ")! Next: " + nextWord + std::to_string(next.key);
-        toastQueue.push(doneWord + std::to_string(applied.key) + " -> AVL valid!", TOAST_KIND_SUCCESS);
+        pushToast(doneWord + std::to_string(applied.key) + " -> AVL valid!", TOAST_KIND_SUCCESS);
     };
     auto saveEndlessRun = [&](const std::string& pathOverride = "") {
         std::string target = pathOverride.empty() ? endlessSavePath : pathOverride;
@@ -3283,15 +3344,15 @@ int main(int argc, char** argv) {
             status = "Saved Endless run (Seed=" + std::to_string(endlessSession.getInitialSeed()) +
                      ", Time=" + EndlessLeaderboard::formatTimeMs(endlessSession.getSurvivalMs()) +
                      ", Preorder+null AVL persisted).";
-            toastQueue.push("Endless session saved!", TOAST_KIND_SUCCESS);
+            pushToast("Endless session saved!", TOAST_KIND_SUCCESS);
         } else {
-            toastQueue.push("Failed to save Endless session", TOAST_KIND_PENALTY);
+            pushToast("Failed to save Endless session", TOAST_KIND_PENALTY);
         }
     };
     auto loadEndlessRun = [&](const std::string& pathOverride = "") -> bool {
         std::string target = pathOverride.empty() ? endlessSavePath : pathOverride;
         if (!endlessSession.loadFromFile(target, avl)) {
-            toastQueue.push("No valid saved Endless run found", TOAST_KIND_WARNING);
+            pushToast("No valid saved Endless run found", TOAST_KIND_WARNING);
             return false;
         }
         currentScreen = SCREEN_ENDLESS;
@@ -3309,7 +3370,7 @@ int main(int argc, char** argv) {
                  ", Survived=" + EndlessLeaderboard::formatTimeMs(endlessSession.getSurvivalMs()) +
                  ")! Next: " + std::string(op.type == ENDLESS_OP_INSERT ? "INSERT " : "DELETE ") +
                  std::to_string(op.key);
-        toastQueue.push("Resumed saved Endless run!", TOAST_KIND_SUCCESS);
+        pushToast("Resumed saved Endless run!", TOAST_KIND_SUCCESS);
         return true;
     };
 
@@ -3451,8 +3512,10 @@ int main(int argc, char** argv) {
                 "5.  SETTINGS",
                 "6.  QUIT"
             };
+            int curMenuHov = -1;
             for (int i = 0; i < 6; ++i) {
                 float itemY = 300.f + static_cast<float>(i) * 70.f;
+                if (Ui::inside(in.mx, in.my, 90.f, itemY - 10.f, 430.f, 54.f)) curMenuHov = i;
                 bool sel = (i == menuSelectedIdx);
                 if (sel) {
                     Ui::text(window, menuFont, ">", 24, menuBright, 96.f, itemY, true, &uiCache);
@@ -3464,6 +3527,10 @@ int main(int argc, char** argv) {
                 } else {
                     Ui::text(window, menuFont, menuItems[i], 24, sf::Color::White, 128.f, itemY, false, &uiCache);
                 }
+            }
+            if (curMenuHov != mainMenuHoveredIdx) {
+                if (curMenuHov != -1) playSfx(menuClickSnd);
+                mainMenuHoveredIdx = curMenuHov;
             }
 
             // Bottom full-width thin green line (height 1px, #00FF41)
@@ -3608,12 +3675,14 @@ int main(int argc, char** argv) {
             leftDiv.setFillColor(sf::Color(0, 255, 65, 90));
             window.draw(leftDiv);
 
+            int curCampHov = -1;
             for (int a = 0; a < 4; ++a) {
                 float bx = 44.f;
                 float by = 190.f + static_cast<float>(a) * 124.f;
                 float bw = 220.f, bh = 66.f;
                 bool active = (a == selectedActIdx);
                 bool hov = Ui::inside(mapIn.mx, mapIn.my, bx, by, bw, bh);
+                if (hov) curCampHov = 100 + a;
 
                 sf::RectangleShape actBox({bw, bh});
                 actBox.setPosition({bx, by});
@@ -3663,6 +3732,7 @@ int main(int argc, char** argv) {
                 float dx = mapIn.mx - nodeX[i];
                 float dy = mapIn.my - nodeY[i];
                 bool hov = (dx * dx + dy * dy) <= (nodeR * nodeR);
+                if (hov) curCampHov = 200 + i;
 
                 sf::CircleShape nodeCirc(nodeR);
                 nodeCirc.setOrigin({nodeR, nodeR});
@@ -3704,6 +3774,10 @@ int main(int argc, char** argv) {
                     keyhole.setFillColor(sf::Color(6, 14, 8));
                     window.draw(keyhole);
                 }
+            }
+            if (curCampHov != campaignHoveredId) {
+                if (curCampHov != -1) playSfx(campaignClickSnd);
+                campaignHoveredId = curCampHov;
             }
 
             // Bottom info panel (~180px tall)
@@ -5117,7 +5191,7 @@ int main(int argc, char** argv) {
             idle.mx = bstLayout.nodes[bstLayout.nodeCount / 2].x;
             idle.my = bstLayout.nodes[bstLayout.nodeCount / 2].y;
         }
-        toastQueue.push("Clicked Leaf 80 cleanly!", TOAST_KIND_SUCCESS);
+        pushToast("Clicked Leaf 80 cleanly!", TOAST_KIND_SUCCESS);
         toastQueue.update(0.25f);
         saveShot("04_bst_node_play_toast_tooltip", idle);
 
@@ -6091,7 +6165,7 @@ int main(int argc, char** argv) {
         }
         in.mx = (bstLayout.nodeCount > 0) ? bstLayout.nodes[bstLayout.nodeCount / 2].x : 600.f;
         in.my = (bstLayout.nodeCount > 0) ? bstLayout.nodes[bstLayout.nodeCount / 2].y : 300.f;
-        toastQueue.push("Clicked Leaf 80 cleanly!", TOAST_KIND_SUCCESS);
+        pushToast("Clicked Leaf 80 cleanly!", TOAST_KIND_SUCCESS);
         toastQueue.update(0.25f);
         sumFps += benchScene("Level 2.2 (BST + EventLog + Toast + Tooltip)", in);
 
@@ -6400,6 +6474,7 @@ int main(int argc, char** argv) {
                     }
                 } else if (currentScreen == SCREEN_MAIN_MENU) {
                     auto activateMenuIdx = [&](int idx) {
+                        playSfx(menuClickSnd);
                         if (idx == 0) { currentScreen = SCREEN_CAMPAIGN_MAP; status = "Heist Wings Overview"; }
                         else if (idx == 1) startEndlessMode(0u);
                         else if (idx == 2) enterSandbox();
@@ -6431,7 +6506,7 @@ int main(int argc, char** argv) {
                     } else if (kp->code == sf::Keyboard::Key::Enter || kp->code == sf::Keyboard::Key::Space) {
                         int li = selectedActIdx * 5 + selectedLevelInAct;
                         if (levels[li].unlocked) startLevel(li);
-                        else toastQueue.push("Locked! Clear previous level first", TOAST_KIND_INFO);
+                        else pushToast("Locked! Clear previous level first", TOAST_KIND_INFO);
                     }
                 } else if (currentScreen == SCREEN_LEADERBOARD) {
                     if (kp->code == sf::Keyboard::Key::E) {
@@ -6443,7 +6518,7 @@ int main(int argc, char** argv) {
                         triggerEndlessExecute();
                     } else if (kp->code == sf::Keyboard::Key::P) {
                         endlessPaused = !endlessPaused;
-                        toastQueue.push(endlessPaused ? "Endless paused" : "Endless resumed!", TOAST_KIND_WARNING);
+                        pushToast(endlessPaused ? "Endless paused" : "Endless resumed!", TOAST_KIND_WARNING);
                     } else if (kp->code == sf::Keyboard::Key::F5) {
                         saveEndlessRun();
                     } else if (kp->code == sf::Keyboard::Key::F9) {
@@ -6511,7 +6586,7 @@ int main(int argc, char** argv) {
                         if (!cam.containsPixel(mx, my)) return false;
                         if (cam.checkDoubleClick(mc->position)) {
                             cam.reset();
-                            toastQueue.push("Canvas camera reset", TOAST_KIND_SUCCESS);
+                            pushToast("Canvas camera reset", TOAST_KIND_SUCCESS);
                         } else {
                             cam.panning = true;
                             cam.lastPanPixel = mc->position;
@@ -6536,6 +6611,7 @@ int main(int argc, char** argv) {
                     for (int i = 0; i < 6; ++i) {
                         float itemY = 300.f + static_cast<float>(i) * 70.f;
                         if (Ui::inside(mx, my, 90.f, itemY - 10.f, 430.f, 54.f)) {
+                            playSfx(menuClickSnd);
                             menuSelectedIdx = i;
                             if (i == 0) {
                                 currentScreen = SCREEN_CAMPAIGN_MAP;
@@ -6584,6 +6660,7 @@ int main(int argc, char** argv) {
                         float bx = 44.f;
                         float by = 190.f + static_cast<float>(a) * 124.f;
                         if (Ui::inside(mx, my, bx, by, 220.f, 66.f)) {
+                            playSfx(campaignClickSnd);
                             selectedActIdx = a;
                             break;
                         }
@@ -6595,10 +6672,11 @@ int main(int argc, char** argv) {
                         float dx = mx - nodeX[i];
                         float dy = my - nodeY[i];
                         if (dx * dx + dy * dy <= nodeR * nodeR) {
+                            playSfx(campaignClickSnd);
                             selectedLevelInAct = i;
                             int li = selectedActIdx * 5 + i;
                             if (levels[li].unlocked) startLevel(li);
-                            else toastQueue.push("Locked! Clear previous level first", TOAST_KIND_INFO);
+                            else pushToast("Locked! Clear previous level first", TOAST_KIND_INFO);
                             break;
                         }
                     }
@@ -6614,7 +6692,7 @@ int main(int argc, char** argv) {
                 else if (currentScreen == SCREEN_ENDLESS) {
                     if (Ui::inside(mx, my, 670.f, 18.f, 125.f, 34.f)) {
                         endlessPaused = !endlessPaused;
-                        toastQueue.push(endlessPaused ? "Endless paused" : "Endless resumed!", TOAST_KIND_WARNING);
+                        pushToast(endlessPaused ? "Endless paused" : "Endless resumed!", TOAST_KIND_WARNING);
                         continue;
                     }
                     if (Ui::inside(mx, my, 805.f, 18.f, 125.f, 34.f)) { startEndlessMode(0u); continue; }
@@ -6639,7 +6717,7 @@ int main(int argc, char** argv) {
                     if (endlessCam.containsPixel(mx, my)) {
                         if (endlessCam.checkDoubleClick(mc->position)) {
                             endlessCam.reset();
-                            toastQueue.push("Canvas camera reset", TOAST_KIND_SUCCESS);
+                            pushToast("Canvas camera reset", TOAST_KIND_SUCCESS);
                         } else {
                             endlessCam.panning = true;
                             endlessCam.lastPanPixel = mc->position;
@@ -6779,7 +6857,7 @@ int main(int argc, char** argv) {
                             } else {
                                 if (levelCam.checkDoubleClick(mc->position)) {
                                     levelCam.reset();
-                                    toastQueue.push("Canvas camera reset", TOAST_KIND_SUCCESS);
+                                    pushToast("Canvas camera reset", TOAST_KIND_SUCCESS);
                                 } else {
                                     levelCam.panning = true;
                                     levelCam.lastPanPixel = mc->position;
@@ -6788,7 +6866,7 @@ int main(int argc, char** argv) {
                         } else {
                             if (levelCam.checkDoubleClick(mc->position)) {
                                 levelCam.reset();
-                                toastQueue.push("Canvas camera reset", TOAST_KIND_SUCCESS);
+                                pushToast("Canvas camera reset", TOAST_KIND_SUCCESS);
                             } else {
                                 levelCam.panning = true;
                                 levelCam.lastPanPixel = mc->position;
@@ -6802,7 +6880,7 @@ int main(int argc, char** argv) {
                     if (sbAvlCam.containsPixel(mx, my)) {
                         if (sbAvlCam.checkDoubleClick(mc->position)) {
                             sbAvlCam.reset();
-                            toastQueue.push("AVL camera reset", TOAST_KIND_SUCCESS);
+                            pushToast("AVL camera reset", TOAST_KIND_SUCCESS);
                         } else {
                             sbAvlCam.panning = true;
                             sbAvlCam.lastPanPixel = mc->position;
@@ -6810,7 +6888,7 @@ int main(int argc, char** argv) {
                     } else if (sbHeapCam.containsPixel(mx, my)) {
                         if (sbHeapCam.checkDoubleClick(mc->position)) {
                             sbHeapCam.reset();
-                            toastQueue.push("Heap camera reset", TOAST_KIND_SUCCESS);
+                            pushToast("Heap camera reset", TOAST_KIND_SUCCESS);
                         } else {
                             sbHeapCam.panning = true;
                             sbHeapCam.lastPanPixel = mc->position;
@@ -6844,7 +6922,7 @@ int main(int argc, char** argv) {
                             status = pStr;
                         } else if (demoCam.checkDoubleClick(mc->position)) {
                             demoCam.reset();
-                            toastQueue.push("Canvas camera reset", TOAST_KIND_SUCCESS);
+                            pushToast("Canvas camera reset", TOAST_KIND_SUCCESS);
                         } else {
                             demoCam.panning = true;
                             demoCam.lastPanPixel = mc->position;
@@ -6883,7 +6961,7 @@ int main(int argc, char** argv) {
                                      (sc != -1 ? std::to_string(sc) : "None");
                         } else if (demoCam.checkDoubleClick(mc->position)) {
                             demoCam.reset();
-                            toastQueue.push("Canvas camera reset", TOAST_KIND_SUCCESS);
+                            pushToast("Canvas camera reset", TOAST_KIND_SUCCESS);
                         } else {
                             demoCam.panning = true;
                             demoCam.lastPanPixel = mc->position;
