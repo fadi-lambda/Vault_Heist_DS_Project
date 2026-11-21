@@ -6988,14 +6988,10 @@ int main(int argc, char** argv) {
         }
 
         if (bgmLoaded) {
-            bgm.setVolume(soundEnabled ? 35.f : 0.f);
-        }
-        static int lastScreenForBgm = -1;
-        if (currentScreen != lastScreenForBgm) {
-            if (bgmLoaded) {
-                bgm.setPitch((currentScreen == SCREEN_LEVEL_PLAY || currentScreen == SCREEN_SANDBOX || currentScreen == SCREEN_ENDLESS) ? 0.92f : 1.0f);
-            }
-            lastScreenForBgm = currentScreen;
+            bgm.setPitch(1.0f);
+            bool inGameplay = (currentScreen == SCREEN_LEVEL_PLAY || currentScreen == SCREEN_SANDBOX || currentScreen == SCREEN_ENDLESS);
+            float targetVol = !soundEnabled ? 0.f : (inGameplay ? 15.f : 35.f);
+            bgm.setVolume(targetVol);
         }
 
         renderFrame(in);
