@@ -769,7 +769,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    sf::SoundBuffer successBuf, errorBuf, levelCompleteBuf, levelFailBuf, missionStartBuf, menuClickBuf, campaignClickBuf;
+    sf::SoundBuffer successBuf, errorBuf, levelCompleteBuf, levelFailBuf, missionStartBuf, menuClickBuf, campaignClickBuf, escBuf;
     bool successLoaded = successBuf.loadFromFile("assets/sounds/Success_correct-action.wav") ||
                          successBuf.loadFromFile("../../assets/sounds/Success_correct-action.wav") ||
                          successBuf.loadFromFile("out/build/x64-debug/assets/sounds/Success_correct-action.wav") ||
@@ -778,14 +778,14 @@ int main(int argc, char** argv) {
                        errorBuf.loadFromFile("../../assets/sounds/Wrong_error-action.wav") ||
                        errorBuf.loadFromFile("out/build/x64-debug/assets/sounds/Wrong_error-action.wav") ||
                        errorBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/Wrong_error-action.wav");
-    bool levelCompleteLoaded = levelCompleteBuf.loadFromFile("assets/sounds/Level_complete_victory.mp3") ||
-                               levelCompleteBuf.loadFromFile("../../assets/sounds/Level_complete_victory.mp3") ||
-                               levelCompleteBuf.loadFromFile("out/build/x64-debug/assets/sounds/Level_complete_victory.mp3") ||
-                               levelCompleteBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/Level_complete_victory.mp3");
-    bool levelFailLoaded = levelFailBuf.loadFromFile("assets/sounds/Level_fail_alarm.wav") ||
-                           levelFailBuf.loadFromFile("../../assets/sounds/Level_fail_alarm.wav") ||
-                           levelFailBuf.loadFromFile("out/build/x64-debug/assets/sounds/Level_fail_alarm.wav") ||
-                           levelFailBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/Level_fail_alarm.wav");
+    bool levelCompleteLoaded = levelCompleteBuf.loadFromFile("assets/sounds/Level_completevictory.mp3") ||
+                               levelCompleteBuf.loadFromFile("../../assets/sounds/Level_completevictory.mp3") ||
+                               levelCompleteBuf.loadFromFile("out/build/x64-debug/assets/sounds/Level_completevictory.mp3") ||
+                               levelCompleteBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/Level_completevictory.mp3");
+    bool levelFailLoaded = levelFailBuf.loadFromFile("assets/sounds/Level_failalarm.wav") ||
+                           levelFailBuf.loadFromFile("../../assets/sounds/Level_failalarm.wav") ||
+                           levelFailBuf.loadFromFile("out/build/x64-debug/assets/sounds/Level_failalarm.wav") ||
+                           levelFailBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/Level_failalarm.wav");
     bool missionStartLoaded = missionStartBuf.loadFromFile("assets/sounds/starting_new_mission.wav") ||
                               missionStartBuf.loadFromFile("../../assets/sounds/starting_new_mission.wav") ||
                               missionStartBuf.loadFromFile("out/build/x64-debug/assets/sounds/starting_new_mission.wav") ||
@@ -798,8 +798,12 @@ int main(int argc, char** argv) {
                                campaignClickBuf.loadFromFile("../../assets/sounds/click_hover_sound_in_acts_menu_and_levels.mp3") ||
                                campaignClickBuf.loadFromFile("out/build/x64-debug/assets/sounds/click_hover_sound_in_acts_menu_and_levels.mp3") ||
                                campaignClickBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/click_hover_sound_in_acts_menu_and_levels.mp3");
+    bool escLoaded = escBuf.loadFromFile("assets/sounds/ESC.mp3") ||
+                     escBuf.loadFromFile("../../assets/sounds/ESC.mp3") ||
+                     escBuf.loadFromFile("out/build/x64-debug/assets/sounds/ESC.mp3") ||
+                     escBuf.loadFromFile("E:/Vault_Heist_DS/out/build/x64-debug/assets/sounds/ESC.mp3");
 
-    std::optional<sf::Sound> successSnd, errorSnd, levelCompleteSnd, levelFailSnd, missionStartSnd, menuClickSnd, campaignClickSnd;
+    std::optional<sf::Sound> successSnd, errorSnd, levelCompleteSnd, levelFailSnd, missionStartSnd, menuClickSnd, campaignClickSnd, escSnd;
     if (successLoaded) successSnd.emplace(successBuf);
     if (errorLoaded) errorSnd.emplace(errorBuf);
     if (levelCompleteLoaded) levelCompleteSnd.emplace(levelCompleteBuf);
@@ -807,6 +811,7 @@ int main(int argc, char** argv) {
     if (missionStartLoaded) missionStartSnd.emplace(missionStartBuf);
     if (menuClickLoaded) menuClickSnd.emplace(menuClickBuf);
     if (campaignClickLoaded) campaignClickSnd.emplace(campaignClickBuf);
+    if (escLoaded) escSnd.emplace(escBuf);
 
     sf::Music bgm;
     bool bgmLoaded = bgm.openFromFile("assets/sounds/BGM.mp3") ||
@@ -6356,6 +6361,7 @@ int main(int argc, char** argv) {
                     continue;
                 }
                 if (kp->code == sf::Keyboard::Key::Escape) {
+                    playSfx(escSnd);
                     if (currentScreen == SCREEN_CAMPAIGN_MAP && demoPromptOpen) {
                         demoPromptOpen = false;
                         demoPasswordLen = 0;
@@ -6978,6 +6984,14 @@ int main(int argc, char** argv) {
                     if (Ui::inside(mx, my, 1378.f, 620.f, 156.f, 44.f)) triggerAct2Action(9);
                 }
             }
+        }
+
+        static int lastScreenForBgm = -1;
+        if (currentScreen != lastScreenForBgm) {
+            if (bgmLoaded) {
+                bgm.setPitch(currentScreen == SCREEN_LEVEL_PLAY ? 0.92f : 1.0f);
+            }
+            lastScreenForBgm = currentScreen;
         }
 
         renderFrame(in);
