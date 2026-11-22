@@ -2,8 +2,8 @@
 
 **Framework**: GoogleTest (v1.18.0)  
 **Binary**: `out/build/x64-debug/tests/Vault_Heist_Tests.exe`  
-**Total Tests**: 13  
-**Passing**: 13 (100%)  
+**Total Tests**: 56  
+**Passing**: 56 (100%)  
 **Failing**: 0 (0%)  
 
 ---
@@ -12,14 +12,14 @@
 
 ```
 Running main() from googletest/src/gtest_main.cc
-[==========] Running 13 tests from 3 test suites.
+[==========] Running 56 tests from 16 test suites.
 [----------] Global test environment set-up.
 [----------] 1 test from GoogleTestSetup
 [ RUN      ] GoogleTestSetup.BasicTest
 [       OK ] GoogleTestSetup.BasicTest (0 ms)
 [----------] 1 test from GoogleTestSetup (0 ms total)
 
-[----------] 4 tests from MaxHeapTest
+[----------] 7 tests from MaxHeapTest
 [ RUN      ] MaxHeapTest.InsertAndExtractMax
 [       OK ] MaxHeapTest.InsertAndExtractMax (0 ms)
 [ RUN      ] MaxHeapTest.DynamicResizing
@@ -28,9 +28,16 @@ Running main() from googletest/src/gtest_main.cc
 [       OK ] MaxHeapTest.BuildMaxHeapVariousArrays (0 ms)
 [ RUN      ] MaxHeapTest.HeapSortCorrectness
 [       OK ] MaxHeapTest.HeapSortCorrectness (0 ms)
-[----------] 4 tests from MaxHeapTest (0 ms total)
+[ RUN      ] MaxHeapTest.EventsBuildMaxHeap
+[       OK ] MaxHeapTest.EventsBuildMaxHeap (0 ms)
+[ RUN      ] MaxHeapTest.EventsExtractMax
+Error: Heap is empty!
+[       OK ] MaxHeapTest.EventsExtractMax (0 ms)
+[ RUN      ] MaxHeapTest.EventsHeapSort
+[       OK ] MaxHeapTest.EventsHeapSort (0 ms)
+[----------] 7 tests from MaxHeapTest (0 ms total)
 
-[----------] 8 tests from AVLTreeTest
+[----------] 11 tests from AVLTreeTest
 [ RUN      ] AVLTreeTest.LeftLeftRotation
 [       OK ] AVLTreeTest.LeftLeftRotation (0 ms)
 [ RUN      ] AVLTreeTest.RightRightRotation
@@ -40,6 +47,7 @@ Running main() from googletest/src/gtest_main.cc
 [ RUN      ] AVLTreeTest.RightLeftRotation
 [       OK ] AVLTreeTest.RightLeftRotation (0 ms)
 [ RUN      ] AVLTreeTest.DuplicateRejection
+Warning: Duplicate key 50 rejected in Vault!
 [       OK ] AVLTreeTest.DuplicateRejection (0 ms)
 [ RUN      ] AVLTreeTest.DeleteWithRebalancing
 [       OK ] AVLTreeTest.DeleteWithRebalancing (0 ms)
@@ -47,11 +55,139 @@ Running main() from googletest/src/gtest_main.cc
 [       OK ] AVLTreeTest.OrderStatistics (0 ms)
 [ RUN      ] AVLTreeTest.LargeSequentialInsertionMaintainsLogNHeight
 [       OK ] AVLTreeTest.LargeSequentialInsertionMaintainsLogNHeight (0 ms)
-[----------] 8 tests from AVLTreeTest (0 ms total)
+[ RUN      ] AVLTreeTest.EventsLLRotation
+[       OK ] AVLTreeTest.EventsLLRotation (0 ms)
+[ RUN      ] AVLTreeTest.EventsRotationCases
+[       OK ] AVLTreeTest.EventsRotationCases (0 ms)
+[ RUN      ] AVLTreeTest.EventsSearchDeleteDuplicate
+Warning: Duplicate key 30 rejected in Vault!
+[       OK ] AVLTreeTest.EventsSearchDeleteDuplicate (0 ms)
+[----------] 11 tests from AVLTreeTest (1 ms total)
+
+[----------] 8 tests from BinaryTreeTest
+[ RUN      ] BinaryTreeTest.EmptyTreeOperations
+[       OK ] BinaryTreeTest.EmptyTreeOperations (0 ms)
+[ RUN      ] BinaryTreeTest.SingleNodeTree
+[       OK ] BinaryTreeTest.SingleNodeTree (0 ms)
+[ RUN      ] BinaryTreeTest.SkewedTreeTraversalsMatch
+[       OK ] BinaryTreeTest.SkewedTreeTraversalsMatch (0 ms)
+[ RUN      ] BinaryTreeTest.BalancedTreeTraversalsAndLevelOrder
+[       OK ] BinaryTreeTest.BalancedTreeTraversalsAndLevelOrder (0 ms)
+[ RUN      ] BinaryTreeTest.ReconstructionRoundTripPreIn
+[       OK ] BinaryTreeTest.ReconstructionRoundTripPreIn (0 ms)
+[ RUN      ] BinaryTreeTest.ReconstructionRoundTripPostIn
+[       OK ] BinaryTreeTest.ReconstructionRoundTripPostIn (0 ms)
+[ RUN      ] BinaryTreeTest.LCAAndPathTo
+[       OK ] BinaryTreeTest.LCAAndPathTo (0 ms)
+[ RUN      ] BinaryTreeTest.MirrorAndSymmetry
+[       OK ] BinaryTreeTest.MirrorAndSymmetry (0 ms)
+[----------] 8 tests from BinaryTreeTest (0 ms total)
+
+[----------] 2 tests from BinaryTreeEventTest
+[ RUN      ] BinaryTreeEventTest.TraversalVisitOrderMatchesOutput
+[       OK ] BinaryTreeEventTest.TraversalVisitOrderMatchesOutput (0 ms)
+[ RUN      ] BinaryTreeEventTest.BuildEmitsOneInsertPerNode
+[       OK ] BinaryTreeEventTest.BuildEmitsOneInsertPerNode (0 ms)
+[----------] 2 tests from BinaryTreeEventTest (0 ms total)
+
+[----------] 8 tests from BSTTest
+[ RUN      ] BSTTest.InsertSearchAndDuplicateRejection
+Duplicate key 50 rejected.
+Duplicate key 30 rejected.
+Duplicate key 20 rejected.
+[       OK ] BSTTest.InsertSearchAndDuplicateRejection (0 ms)
+[ RUN      ] BSTTest.FindMinAndFindMax
+findMin called on empty BST.
+findMax called on empty BST.
+[       OK ] BSTTest.FindMinAndFindMax (0 ms)
+[ RUN      ] BSTTest.DeleteAllCases
+[       OK ] BSTTest.DeleteAllCases (0 ms)
+[ RUN      ] BSTTest.SuccessorAndPredecessor
+[       OK ] BSTTest.SuccessorAndPredecessor (0 ms)
+[ RUN      ] BSTTest.RangeQuery
+[       OK ] BSTTest.RangeQuery (0 ms)
+[ RUN      ] BSTTest.KthSmallest
+kthSmallest: k=0 out of range [1, 7].
+kthSmallest: k=8 out of range [1, 7].
+[       OK ] BSTTest.KthSmallest (0 ms)
+[ RUN      ] BSTTest.LCABST
+[       OK ] BSTTest.LCABST (0 ms)
+[ RUN      ] BSTTest.DegenerateChainHeightEqualsN
+[       OK ] BSTTest.DegenerateChainHeightEqualsN (0 ms)
+[----------] 8 tests from BSTTest (0 ms total)
+
+[----------] 3 tests from BSTEventTest
+[ RUN      ] BSTEventTest.InsertEmitsComparesThenInsert
+Duplicate key 30 rejected.
+[       OK ] BSTEventTest.InsertEmitsComparesThenInsert (0 ms)
+[ RUN      ] BSTEventTest.SearchAndDeleteEvents
+[       OK ] BSTEventTest.SearchAndDeleteEvents (0 ms)
+[ RUN      ] BSTEventTest.RangeQueryHighlightsPrunedSubtrees
+[       OK ] BSTEventTest.RangeQueryHighlightsPrunedSubtrees (0 ms)
+[----------] 3 tests from BSTEventTest (0 ms total)
+
+[----------] 4 tests from EventLogTest
+[ RUN      ] EventLogTest.EmptyLog
+[       OK ] EventLogTest.EmptyLog (0 ms)
+[ RUN      ] EventLogTest.AppendAndRetrieve
+[       OK ] EventLogTest.AppendAndRetrieve (0 ms)
+[ RUN      ] EventLogTest.Clear
+[       OK ] EventLogTest.Clear (0 ms)
+[ RUN      ] EventLogTest.EventBatchGrowthAndCopy
+[       OK ] EventLogTest.EventBatchGrowthAndCopy (0 ms)
+[----------] 4 tests from EventLogTest (0 ms total)
+
+[----------] 3 tests from ScoringEngineTest
+[ RUN      ] ScoringEngineTest.AlarmCapacityMatchesFormula
+[       OK ] ScoringEngineTest.AlarmCapacityMatchesFormula (0 ms)
+[ RUN      ] ScoringEngineTest.StarCalculationAndHintCap
+[       OK ] ScoringEngineTest.StarCalculationAndHintCap (0 ms)
+[ RUN      ] ScoringEngineTest.PenaltiesAndScoreFloor
+[       OK ] ScoringEngineTest.PenaltiesAndScoreFloor (0 ms)
+[----------] 3 tests from ScoringEngineTest (0 ms total)
+
+[----------] 1 test from LevelLoaderTest
+[ RUN      ] LevelLoaderTest.LoadsAllTwentyLevelsAndComputesOptimalSteps
+[       OK ] LevelLoaderTest.LoadsAllTwentyLevelsAndComputesOptimalSteps (45 ms)
+[----------] 1 test from LevelLoaderTest (45 ms total)
+
+[----------] 1 test from HintSystemTest
+[ RUN      ] HintSystemTest.OncePerLevelNudgeAndStarCap
+[       OK ] HintSystemTest.OncePerLevelNudgeAndStarCap (1 ms)
+[----------] 1 test from HintSystemTest (1 ms total)
+
+[----------] 1 test from DragDropTest
+[ RUN      ] DragDropTest.PickupHoverSnapRejectCancelAndReslot
+[       OK ] DragDropTest.PickupHoverSnapRejectCancelAndReslot (0 ms)
+[----------] 1 test from DragDropTest (0 ms total)
+
+[----------] 1 test from Act3AvlTests
+[ RUN      ] Act3AvlTests.Act3JsonRealRotationsSubtreeSizesAndKthLargest
+[       OK ] Act3AvlTests.Act3JsonRealRotationsSubtreeSizesAndKthLargest (7 ms)
+[----------] 1 test from Act3AvlTests (7 ms total)
+
+[----------] 1 test from Act4HeapTests
+[ RUN      ] Act4HeapTests.ExpectedSortedResultAndAscendingHeapSortValidation
+[       OK ] Act4HeapTests.ExpectedSortedResultAndAscendingHeapSortValidation (6 ms)
+[----------] 1 test from Act4HeapTests (7 ms total)
+
+[----------] 1 test from EndlessModeTests
+[ RUN      ] EndlessModeTests.StreamGeneratorValidatorSaveLoadAndLeaderboard
+[       OK ] EndlessModeTests.StreamGeneratorValidatorSaveLoadAndLeaderboard (13 ms)
+[----------] 1 test from EndlessModeTests (13 ms total)
+
+[----------] 3 tests from BenchmarkCounterTest
+[ RUN      ] BenchmarkCounterTest.BSTComparisonCountersAndDeepChain
+[       OK ] BenchmarkCounterTest.BSTComparisonCountersAndDeepChain (715 ms)
+[ RUN      ] BenchmarkCounterTest.AVLRotationAndComparisonCounters
+[       OK ] BenchmarkCounterTest.AVLRotationAndComparisonCounters (0 ms)
+[ RUN      ] BenchmarkCounterTest.MaxHeapCountersAndLinearBuild
+[       OK ] BenchmarkCounterTest.MaxHeapCountersAndLinearBuild (0 ms)
+[----------] 3 tests from BenchmarkCounterTest (716 ms total)
 
 [----------] Global test environment tear-down
-[==========] 13 tests from 3 test suites ran. (0 ms total)
-[  PASSED  ] 13 tests.
+[==========] 56 tests from 16 test suites ran. (797 ms total)
+[  PASSED  ] 56 tests.
 ```
 
 ---

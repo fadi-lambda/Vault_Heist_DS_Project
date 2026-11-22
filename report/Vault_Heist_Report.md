@@ -2,7 +2,7 @@
 
 ### Data Structures Project Report (FAST-NUCES), Deliverable #3
 
-**Engine:** C++20, SFML, CMake + Ninja + vcpkg (MSVC). **Branch:** `wip-review`. **Date:** 19 Nov 2026
+**Engine:** C++20, SFML, CMake + Ninja + vcpkg (MSVC). **Branch:** `main`. **Date:** 22 Nov 2026
 
 ---
 
@@ -42,11 +42,18 @@ The design target was the module table in Project.pdf §4.2. The table below des
 | | `Scoring.h` (`ScoringEngine`) | Score/alarm engine. Alarm capacity = ⌈1.5 × optimalSteps⌉ + 2. Penalty kinds and star rating |
 | | `HintSystem.h` | One hint per level. Using it caps the rating at 2 stars |
 | | `EndlessMode.h` (`EndlessSession`, `EndlessLeaderboard`) | Seeded op generator that runs real `AVLTree` insert/delete with invariant checks. Save/resume persists the seed, RNG state, timer, pending op and the tree as preorder |
+| | `SaveManager.h` (`SaveManager`, `SaveData`) | Plain-text save/load manager (`savegame.dat`) for campaign progress (unlocked levels, stars), Endless mode state (seed, wave, score), and tree states in preorder-with-`#` format, plus structural invariant validation via `Validator.h` |
 | Bench | `Benchmark.h` | Produces `benchmark_report.txt` (Section 4) |
 
-> **Deviations from the spec table.** (1) `AVLTree` does **not** extend `BST`. It is a standalone class with its own `AVLNode`, which also stores height and subtree size. Only `BinaryTree` and `BST` share `TreeNode`. (2) There is no separate "SaveManager" class. Persistence lives in `ScoreLog`, `EndlessLeaderboard`, and `EndlessSession`'s save/resume. (3) The event system was added afterwards as overloads (`insert(key, EventBatch&)`), so the original signatures still work.
+> **Deviations from the spec table.** (1) `AVLTree` does **not** extend `BST`. It is a standalone class with its own `AVLNode`, which also stores height and subtree size. Only `BinaryTree` and `BST` share `TreeNode`. (2) `SaveManager` works alongside `ScoreLog`, `EndlessLeaderboard`, and `EndlessSession`'s save/resume. (3) The event system was added afterwards as overloads (`insert(key, EventBatch&)`), so the original signatures still work.
 
 **Data flow per move:** input → game logic in `main.cpp` → structure method with an `EventBatch&` → `EventLog` → `AnimationController` playback → `LayoutEngine`/`Renderer`. `ScoringEngine` updates score and alarm from whether the move was valid.
+
+### 2.1 Save/Load System & Memory Safety (Project.pdf §8)
+
+- **`SaveManager` Persistence:** The `SaveManager` class (`include/game/SaveManager.h`, `src/game/SaveManager.cpp`) saves and loads overall game state into a plain-text file (`savegame.dat`, header `VAULT_HEIST_SAVE_V1`). It persists campaign progress (`UNLOCKED` flags and `STARS` ratings across all 20 levels), Endless Mode state (`SEED`, wave, and `ENDLESS` score), active heap and sorted partition arrays (`HEAP`, `SORTED`), and tree states serialized in **preorder-with-`#`** null-marker format (`BT`, `BST`, `AVL`, e.g., `50 30 # # 70 60 # # #`). On load, `Validator` (`include/structures/Validator.h`) verifies all structural invariants before restoring state.
+- **Reset Progress Button (2-Click Confirm Flow):** The System Settings screen (`SCREEN_SETTINGS`) includes a **Reset Progress (Campaign & Endless Save)** button using a confirm-then-wipe two-click flow. The first click arms `resetConfirmPending` and displays a warning toast and confirmation prompt (`CONFIRM RESET PROGRESS? (Click again to wipe save)`); only a second click wipes the campaign unlocks/stars (re-locking Levels 2–20), resets Endless Mode progress, and overwrites `savegame.dat` with a clean state. Any other action cancels the pending confirmation.
+- **Memory-Leak Fix & Reset Robustness:** `BST`, `AVLTree`, and `BinaryTree` reset operations now explicitly invoke `.clear()` (which recursively frees all allocated nodes via `destroyRecursive` and resets root/size/ID counters) instead of default-constructed copy-assignment (`tree = Tree()`), which was unsafe (shallow pointer copy leaking old nodes or double-freeing) and is now explicitly `= delete`d alongside copy constructors. Zero memory leaks are guaranteed across level transitions, sandbox resets, and save reloads, verified across all 56 unit tests.
 
 ## 3. Algorithmic Complexity Analysis
 
@@ -247,4 +254,4 @@ Shots 26b and 27b were added for this report so that construction and the fully 
 
 ## 6. Conclusion
 
-All four structures were built from scratch and connected to an event-driven GUI. The benchmarks match the theory: BST height grows to O(n) on sorted input while AVL height stays at ⌈log₂(N+1)⌉; AVL inserts average fewer than one rotation; Floyd's build uses at most 2 comparisons per element; and heap sort is Θ(n log n) in time and O(1) in extra space.
+All four structures were built from scratch and connected to an event-driven GUI, backed by 56 passing GoogleTest unit tests. The benchmarks match the theory: BST height grows to O(n) on sorted input while AVL height stays at ⌈log₂(N+1)⌉; AVL inserts average fewer than one rotation; Floyd's build uses at most 2 comparisons per element; and heap sort is Θ(n log n) in time and O(1) in extra space.
