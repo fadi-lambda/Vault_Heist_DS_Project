@@ -665,8 +665,8 @@
             act1Hl1 = -9999; act1Hl2 = -9999; act1TraversalStr = "";
             status = std::string(traversalModeName(act1TravMode)) + " - click all rooms in exact order!";
         } else if (lid == LEVEL_1_2) {
-            act1Tree.clear();
-            act1RefTree.clear();
+            act1Tree = BinaryTree();
+            act1RefTree = BinaryTree();
             act1RefTree.buildFromPreorderInorder(d.preorder, d.inorder, d.preorderCount);
             LayoutEngine::layoutBinaryTree(act1RefTree, CANVAS_X, CANVAS_Y + 75.f, CANVAS_W, CANVAS_H - 95.f, btLayout);
             layoutDirty = false;
@@ -1652,7 +1652,7 @@
             LayoutResult before;
             LayoutEngine::layoutBinaryTree(act1Tree, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H, before);
             EventBatch batch;
-            act1Tree.clear();
+            act1Tree = BinaryTree();
             act1Tree.buildFromPreorderInorder(d.preorder, d.inorder, d.preorderCount, batch);
             act1Reconstructed = true;
             dragDrop.clear();
