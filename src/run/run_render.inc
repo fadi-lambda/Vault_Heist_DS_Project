@@ -1564,6 +1564,28 @@
             drawSettingToggle(autoPlayEvents ? "Operation Animation Mode: AUTO-PLAY" : "Operation Animation Mode: STEP-BY-STEP", 335.f, autoPlayEvents);
             drawSettingToggle(cachedSetFpsBtnStr, 405.f, true);
 
+            // Reset Progress button (PART C)
+            {
+                float rby = sy0 + 485.f;
+                bool rHov = Ui::inside(in.mx, in.my, bx, rby, bw, bh);
+                sf::RectangleShape rBox({bw, bh});
+                rBox.setPosition({bx, rby});
+                rBox.setFillColor(resetConfirmPending
+                                      ? (rHov ? sf::Color(110, 22, 22, 240) : sf::Color(75, 14, 14, 230))
+                                      : (rHov ? sf::Color(52, 16, 16, 235) : sf::Color(28, 10, 10, 220)));
+                rBox.setOutlineColor(resetConfirmPending ? sf::Color(255, 80, 80)
+                                                         : (rHov ? sf::Color(255, 120, 100) : sf::Color(180, 70, 70)));
+                rBox.setOutlineThickness((rHov || resetConfirmPending) ? 2.f : 1.f);
+                window.draw(rBox);
+                std::string rLabel = resetConfirmPending
+                                         ? "CONFIRM RESET PROGRESS? (Click again to wipe save)"
+                                         : "Reset Progress (Campaign & Endless Save)";
+                Ui::textCenter(window, menuFont, rLabel, 15,
+                               resetConfirmPending ? sf::Color(255, 220, 220)
+                                                   : (rHov ? sf::Color(255, 190, 180) : sf::Color(230, 150, 140)),
+                               bx + bw * 0.5f, rby + 16.f, rHov || resetConfirmPending, &uiCache);
+            }
+
             bool retHov = Ui::inside(in.mx, in.my, static_cast<float>(W) * 0.5f - 150.f, 740.f, 300.f, 48.f);
             sf::RectangleShape retBtn({300.f, 48.f});
             retBtn.setPosition({static_cast<float>(W) * 0.5f - 150.f, 740.f});

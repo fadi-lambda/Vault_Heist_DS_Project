@@ -82,7 +82,7 @@
         else if (currentScreen == SCREEN_ACT1_DEMO || currentScreen == SCREEN_ACT2_DEMO) updateCamPan(demoCam);
 
         while (const std::optional event = window.pollEvent()) {
-            if (event->is<sf::Event::Closed>()) window.close();
+            if (event->is<sf::Event::Closed>()) { doSaveGame(); window.close(); }
             if (const auto* mm = event->getIf<sf::Event::MouseMoved>()) {
                 if (currentScreen == SCREEN_MAIN_MENU) {
                     sf::Vector2f mp = window.mapPixelToCoords(mm->position);
@@ -167,15 +167,18 @@
                     } else if (currentScreen == SCREEN_ENDLESS) {
                         endlessSession.stop();
                         endlessPaused = false;
+                        doSaveGame();
                         currentScreen = SCREEN_MAIN_MENU;
                         status = "Main Menu";
                     } else if (currentScreen == SCREEN_CAMPAIGN_MAP || currentScreen == SCREEN_SANDBOX ||
                                currentScreen == SCREEN_ACT1_DEMO || currentScreen == SCREEN_ACT2_DEMO ||
                                currentScreen == SCREEN_LEADERBOARD || currentScreen == SCREEN_SETTINGS ||
                                currentScreen == SCREEN_ENDLESS_LEADERBOARD) {
+                        resetConfirmPending = false;
                         currentScreen = SCREEN_MAIN_MENU;
                         status = "Main Menu";
                     } else {
+                        doSaveGame();
                         window.close();
                     }
                     continue;
@@ -326,6 +329,7 @@
                         endlessSession.stop();
                         endlessPaused = false;
                         endlessShowLastResult = false;
+                        doSaveGame();
                         currentScreen = SCREEN_ENDLESS_LEADERBOARD;
                     } else if (kp->code == sf::Keyboard::Key::R) {
                         startEndlessMode(0u);
@@ -499,6 +503,7 @@
                     if (Ui::inside(mx, my, 940.f, 18.f, 125.f, 34.f)) {
                         endlessSession.stop();
                         endlessPaused = false;
+                        doSaveGame();
                         currentScreen = SCREEN_MAIN_MENU;
                         status = "Main Menu";
                         continue;
@@ -511,6 +516,7 @@
                         endlessSession.stop();
                         endlessPaused = false;
                         endlessShowLastResult = false;
+                        doSaveGame();
                         currentScreen = SCREEN_ENDLESS_LEADERBOARD;
                         continue;
                     }
@@ -532,15 +538,42 @@
                 }
                 else if (currentScreen == SCREEN_SETTINGS) {
                     float sy0 = 140.f, bw = 560.f, bh = 52.f, bx = W * 0.5f - bw * 0.5f;
-                    if (Ui::inside(mx, my, bx, sy0 + 125.f, bw, bh)) soundEnabled   = !soundEnabled;
-                    if (Ui::inside(mx, my, bx, sy0 + 195.f, bw, bh)) showNodeBadges = !showNodeBadges;
-                    if (Ui::inside(mx, my, bx, sy0 + 265.f, bw, bh)) showBgGrid     = !showBgGrid;
-                    if (Ui::inside(mx, my, bx, sy0 + 335.f, bw, bh)) autoPlayEvents = !autoPlayEvents;
+                    if (Ui::inside(mx, my, bx, sy0 + 125.f, bw, bh)) { soundEnabled   = !soundEnabled; resetConfirmPending = false; }
+                    if (Ui::inside(mx, my, bx, sy0 + 195.f, bw, bh)) { showNodeBadges = !showNodeBadges; resetConfirmPending = false; }
+                    if (Ui::inside(mx, my, bx, sy0 + 265.f, bw, bh)) { showBgGrid     = !showBgGrid; resetConfirmPending = false; }
+                    if (Ui::inside(mx, my, bx, sy0 + 335.f, bw, bh)) { autoPlayEvents = !autoPlayEvents; resetConfirmPending = false; }
                     if (Ui::inside(mx, my, bx, sy0 + 405.f, bw, bh)) {
                         targetFps = (targetFps == 60) ? 120 : 60;
                         window.setFramerateLimit(static_cast<unsigned int>(targetFps));
+                        resetConfirmPending = false;
+                    }
+                    if (Ui::inside(mx, my, bx, sy0 + 485.f, bw, bh)) {
+                        if (!resetConfirmPending) {
+                            resetConfirmPending = true;
+                            pushToast("Click Reset Progress again to confirm!", TOAST_KIND_WARNING);
+                        } else {
+                            resetConfirmPending = false;
+                            demoAllUnlocked = false;
+                            for (int i = 0; i < TOTAL_LEVELS; ++i) {
+                                levels[i].unlocked = (i == 0);
+                                levels[i].stars = 0;
+                                campCachedUnl[i] = false;
+                                campCachedStars[i] = -1;
+                                campCachedLabels[i].clear();
+                            }
+                            avl.clear();
+                            endlessSession = EndlessSession();
+                            endlessLastSeed = 1337u;
+                            endlessLastEntry = EndlessLeaderboardEntry();
+                            endlessPaused = false;
+                            endlessShowLastResult = false;
+                            endlessLastReason = "";
+                            doSaveGame();
+                            pushToast("Progress reset", TOAST_KIND_SUCCESS);
+                        }
                     }
                     if (Ui::inside(mx, my, W * 0.5f - 150.f, 740.f, 300.f, 48.f)) {
+                        resetConfirmPending = false;
                         currentScreen = SCREEN_MAIN_MENU;
                     }
                 }
