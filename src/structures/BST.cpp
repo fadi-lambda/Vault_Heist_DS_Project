@@ -57,6 +57,13 @@ BST::~BST() {
     root = nullptr;
 }
 
+void BST::clear() {
+    destroyRecursive(root);
+    root = nullptr;
+    nodeCount = 0;
+    nextId = 1;
+}
+
 void BST::destroyRecursive(TreeNode* node) {
     // Iterative vine-flatten deletion: O(n) time, O(1) auxiliary/stack space
     // so degenerate chains of 10,000+ nodes never overflow the call stack.

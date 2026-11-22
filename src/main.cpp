@@ -23,6 +23,7 @@
 #include "game/Scoring.h"
 #include "game/HintSystem.h"
 #include "game/EndlessMode.h"
+#include "game/SaveManager.h"
 #include "benchmark/Benchmark.h"
 #include <optional>
 #include <iostream>
@@ -443,8 +444,15 @@ static bool allInternalNodesSwapped(const TreeNode* root, const int* swappedKeys
 }
 
 static void buildBstFromData(BST& bst, const LevelData& d) {
-    bst = BST();
+    bst.clear();
     for (int i = 0; i < d.initialKeyCount; ++i) bst.insert(d.initialKeys[i]);
+}
+
+static void copyAvlPreorder(const AVLNode* node, AVLTree& dst) {
+    if (!node) return;
+    dst.insert(node->key);
+    copyAvlPreorder(node->left, dst);
+    copyAvlPreorder(node->right, dst);
 }
 
 static int treeHeightNodes(const TreeNode* node) {

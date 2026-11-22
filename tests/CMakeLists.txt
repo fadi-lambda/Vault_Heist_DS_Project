@@ -13,6 +13,7 @@ add_executable(Vault_Heist_Tests
     ${PROJECT_SOURCE_DIR}/src/game/Scoring.cpp
     ${PROJECT_SOURCE_DIR}/src/game/HintSystem.cpp
     ${PROJECT_SOURCE_DIR}/src/game/EndlessMode.cpp
+    ${PROJECT_SOURCE_DIR}/src/game/SaveManager.cpp
     ${PROJECT_SOURCE_DIR}/src/gui/DragDrop.cpp
     ${PROJECT_SOURCE_DIR}/src/structures/MaxHeap.cpp
     ${PROJECT_SOURCE_DIR}/src/structures/AVLTree.cpp

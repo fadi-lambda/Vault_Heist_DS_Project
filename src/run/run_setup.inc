@@ -160,6 +160,7 @@
     EndlessLeaderboard endlessLb;
     endlessLb.load("endless_leaderboard.txt");
     const std::string endlessSavePath = "endless_save.txt";
+    const std::string saveGamePath = "savegame.dat";
 
     // 20 Campaign Levels across 4 Wings (5 levels per Wing) — loaded from levels/actN/level_N_M.json
     const int TOTAL_LEVELS = 20;
@@ -334,41 +335,10 @@
     // Demo unlock-all state (non-global, password-protected)
     bool demoAllUnlocked = false;
     bool demoPromptOpen = false;
+    bool resetConfirmPending = false;
     char demoPasswordBuf[33];
     demoPasswordBuf[0] = '\0';
     int demoPasswordLen = 0;
-    auto submitDemoPassword = [&]() {
-        if (std::strcmp(demoPasswordBuf, "lambda@fadi") == 0) {
-            if (!demoAllUnlocked) {
-                for (int i = 0; i < TOTAL_LEVELS; ++i) {
-                    levels[i].unlocked = true;
-                    campCachedUnl[i] = false;
-                    campCachedLabels[i].clear();
-                }
-                demoAllUnlocked = true;
-                pushToast("[DEMO] All levels unlocked", TOAST_KIND_SUCCESS);
-                playSfx(unlockLevelsSnd);
-            } else {
-                levels[0].unlocked = true;
-                campCachedUnl[0] = false;
-                campCachedLabels[0].clear();
-                for (int i = 1; i < TOTAL_LEVELS; ++i) {
-                    levels[i].unlocked = false;
-                    campCachedUnl[i] = false;
-                    campCachedLabels[i].clear();
-                }
-                demoAllUnlocked = false;
-                pushToast("[DEMO] Levels locked", TOAST_KIND_SUCCESS);
-                playSfx(lockLevelsSnd);
-            }
-        } else {
-            pushToast("Wrong password", TOAST_KIND_PENALTY);
-            playSfx(errorSnd);
-        }
-        demoPromptOpen = false;
-        demoPasswordLen = 0;
-        demoPasswordBuf[0] = '\0';
-    };
 
     int cachedHudLid = -1;
     std::string cachedHudObj;
@@ -421,6 +391,76 @@
     EndlessLeaderboardEntry endlessLastEntry;
     std::string endlessLastReason = "";
     unsigned int endlessLastSeed = 1337u;
+
+    auto doSaveGame = [&]() {
+        SaveData data;
+        for (int i = 0; i < TOTAL_LEVELS; ++i) {
+            data.unlocked[i] = levels[i].unlocked;
+            data.stars[i] = levels[i].stars;
+        }
+        data.seed = endlessLastSeed;
+        data.endlessScore = endlessSession.getOpsCompleted();
+        data.endlessWave = 1 + (data.endlessScore / 10);
+        BinaryTree emptyBt;
+        BST emptyBst;
+        SaveManager::saveToFile(saveGamePath, data, emptyBt, emptyBst, avl, nullptr, 0, nullptr, 0);
+    };
+
+    auto doLoadGame = [&]() {
+        SaveData data;
+        BinaryTree dummyBt;
+        BST dummyBst;
+        AVLTree loadedAvl;
+        if (SaveManager::loadFromFile(saveGamePath, data, dummyBt, dummyBst, loadedAvl)) {
+            for (int i = 0; i < TOTAL_LEVELS; ++i) {
+                levels[i].unlocked = data.unlocked[i];
+                levels[i].stars = data.stars[i];
+                campCachedUnl[i] = false;
+                campCachedStars[i] = -1;
+                campCachedLabels[i].clear();
+            }
+            endlessLastSeed = data.seed;
+            endlessLastEntry.seed = data.seed;
+            endlessLastEntry.opsCompleted = data.endlessScore;
+            avl.clear();
+            copyAvlPreorder(loadedAvl.getRoot(), avl);
+        }
+    };
+    doLoadGame();
+
+    auto submitDemoPassword = [&]() {
+        if (std::strcmp(demoPasswordBuf, "lambda@fadi") == 0) {
+            if (!demoAllUnlocked) {
+                for (int i = 0; i < TOTAL_LEVELS; ++i) {
+                    levels[i].unlocked = true;
+                    campCachedUnl[i] = false;
+                    campCachedLabels[i].clear();
+                }
+                demoAllUnlocked = true;
+                pushToast("[DEMO] All levels unlocked", TOAST_KIND_SUCCESS);
+                playSfx(unlockLevelsSnd);
+            } else {
+                levels[0].unlocked = true;
+                campCachedUnl[0] = false;
+                campCachedLabels[0].clear();
+                for (int i = 1; i < TOTAL_LEVELS; ++i) {
+                    levels[i].unlocked = false;
+                    campCachedUnl[i] = false;
+                    campCachedLabels[i].clear();
+                }
+                demoAllUnlocked = false;
+                pushToast("[DEMO] Levels locked", TOAST_KIND_SUCCESS);
+                playSfx(lockLevelsSnd);
+            }
+            doSaveGame();
+        } else {
+            pushToast("Wrong password", TOAST_KIND_PENALTY);
+            playSfx(errorSnd);
+        }
+        demoPromptOpen = false;
+        demoPasswordLen = 0;
+        demoPasswordBuf[0] = '\0';
+    };
     int cachedEndlessOps = -1, cachedEndlessNodes = -1, cachedEndlessRateTenths = -1;
     std::string cachedEndlessSub = "";
     int cachedEndlessOpType = -1, cachedEndlessOpKey = -999999;
@@ -502,6 +542,7 @@
         pendingWin = false;
         levels[currentLevelIdx].stars = maxInt(levels[currentLevelIdx].stars, starsAwarded);
         if (currentLevelIdx + 1 < TOTAL_LEVELS) levels[currentLevelIdx + 1].unlocked = true;
+        doSaveGame();
         status = msg;
 
         ScoreEntry se;

@@ -773,7 +773,7 @@
             status = "kthSmallest(k=" + std::to_string(k) + ") = " + std::to_string(ans);
             k++;
         } else if (actionCode == 8) {
-            act2Bst = BST();
+            act2Bst.clear();
             for (int i = 1; i <= 7; ++i) act2Bst.insert(i * 10);
             act2Hl1 = -9999; act2Hl2 = -9999;
             animCtrl.clearCurrent();
@@ -871,7 +871,7 @@
         sbAvlCam.reset();
         sbHeapCam.reset();
         layoutDirty = true;
-        avl = AVLTree();
+        avl.clear();
         int init[] = { 40, 20, 60, 10, 30, 50, 70 };
         for (int v : init) avl.insert(v);
         int hInit[] = { 90, 75, 80, 60, 50, 40, 70 };
@@ -969,6 +969,7 @@
         endlessLastEntry = rec;
         endlessLastReason = endlessSession.getGameOverReason();
         endlessLb.recordRun(rec);
+        doSaveGame();
         currentScreen = SCREEN_ENDLESS_LEADERBOARD;
         status = endlessLastReason + " Survived " + EndlessLeaderboard::formatTimeMs(rec.survivalMs) +
                  " (" + std::to_string(rec.opsCompleted) + " ops).";

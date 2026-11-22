@@ -63,6 +63,8 @@ public:
     BinaryTree();
     ~BinaryTree();
 
+    void clear();
+
     // --- Manual construction (for testing) ---
     // Insert `value` as a new node; returns pointer to the created node.
     // Attaches as left or right child of `parent`; if parent == nullptr, sets root.

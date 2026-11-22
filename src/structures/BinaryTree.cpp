@@ -20,6 +20,13 @@ BinaryTree::~BinaryTree() {
     destroyRecursive(root);
 }
 
+void BinaryTree::clear() {
+    destroyRecursive(root);
+    root = nullptr;
+    nodeCount = 0;
+    nextId = 1;
+}
+
 void BinaryTree::destroyRecursive(TreeNode* node) {
     if (!node) return;
     destroyRecursive(node->left);
