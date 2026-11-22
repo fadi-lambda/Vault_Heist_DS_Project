@@ -177,6 +177,6 @@ cmake --build . --target Vault_Heist_Benchmarks
 |---|---|---|
 | **1. Source Code & README** | `src/`, `include/`, `README.md` | Full executable source code + build & control guide |
 | **2. Unit Test Suite & Report** | `tests/`, `docs/reports/TEST_REPORT.md` | 56/56 passing GoogleTests across 16 test suites covering all operations |
-| **3. Written Report** | `report/Vault_Heist_Report.md`, `report/Vault_Heist_Report.pdf` | System architecture, Save/Load system, complexity proofs, benchmarks, 33 UI screenshots |
+| **3. Written Report** | `report/Vault_Heist_Report.md`, `report/Vault_Heist_Report.pdf` | System architecture, Save/Load system, complexity proofs, benchmarks, 35 UI screenshots |
 | **4. Level Data Files & Guide** | `levels/act1/`–`levels/act4/`, `docs/LEVEL_CREATION_GUIDE.md` | 20 JSON level data files + guide to authoring levels |
 | **Benchmarking Suite** | `benchmarks/BenchmarkSuite.cpp`, `src/benchmark/Benchmark.cpp` | Standalone & integrated benchmarks measuring BST vs AVL & Heap Sort |

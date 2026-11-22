@@ -196,8 +196,11 @@
         }
         saveShot("24_act3_5_order_stat_boss", idle);
 
-        // Act 4 Levels (4.3..4.5 ascending sorted tail & 4.4 step/complexity readout)
+        // Act 4 Levels (4.2..4.5 ascending sorted tail & 4.4 step/complexity readout)
         toastQueue.clear();
+        startLevel(16); showingBriefing = false; layoutHeapForScreen(false, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
+        saveShot("24b_act4_2_repair_locks", idle);
+
         startLevel(17); showingBriefing = false; layoutHeapForScreen(true, CANVAS_X, CANVAS_Y, CANVAS_W, CANVAS_H); layoutDirty = false;
         for (int e = 0; e < 4; ++e) {
             handleLevelNodeClick(0, act4Heap.getMax());
@@ -242,6 +245,15 @@
         endlessSession.tick(endlessSession.getOpTimeRemaining() + 0.1f);
         finishEndlessGameOver();
         saveShot("29_endless_leaderboard", idle);
+
+        // Sandbox Mode visual verification
+        toastQueue.clear();
+        enterSandbox();
+        triggerSandboxAction(4); // Heap Extract max into sorted tail
+        animCtrl.finishInstant();
+        triggerSandboxAction(1); // AVL Insert with EventLog
+        animCtrl.finishInstant();
+        saveShot("30_sandbox_mode", idle);
 
         return 0;
     }

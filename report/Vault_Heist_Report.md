@@ -218,13 +218,15 @@ All images are real 1600×900 frames from `Vault_Heist.exe --verify-screenshots 
 ![05 Level 3.4 AVL BF badges](../report_assets/screenshots/05_avl_badges.png)
 ![24 Level 3.5 Order-statistic boss](../report_assets/screenshots/24_act3_5_order_stat_boss.png)
 ![06 Level 4.1 Heap and synchronised array](../report_assets/screenshots/06_heap_array_sync.png)
+![24b Level 4.2 Repair the Security Locks](../report_assets/screenshots/24b_act4_2_repair_locks.png)
 ![26 Level 4.4 Race Against the Guards](../report_assets/screenshots/26_act4_4_race_complexity.png)
 ![28 Endless Mode](../report_assets/screenshots/28_endless_mode_play.png)
 ![29 Endless leaderboard](../report_assets/screenshots/29_endless_leaderboard.png)
+![30 Sandbox simulator](../report_assets/screenshots/30_sandbox_mode.png)
 
 </div>
 
-Levels 3.2–3.4 and 4.3/4.5 appear in Sections 5.1–5.2. **Level 4.2 (Repair the Security Locks) and the Sandbox screen have no `saveShot` call in the verify block, so they have no screenshot.**
+Levels 3.2–3.4 and 4.3/4.5 appear in Sections 5.1–5.2.
 
 ### 5.1 All Four AVL Rotation Types
 
