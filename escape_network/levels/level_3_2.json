@@ -1,0 +1,31 @@
+{
+  "level_id": 32,
+  "act": 3,
+  "title": "3.2 Power the District",
+  "concept": "Prim's MST Algorithm (Binary Heap Priority Queue)",
+  "objective": "Grow a minimum spanning tree from start vertex (0) by repeatedly picking the cheapest crossing edge.",
+  "controls": "Select cheapest crossing edge to grow tree | [R] Run | [S] Step",
+  "start_status": "Power all 6 districts from Substation 0 using Prim's algorithm.",
+  "vertices": [
+    { "id": 0, "label": "Substation", "x": 150.0, "y": 240.0 },
+    { "id": 1, "label": "Grid North", "x": 340.0, "y": 120.0 },
+    { "id": 2, "label": "Grid South", "x": 340.0, "y": 360.0 },
+    { "id": 3, "label": "Relay East", "x": 540.0, "y": 120.0 },
+    { "id": 4, "label": "Dock Relay", "x": 540.0, "y": 360.0 },
+    { "id": 5, "label": "Airfield",   "x": 730.0, "y": 240.0 }
+  ],
+  "edges": [
+    { "from": 0, "to": 1, "weight": 3.0, "capacity": 0.0, "directed": false },
+    { "from": 0, "to": 2, "weight": 5.0, "capacity": 0.0, "directed": false },
+    { "from": 1, "to": 2, "weight": 2.0, "capacity": 0.0, "directed": false },
+    { "from": 1, "to": 3, "weight": 4.0, "capacity": 0.0, "directed": false },
+    { "from": 2, "to": 4, "weight": 6.0, "capacity": 0.0, "directed": false },
+    { "from": 3, "to": 4, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 3, "to": 5, "weight": 7.0, "capacity": 0.0, "directed": false },
+    { "from": 4, "to": 5, "weight": 2.0, "capacity": 0.0, "directed": false }
+  ],
+  "hints": [
+    "Prim's MST total weight on this graph is 3 + 2 + 4 + 1 + 2 = 12.",
+    "Only edges crossing from visited vertices to unvisited vertices are valid candidates."
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "level_id": 41,
+  "act": 4,
+  "title": "4.1 Schedule the Heist",
+  "concept": "Topological Sort (Kahn's Algorithm & Directed Cycle Detection)",
+  "objective": "Produce a valid topological ordering of the heist dependency DAG by peeling zero-in-degree tasks.",
+  "controls": "Pick a vertex with in-degree 0 | [R] Run | [S] Step",
+  "start_status": "Schedule all 6 heist tasks respecting directed prerequisite edges.",
+  "vertices": [
+    { "id": 0, "label": "Recon",      "x": 140.0, "y": 150.0 },
+    { "id": 1, "label": "Keycards",   "x": 140.0, "y": 330.0 },
+    { "id": 2, "label": "Jammer",     "x": 360.0, "y": 150.0 },
+    { "id": 3, "label": "Disguise",   "x": 360.0, "y": 330.0 },
+    { "id": 4, "label": "Breach",     "x": 560.0, "y": 240.0 },
+    { "id": 5, "label": "Extraction", "x": 740.0, "y": 240.0 }
+  ],
+  "edges": [
+    { "from": 0, "to": 2, "weight": 1.0, "capacity": 0.0, "directed": true },
+    { "from": 1, "to": 2, "weight": 1.0, "capacity": 0.0, "directed": true },
+    { "from": 1, "to": 3, "weight": 1.0, "capacity": 0.0, "directed": true },
+    { "from": 2, "to": 4, "weight": 1.0, "capacity": 0.0, "directed": true },
+    { "from": 3, "to": 4, "weight": 1.0, "capacity": 0.0, "directed": true },
+    { "from": 4, "to": 5, "weight": 1.0, "capacity": 0.0, "directed": true }
+  ],
+  "hints": [
+    "Vertices 0 and 1 start with in-degree 0.",
+    "If fewer than V vertices are output when the zero-in-degree queue empties, a directed cycle exists."
+  ]
+}

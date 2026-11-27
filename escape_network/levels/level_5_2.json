@@ -1,0 +1,31 @@
+{
+  "level_id": 52,
+  "act": 5,
+  "title": "5.2 Escape Capacity",
+  "concept": "Edmonds-Karp Maximum Flow & Min-Cut Equality",
+  "objective": "Find BFS augmenting paths from Source (0) to Sink (5) until no residual path remains and verify max-flow == min-cut.",
+  "controls": "Augment along BFS shortest residual path | [R] Run | [S] Step",
+  "start_status": "Route maximum escape capacity from Vault (0) to Airfield (5).",
+  "vertices": [
+    { "id": 0, "label": "Source",   "x": 140.0, "y": 240.0 },
+    { "id": 1, "label": "Route N",  "x": 330.0, "y": 130.0 },
+    { "id": 2, "label": "Route S",  "x": 330.0, "y": 350.0 },
+    { "id": 3, "label": "Merge N",  "x": 540.0, "y": 130.0 },
+    { "id": 4, "label": "Merge S",  "x": 540.0, "y": 350.0 },
+    { "id": 5, "label": "Sink",     "x": 730.0, "y": 240.0 }
+  ],
+  "edges": [
+    { "from": 0, "to": 1, "weight": 1.0, "capacity": 10.0, "directed": true },
+    { "from": 0, "to": 2, "weight": 1.0, "capacity": 10.0, "directed": true },
+    { "from": 1, "to": 3, "weight": 1.0, "capacity": 4.0,  "directed": true },
+    { "from": 1, "to": 4, "weight": 1.0, "capacity": 8.0,  "directed": true },
+    { "from": 2, "to": 4, "weight": 1.0, "capacity": 9.0,  "directed": true },
+    { "from": 3, "to": 5, "weight": 1.0, "capacity": 10.0, "directed": true },
+    { "from": 4, "to": 3, "weight": 1.0, "capacity": 6.0,  "directed": true },
+    { "from": 4, "to": 5, "weight": 1.0, "capacity": 10.0, "directed": true }
+  ],
+  "hints": [
+    "Reverse residual edges allow flow redirection when a greedy choice blocks a better path.",
+    "The maximum flow from Source (0) to Sink (5) is 19."
+  ]
+}

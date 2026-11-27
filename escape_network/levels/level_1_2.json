@@ -1,0 +1,28 @@
+{
+  "level_id": 12,
+  "act": 1,
+  "title": "1.2 Scout the Districts",
+  "concept": "BFS, DFS, Connected Components, and Undirected Cycle Detection",
+  "objective": "Traverse reachable districts via BFS/DFS, count connected components, and detect whether a cycle exists.",
+  "controls": "Click vertices to step traversal | [R] Run | [S] Step | [Backspace] Restart",
+  "start_status": "City districts are fragmented. Scout components from Vault Gate (0) and detect cycles.",
+  "vertices": [
+    { "id": 0, "label": "Vault Gate",   "x": 140.0, "y": 180.0 },
+    { "id": 1, "label": "Plaza North",  "x": 320.0, "y": 110.0 },
+    { "id": 2, "label": "Subway East",  "x": 320.0, "y": 270.0 },
+    { "id": 3, "label": "Signal Tower", "x": 500.0, "y": 180.0 },
+    { "id": 4, "label": "Old Depot",    "x": 650.0, "y": 120.0 },
+    { "id": 5, "label": "Freight Yard", "x": 650.0, "y": 300.0 }
+  ],
+  "edges": [
+    { "from": 0, "to": 1, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 0, "to": 2, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 1, "to": 3, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 2, "to": 3, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 4, "to": 5, "weight": 1.0, "capacity": 0.0, "directed": false }
+  ],
+  "hints": [
+    "BFS explores layer by layer using a FIFO queue; DFS explores deep using a LIFO stack.",
+    "Vertices {0,1,2,3} form a cycle (0-1-3-2-0), while {4,5} form a second disconnected component."
+  ]
+}

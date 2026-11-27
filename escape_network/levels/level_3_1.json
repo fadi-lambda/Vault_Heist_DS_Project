@@ -1,0 +1,31 @@
+{
+  "level_id": 31,
+  "act": 3,
+  "title": "3.1 Build the Tunnel",
+  "concept": "Kruskal's MST & Union-Find (Disjoint Set Union)",
+  "objective": "Process undirected tunnel edges in nondecreasing weight order and accept V-1 edges that connect distinct components.",
+  "controls": "Accept/reject candidate edge in sorted order | [R] Run | [S] Step",
+  "start_status": "Connect all 6 districts with minimum total tunnel cost using Kruskal + Union-Find.",
+  "vertices": [
+    { "id": 0, "label": "Sector A", "x": 150.0, "y": 160.0 },
+    { "id": 1, "label": "Sector B", "x": 360.0, "y": 110.0 },
+    { "id": 2, "label": "Sector C", "x": 360.0, "y": 320.0 },
+    { "id": 3, "label": "Sector D", "x": 560.0, "y": 110.0 },
+    { "id": 4, "label": "Sector E", "x": 560.0, "y": 320.0 },
+    { "id": 5, "label": "Sector F", "x": 730.0, "y": 220.0 }
+  ],
+  "edges": [
+    { "from": 0, "to": 1, "weight": 2.0, "capacity": 0.0, "directed": false },
+    { "from": 0, "to": 2, "weight": 4.0, "capacity": 0.0, "directed": false },
+    { "from": 1, "to": 2, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 1, "to": 3, "weight": 5.0, "capacity": 0.0, "directed": false },
+    { "from": 2, "to": 4, "weight": 3.0, "capacity": 0.0, "directed": false },
+    { "from": 3, "to": 4, "weight": 2.0, "capacity": 0.0, "directed": false },
+    { "from": 3, "to": 5, "weight": 6.0, "capacity": 0.0, "directed": false },
+    { "from": 4, "to": 5, "weight": 3.0, "capacity": 0.0, "directed": false }
+  ],
+  "hints": [
+    "Sort edges by weight ascending: 1, 2, 2, 3, 3, 4, 5, 6.",
+    "Skip any edge whose endpoints already share the same Union-Find root."
+  ]
+}

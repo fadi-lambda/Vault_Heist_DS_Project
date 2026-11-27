@@ -225,7 +225,13 @@ TEST(EscapeNetworkSkeletonsTest, ScoreManagerAndValidatorShellsCompileAndReset) 
     EXPECT_EQ(score.getMistakeCount(), 1);
     score.reset();
     EXPECT_EQ(score.getMistakeCount(), 0);
-    EXPECT_EQ(score.calculateStars(10, 10), 0);
+    EXPECT_EQ(score.calculateStars(10, 10), 3);
+    EXPECT_EQ(ScoreManager::computeRouteHeatCapacity(11.0), 19); // ceil(1.5 * 11) + 2 = 17 + 2 = 19
+    EXPECT_EQ(score.calculateRouteStars(11.0, 11.0, 11, 19, true), 3);
+    score.recordMistake();
+    EXPECT_EQ(score.calculateRouteStars(11.0, 13.0, 13, 19, true), 2);
+    EXPECT_EQ(score.calculateNonRouteStars(true, 3), 2);
+    EXPECT_EQ(score.calculateRouteStars(11.0, 11.0, 20, 19, true), 0);
 
     Validator validator;
     Graph g;
@@ -234,4 +240,19 @@ TEST(EscapeNetworkSkeletonsTest, ScoreManagerAndValidatorShellsCompileAndReset) 
     ValidationResult subRes = validator.validateSubmission(g, {0});
     EXPECT_FALSE(subRes.valid);
     validator.reset();
+}
+
+TEST(EscapeNetworkLevelManagerTest, AllTenPredefinedLevelsLoadCleanly) {
+    LevelManager manager;
+    const int levelIds[10] = { 11, 12, 21, 22, 31, 32, 41, 42, 51, 52 };
+    for (int id : levelIds) {
+        Graph g;
+        LevelMetadata meta;
+        std::string err;
+        EXPECT_TRUE(manager.loadLevelById(id, g, meta, err)) << "Level " << id << " failed: " << err;
+        EXPECT_EQ(meta.levelId, id);
+        EXPECT_FALSE(meta.title.empty());
+        EXPECT_GE(g.getVertexCount(), 5);
+        EXPECT_GE(g.getEdgeCount(), 5);
+    }
 }

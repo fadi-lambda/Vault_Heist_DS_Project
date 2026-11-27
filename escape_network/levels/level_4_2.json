@@ -1,0 +1,29 @@
+{
+  "level_id": 42,
+  "act": 4,
+  "title": "4.2 Crew Assignment",
+  "concept": "Bipartite Graph Check (BFS Two-Colouring)",
+  "objective": "Assign every operative to Team A or Team B so no adjacent vertices share a team, or report an odd-cycle conflict.",
+  "controls": "Assign colour (A/B) to frontier vertices | [R] Run | [S] Step",
+  "start_status": "Partition the 6-vertex contact graph into two conflict-free crews.",
+  "vertices": [
+    { "id": 0, "label": "Op Alpha",  "x": 180.0, "y": 140.0 },
+    { "id": 1, "label": "Op Bravo",  "x": 420.0, "y": 140.0 },
+    { "id": 2, "label": "Op Charlie","x": 660.0, "y": 140.0 },
+    { "id": 3, "label": "Op Delta",  "x": 180.0, "y": 340.0 },
+    { "id": 4, "label": "Op Echo",   "x": 420.0, "y": 340.0 },
+    { "id": 5, "label": "Op Foxtrot","x": 660.0, "y": 340.0 }
+  ],
+  "edges": [
+    { "from": 0, "to": 3, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 0, "to": 4, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 1, "to": 3, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 1, "to": 5, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 2, "to": 4, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 2, "to": 5, "weight": 1.0, "capacity": 0.0, "directed": false }
+  ],
+  "hints": [
+    "This 6-cycle graph has only even cycles, so it is 2-colourable (bipartite).",
+    "An edge connecting two same-colour vertices proves non-bipartiteness."
+  ]
+}

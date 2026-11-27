@@ -1,0 +1,30 @@
+{
+  "level_id": 51,
+  "act": 5,
+  "title": "5.1 Find the Weak Point",
+  "concept": "Bridges & Articulation Points (DFS Discovery & Low-Link Values)",
+  "objective": "Identify all critical bridges (edges) and articulation points (vertices) whose removal disconnects the network.",
+  "controls": "Click critical vertices/edges | [R] Run | [S] Step",
+  "start_status": "Analyze discovery/low-link values to pinpoint network bottlenecks.",
+  "vertices": [
+    { "id": 0, "label": "Vault",     "x": 140.0, "y": 240.0 },
+    { "id": 1, "label": "West Hub",  "x": 280.0, "y": 130.0 },
+    { "id": 2, "label": "South Hub", "x": 280.0, "y": 350.0 },
+    { "id": 3, "label": "Choke Br",  "x": 450.0, "y": 240.0 },
+    { "id": 4, "label": "East Gate", "x": 600.0, "y": 240.0 },
+    { "id": 5, "label": "Airfield",  "x": 740.0, "y": 240.0 }
+  ],
+  "edges": [
+    { "from": 0, "to": 1, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 0, "to": 2, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 1, "to": 2, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 1, "to": 3, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 2, "to": 3, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 3, "to": 4, "weight": 1.0, "capacity": 0.0, "directed": false },
+    { "from": 4, "to": 5, "weight": 1.0, "capacity": 0.0, "directed": false }
+  ],
+  "hints": [
+    "Edges (3, 4) and (4, 5) are bridges (low[v] > disc[u]).",
+    "Vertices 3 and 4 are articulation points."
+  ]
+}
