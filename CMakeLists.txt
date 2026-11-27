@@ -80,5 +80,26 @@ if(MSVC)
     target_compile_options(Vault_Heist_Benchmarks PRIVATE /Z7 /EHsc)
 endif()
 
+# Deliverable 02: Escape Network
+file(GLOB ESCAPE_NETWORK_SOURCES CONFIGURE_DEPENDS
+    "escape_network/src/*.cpp"
+)
+
+add_executable(VaultHeist_EscapeNetwork
+    ${ESCAPE_NETWORK_SOURCES}
+)
+
+target_include_directories(VaultHeist_EscapeNetwork
+    PRIVATE escape_network/include
+)
+
+if(MSVC)
+    target_compile_options(VaultHeist_EscapeNetwork PRIVATE /Z7 /EHsc)
+endif()
+
+target_link_libraries(VaultHeist_EscapeNetwork
+    PRIVATE SFML::Graphics SFML::Audio
+)
+
 # Tests
 add_subdirectory(tests)
