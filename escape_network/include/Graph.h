@@ -43,6 +43,10 @@ public:
     const std::vector<Vertex>& getVertices() const;
     const std::vector<Edge>& getEdges() const;
 
+    bool isConnected() const;
+    std::vector<std::vector<int>> getConnectedComponents() const;
+    bool hasCycle() const;
+
 private:
     std::vector<Vertex> vertices;
     std::vector<Edge> edges;

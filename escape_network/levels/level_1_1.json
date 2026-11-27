@@ -1,0 +1,31 @@
+{
+  "level_id": 11,
+  "act": 1,
+  "title": "1.1 Map the City",
+  "concept": "Graph Representation: vertices, edges, vertex degrees, and adjacency lists",
+  "objective": "Inspect the city escape network to verify its vertices, edges, degrees, and neighbor connections.",
+  "controls": "Select a junction to inspect its degree and neighbors",
+  "start_status": "Analyze the 6-junction city network and inspect its adjacency list.",
+  "vertices": [
+    { "id": 0, "label": "Vault Gate",  "x": 160.0, "y": 260.0 },
+    { "id": 1, "label": "Alley North", "x": 340.0, "y": 140.0 },
+    { "id": 2, "label": "Metro Hub",   "x": 340.0, "y": 380.0 },
+    { "id": 3, "label": "Clocktower",  "x": 540.0, "y": 140.0 },
+    { "id": 4, "label": "Canal Dock",  "x": 540.0, "y": 380.0 },
+    { "id": 5, "label": "Safehouse",   "x": 720.0, "y": 260.0 }
+  ],
+  "edges": [
+    { "from": 0, "to": 1, "weight": 4.0, "capacity": 0.0, "directed": false },
+    { "from": 0, "to": 2, "weight": 3.0, "capacity": 0.0, "directed": false },
+    { "from": 1, "to": 2, "weight": 2.0, "capacity": 0.0, "directed": false },
+    { "from": 1, "to": 3, "weight": 5.0, "capacity": 0.0, "directed": false },
+    { "from": 2, "to": 4, "weight": 6.0, "capacity": 0.0, "directed": false },
+    { "from": 3, "to": 4, "weight": 3.0, "capacity": 0.0, "directed": false },
+    { "from": 3, "to": 5, "weight": 4.0, "capacity": 0.0, "directed": false },
+    { "from": 4, "to": 5, "weight": 2.0, "capacity": 0.0, "directed": false }
+  ],
+  "hints": [
+    "The degree of a vertex in an undirected graph equals the number of incident edges (its neighbor count).",
+    "An adjacency list stores, for each vertex, the list of directly connected neighbor vertices."
+  ]
+}

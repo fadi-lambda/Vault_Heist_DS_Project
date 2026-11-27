@@ -103,3 +103,4 @@ target_link_libraries(VaultHeist_EscapeNetwork
 
 # Tests
 add_subdirectory(tests)
+add_subdirectory(escape_network/tests)
