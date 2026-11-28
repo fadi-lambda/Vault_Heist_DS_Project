@@ -1,7 +1,12 @@
 add_executable(EscapeNetwork_Tests
     GraphTests.cpp
+    GraphAlgorithmsTests.cpp
     ${PROJECT_SOURCE_DIR}/escape_network/src/Graph.cpp
+    ${PROJECT_SOURCE_DIR}/escape_network/src/GraphAlgorithms.cpp
     ${PROJECT_SOURCE_DIR}/escape_network/src/Level1_1.cpp
+    ${PROJECT_SOURCE_DIR}/escape_network/src/Level1_2.cpp
+    ${PROJECT_SOURCE_DIR}/escape_network/src/Level2_1.cpp
+    ${PROJECT_SOURCE_DIR}/escape_network/src/StatePanel.cpp
     ${PROJECT_SOURCE_DIR}/escape_network/src/Json.cpp
     ${PROJECT_SOURCE_DIR}/escape_network/src/LevelManager.cpp
     ${PROJECT_SOURCE_DIR}/escape_network/src/ScoreManager.cpp
