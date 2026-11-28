@@ -6,6 +6,8 @@ add_executable(EscapeNetwork_Tests
     ${PROJECT_SOURCE_DIR}/escape_network/src/Level1_1.cpp
     ${PROJECT_SOURCE_DIR}/escape_network/src/Level1_2.cpp
     ${PROJECT_SOURCE_DIR}/escape_network/src/Level2_1.cpp
+    ${PROJECT_SOURCE_DIR}/escape_network/src/Level2_2.cpp
+    ${PROJECT_SOURCE_DIR}/escape_network/src/Level3_2.cpp
     ${PROJECT_SOURCE_DIR}/escape_network/src/StatePanel.cpp
     ${PROJECT_SOURCE_DIR}/escape_network/src/Json.cpp
     ${PROJECT_SOURCE_DIR}/escape_network/src/LevelManager.cpp

@@ -227,4 +227,141 @@ std::vector<int> extractPath(const DijkstraResult& result, int targetVertexId) {
     return path;
 }
 
+BellmanFordResult bellmanFord(const Graph& graph, int sourceVertexId) {
+    BellmanFordResult result;
+    const int n = graph.getVertexCount();
+    const double INF = std::numeric_limits<double>::infinity();
+    result.dist.assign(n, INF);
+    result.prev.assign(n, -1);
+    if (!graph.hasVertex(sourceVertexId)) {
+        return result;
+    }
+    result.dist[sourceVertexId] = 0.0;
+
+    // One pass over every adjacency entry (undirected edges appear in both
+    // directions). Only relaxes FROM vertices already reached from the source.
+    auto relaxAll = [&](bool apply) {
+        bool improved = false;
+        for (int u = 0; u < n; ++u) {
+            if (result.dist[u] == INF) {
+                continue; // not (yet) reachable from source -- skip
+            }
+            for (const AdjEntry& entry : graph.getNeighbors(u)) {
+                const Edge* edge = graph.getEdge(entry.edgeId);
+                if (!edge) {
+                    continue;
+                }
+                const double candidate = result.dist[u] + edge->weight;
+                if (candidate < result.dist[entry.to]) {
+                    improved = true;
+                    if (!apply) {
+                        return true;
+                    }
+                    result.dist[entry.to] = candidate;
+                    result.prev[entry.to] = u;
+                }
+            }
+        }
+        return improved;
+    };
+
+    for (int pass = 0; pass < n - 1; ++pass) {
+        if (!relaxAll(true)) {
+            break; // converged early
+        }
+    }
+
+    // Extra (V-th) pass: any further improvement means a negative cycle that
+    // is reachable from the source.
+    result.hasNegativeCycleReachableFromSource = relaxAll(false);
+    return result;
+}
+
+std::vector<int> extractPath(const BellmanFordResult& result, int targetVertexId) {
+    std::vector<int> path;
+    if (result.hasNegativeCycleReachableFromSource || targetVertexId < 0 ||
+        targetVertexId >= static_cast<int>(result.dist.size()) ||
+        result.dist[targetVertexId] == std::numeric_limits<double>::infinity()) {
+        return path;
+    }
+    const int n = static_cast<int>(result.prev.size());
+    for (int v = targetVertexId; v != -1; v = result.prev[v]) {
+        path.insert(path.begin(), v);
+        if (static_cast<int>(path.size()) > n) {
+            return std::vector<int>(); // defensive: malformed prev chain
+        }
+    }
+    return path;
+}
+
+PrimResult prim(const Graph& graph, int startVertexId) {
+    PrimResult result;
+    const int n = graph.getVertexCount();
+    if (n == 0) {
+        return result;
+    }
+
+    // Undirected view of every edge (MST ignores direction).
+    std::vector<std::vector<AdjEntry>> undirectedAdj(n);
+    for (const Edge& e : graph.getEdges()) {
+        if (!graph.hasVertex(e.from) || !graph.hasVertex(e.to) || e.from == e.to) {
+            continue; // self-loops never belong to an MST
+        }
+        undirectedAdj[e.from].push_back(AdjEntry{e.to, e.id});
+        undirectedAdj[e.to].push_back(AdjEntry{e.from, e.id});
+    }
+
+    // Heap item: (weight, edgeId, toVertex). Ties broken by edge id.
+    struct HeapItem {
+        double weight;
+        int edgeId;
+        int to;
+        bool operator>(const HeapItem& other) const {
+            if (weight != other.weight) {
+                return weight > other.weight;
+            }
+            return edgeId > other.edgeId;
+        }
+    };
+
+    std::vector<bool> inTree(n, false);
+    int componentCount = 0;
+
+    auto growFrom = [&](int root) {
+        std::priority_queue<HeapItem, std::vector<HeapItem>, std::greater<HeapItem>> heap;
+        inTree[root] = true;
+        for (const AdjEntry& a : undirectedAdj[root]) {
+            heap.push(HeapItem{graph.getEdge(a.edgeId)->weight, a.edgeId, a.to});
+        }
+        while (!heap.empty()) {
+            const HeapItem top = heap.top();
+            heap.pop();
+            if (inTree[top.to]) {
+                continue; // stale / non-crossing edge
+            }
+            inTree[top.to] = true;
+            result.mstEdges.push_back(*graph.getEdge(top.edgeId));
+            for (const AdjEntry& a : undirectedAdj[top.to]) {
+                if (!inTree[a.to]) {
+                    heap.push(HeapItem{graph.getEdge(a.edgeId)->weight, a.edgeId, a.to});
+                }
+            }
+        }
+    };
+
+    const int first = graph.hasVertex(startVertexId) ? startVertexId : 0;
+    growFrom(first);
+    ++componentCount;
+    for (int v = 0; v < n; ++v) {
+        if (!inTree[v]) {
+            growFrom(v);
+            ++componentCount;
+        }
+    }
+
+    // Documented rule: disconnected -> flag set, mstEdges = spanning forest.
+    result.graphDisconnected = componentCount > 1;
+    return result;
+}
+
 } // namespace EscapeNetwork
